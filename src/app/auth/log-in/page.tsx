@@ -9,6 +9,9 @@ import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 const GoogleIcon = '/assets/Google_Icon.svg';
 const LogInImage = '/assets/LogIn_Image.svg';
 
+{/* This is the log in page of the Moldify Website
+  It allows platform managers and mold curators to log in to their accounts */}
+
 export default function Auth() {
 const [showPassword, setShowPassword] = useState(false);
   return (
@@ -22,7 +25,7 @@ const [showPassword, setShowPassword] = useState(false);
             </h1>
 
             {/* LOG IN FORM*/}
-            <form className="mt-8 flex flex-col">
+            <form className="mt-8 flex flex-col" method = "POST">
                 <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Email</label>
                 {/* Email Textbox */}
                 <input
@@ -62,12 +65,12 @@ const [showPassword, setShowPassword] = useState(false);
                 </Link>
 
                 {/* Log In Button */}
-                  <button
-                  type="submit"
-                  className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 rounded-lg hover:bg-[var(--accent-color)] transition mt-10"
-                  >
-                  Log In
-                  </button>
+                <button
+                type="submit"
+                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 rounded-lg hover:bg-[var(--accent-color)] transition mt-10"
+                >
+                Log In
+                </button>
             </form>
               <p className="text-xs font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] mt-2 flex justify-center">
                 Don't have an account?&nbsp;

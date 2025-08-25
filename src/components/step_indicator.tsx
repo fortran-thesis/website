@@ -14,8 +14,8 @@ export default function StepIndicator({ length }: StepIndicatorProps) {
       {Array.from({ length }, (_, i) => (
         <div
           key={i}
-          className={`w-25 h-1.5 ${
-            i === 0 ? "bg-[var(--accent-color)]" : "bg-gray-300"
+          className={`w-20 h-1.5 ${
+            i === 0 ? "bg-[var(--accent-color)]" : "bg-[var(--moldify-softGrey)]"
           } rounded-md`}
         ></div>
       ))}
