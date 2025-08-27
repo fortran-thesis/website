@@ -6,9 +6,10 @@ export function forgotPasswordUtils1(){
     const [email, setEmail] = useState("");
     const router = useRouter();
 
+    // This tracks changes made by the user in the input fields
     const hasChanges = () => email !== "";
 
-
+    // This handles the cancel button
     const handleCancel = () => {
         if (hasChanges() && confirm("Are you sure you want to cancel? All entered data will be lost.")) {
             setEmail("");
@@ -19,15 +20,22 @@ export function forgotPasswordUtils1(){
             router.back();
         }
     }
-    const handleNext = (e: React.FormEvent) => {
+
+    // This handles the Send Code Button
+    const handleSendCode = (e: React.FormEvent) => {
         e.preventDefault();
-        router.push("/auth/login");
+        if (!email) {
+            alert("Please enter your email address.");
+            return;
+        } else {
+            router.push("/auth/forgot-password-2");
+        }
     }
 
     return {
         email,
         setEmail,
         handleCancel,
-        handleNext
+        handleSendCode
     }
 }
