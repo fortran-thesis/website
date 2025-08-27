@@ -18,12 +18,11 @@ export default function ForgotPassword2() {
     handleVerify,
   } = forgotPasswordUtils2();
 
-
   return (
     <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
       <main className="font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">
         <div className="w-full xl:w-1/2 p-5 flex flex-col">
-            {/* FORGOT PASSWORD - STEP 2 */}
+          {/* FORGOT PASSWORD HEADER - STEP 2 */}
           <p className="text-[var(--accent-color)] font-bold text-xs mb-10">Forgot Password</p>
           <StepIndicator currentStep={2} length={3} />
           <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-3">

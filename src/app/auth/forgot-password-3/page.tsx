@@ -1,92 +1,41 @@
 "use client";
+import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
-import Image from "next/image";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { signUp1Utils } from './signUp1Utils';
+import { forgotPasswordUtils3 } from './forgotPasswordUtils3';
 
-const LogInImage = '/assets/LogIn_Image.svg';
+const PasswordImage = '/assets/ForgotPassword_Password_Image.svg';
 
-export default function SignUp() {
+{/* This is the step 3 when user forgets password
+    It asks the user to enter their new password and confirm password to reset their password */}
 
-    // Custom hook for sign-up step 1
+export default function ForgotPassword3() {
     const {
         showPassword,
         setShowPassword,
         showConfirmPassword,
         setShowConfirmPassword,
-        firstName,
-        setFirstName,
-        lastName,
-        setLastName,
-        email,
-        setEmail,
         password,
         setPassword,
         confirmPassword,
         setConfirmPassword,
         handleCancel,
-        handleNext
-    } = signUp1Utils();
+        handleChangePassword
+    } = forgotPasswordUtils3();
+
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
-            <main className="flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">
-                {/* TEMPORARY IMAGE FOR SIGN UP!!! */}
-                <div className="hidden relative w-1/2 xl:flex transform scale-x-[-1]">
-                    <Image
-                        src={LogInImage}
-                        alt="Log In Illustration"
-                        fill
-                        className="object-cover rounded-xl"
-                    />
-                </div>
-                <div className="w-full xl:w-1/2 p-5 flex flex-col mt-0 xl:mt-2">
-                    {/* SIGN UP HEADER*/}
-                    <StepIndicator length={2} currentStep={1} />
-                    <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-2">LET'S SET UP YOUR
-                        <span className="inline xl:block text-[var(--accent-color)]"> ACCOUNT</span>
+            <main className="font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">
+                <div className="w-full xl:w-1/2 p-5 flex flex-col">
+                    {/* FORGOT PASSWORD HEADER - STEP 3 */}
+                    <p className="text-[var(--accent-color)] font-bold text-xs mb-10">Forgot Password</p>
+                    <StepIndicator currentStep={3} length={3} />
+                    <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-3">
+                        SET NEW <span className = "inline-block xl:block"> PASSWORD </span> 
                     </h1>
-
-                    {/* SIGN UP FORM*/}
-                    <form className = "mt-8 flex flex-col" method = "POST">
-                        <div className = "flex flex-col xl:flex-row gap-x-5 gap-y-5">
-                            <div className = "flex flex-col flex-1">
-                                <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">First Name</label>
-                                {/* First Name Textbox */}
-                                <input
-                                type="text"
-                                placeholder="Enter first name"
-                                className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
-                                required
-                                value={firstName}
-                                onChange={e => setFirstName(e.target.value)}
-                                />
-                            </div>
-                            <div className = "flex flex-col flex-1">
-                                <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Last Name</label>
-                                {/* Last Name Textbox */}
-                                <input
-                                type="text"
-                                placeholder="Enter last name"
-                                className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
-                                required
-                                value={lastName}
-                                onChange={e => setLastName(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                        
-                        <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-5">Email</label>
-                        {/* Email Textbox */}
-                        <input
-                        type="email"
-                        placeholder="Enter email"
-                        className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
-                        required
-                        value={email}
-                        onChange={e => setEmail(e.target.value)}
-                        />
-
+                    <p className="text-[var(--moldify-black)] font-regular text-sm mb-10">Please enter new password to update your account</p>
+                    <form className="flex flex-col" method="POST">
                         <label className = "font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-5 mb-1">Password</label>
                         {/* Password Textbox */}
                         <div className="relative flex items-center overflow-clip">
@@ -135,7 +84,7 @@ export default function SignUp() {
                                 <FontAwesomeIcon icon={showConfirmPassword ? faEye : faEyeSlash} className="w-15 h-7" />
                             </button>
                         </div>
-                        <div className = "flex flex-col xl:flex-row gap-x-5 gap-y-5 mt-10">
+                        <div className = "flex flex-col sm:flex-row gap-x-5 gap-y-5 mt-20">
                             <div className = "flex flex-col flex-1">
                                 {/* Cancel Button */}
                                 <button
@@ -147,19 +96,27 @@ export default function SignUp() {
                                 </button>  
                             </div>
                             <div className="flex flex-col flex-1">
-                                {/* Next Button */}
+                                {/* Change Password Button */}
                                 <button
                                 type="submit"
                                 className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition"
-                                onClick={handleNext}
+                                onClick={handleChangePassword}
                                 >
-                                Next
+                                Change Password
                                 </button> 
                             </div>
                         </div>
                     </form>
                 </div>
+                <div className="hidden relative w-1/2 xl:flex">
+                    <Image
+                        src={PasswordImage}
+                        alt="Forgot Password Illustration"
+                        fill
+                        className="object-cover rounded-xl"
+                    />
+                </div>
             </main>
         </div>
-    );
+    )
 }

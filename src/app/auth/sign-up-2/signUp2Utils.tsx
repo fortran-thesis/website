@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 /// This is the second sign-up step utility hook
 /// It manages the state and behavior for the second step of the sign-up process
 
-export function useSignUp2Utils() {
+export function signUp2Utils() {
     const [file, setFile] = useState<File | null>(null);
     const [progress, setProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,7 +62,7 @@ export function useSignUp2Utils() {
     const hasChanges = () => {
         return file !== null || progress > 0 || links.some(link => link !== "");
     };
-    
+
     // This handles the cancel button
     const handleCancelButton = () =>{
         if (hasChanges() && confirm ("Are you sure you want to cancel? You will lose all progress")) {

@@ -5,7 +5,7 @@ import StepIndicator from "@/components/step_indicator";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFilePdf, faPen, faPlus, faCircleMinus } from '@fortawesome/free-solid-svg-icons';
 import Image from "next/image";
-import { useSignUp2Utils } from './signUp2Utils';
+import { signUp2Utils } from './signUp2Utils';
 
 const LogInImage = '/assets/LogIn_Image.svg';
 
@@ -24,7 +24,7 @@ export default function Page() {
         handleFileChange,
         removeFile,
         handleCancelButton
-    } = useSignUp2Utils();
+    } = signUp2Utils();
 
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
