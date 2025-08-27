@@ -43,10 +43,10 @@ export default function Footer() {
               <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
             </li>
             <li>
-              <Link href="/feedback" className="hover:underline">Send Feedback</Link>
+              <Link href="/support/send-feedback" className="hover:underline">Send Feedback</Link>
             </li>
             <li>
-              <Link href="/bug-report" className="hover:underline">Bug Report</Link>
+              <Link href="/support/bug-report" className="hover:underline">Bug Report</Link>
             </li>
           </ul>
         </div>
