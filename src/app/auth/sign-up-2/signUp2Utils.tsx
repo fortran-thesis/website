@@ -72,12 +72,18 @@ export function signUp2Utils() {
             router.back();
         }
         else if (!hasChanges()) {
-            setFile(null);
-            setProgress(0);
-            setLinks([""]);
             router.back();
         }
     }
+
+    const handleCreateAcc = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (file && links.every(link => link !== "")) {
+            // TODO: Implement account creation logic
+        } else {
+            alert("Please fill in all fields.");
+        }
+    };
 
     // This is used to expose the state and functions
     return {
@@ -95,5 +101,6 @@ export function signUp2Utils() {
         handleFileChange,
         removeFile,
         handleCancelButton,
+        handleCreateAcc,
     };
 }

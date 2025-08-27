@@ -140,7 +140,7 @@ export default function SignUp() {
                                 {/* Cancel Button */}
                                 <button
                                 type="button"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-lg border-3 border-[var(--primary-color)] hover:bg-[var(--primary-color)] hover:text-[var(--background-color)] transition"
+                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-lg border-3 border-[var(--primary-color)] hover:bg-black/10 transition"
                                 onClick={handleCancel}
                                 >
                                 Cancel

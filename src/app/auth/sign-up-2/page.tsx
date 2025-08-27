@@ -23,7 +23,8 @@ export default function Page() {
         removeLink,
         handleFileChange,
         removeFile,
-        handleCancelButton
+        handleCancelButton,
+        handleCreateAcc,
     } = signUp2Utils();
 
     return (
@@ -166,7 +167,7 @@ export default function Page() {
                                 {/* Cancel Button */}
                                 <button
                                 type="button"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-lg border-3 border-[var(--primary-color)] hover:bg-[var(--primary-color)] hover:text-[var(--background-color)] transition"
+                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-lg border-3 border-[var(--primary-color)] hover:bg-black/10 transition"
                                 onClick={handleCancelButton}
                                 >
                                 Cancel
@@ -177,6 +178,7 @@ export default function Page() {
                                 <button
                                 type="submit"
                                 className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition"
+                                onClick={handleCreateAcc}
                                 >
                                 Create Account
                                 </button> 

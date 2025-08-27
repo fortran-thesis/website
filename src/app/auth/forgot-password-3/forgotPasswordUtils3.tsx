@@ -11,6 +11,7 @@ export function forgotPasswordUtils3 (){
 
     const router = useRouter();
 
+    // This tracks changes in the input fields
     const hasChanges = () => {
         return (
             password !== "" ||
@@ -18,6 +19,7 @@ export function forgotPasswordUtils3 (){
         );
     };
 
+    // This handles the cancel button
     const handleCancel = () => {
         if (hasChanges() && confirm("Are you sure you want to cancel? You will lose all progress")) {
             setPassword("");
@@ -29,12 +31,17 @@ export function forgotPasswordUtils3 (){
         }
     };
 
+    // This handles the Change Password Button
     const handleChangePassword = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // This validates password and confirm password
         if (!password || !confirmPassword) {
             alert("Please fill in both fields.");
             return;
         }
+
+        // This changes if passwords match
         if (password === confirmPassword) {
             // Call API to change password
         } else {

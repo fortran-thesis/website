@@ -48,6 +48,18 @@ export function signUp1Utils() {
             e.preventDefault();
             // TODO: Pass data to next page 
             // For now, just navigate
+
+            // This validates all fields
+            if (!firstName || !lastName || !email || !password || !confirmPassword) {
+                alert("Please fill in all fields.");
+                return;
+            }
+            
+            // This checks if passwords match
+            if (password !== confirmPassword) {
+                alert("Passwords do not match.");
+                return;
+            }
             router.push("/auth/sign-up-2");
         };
     
