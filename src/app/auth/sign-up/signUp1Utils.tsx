@@ -16,16 +16,35 @@ export function useSignUp1Utils() {
         const [password, setPassword] = useState("");
         const [confirmPassword, setConfirmPassword] = useState("");
         const router = useRouter();
-    
+
+        // This tracks changes made by the user in the input fields
+        const hasChanges = () => {
+            return (
+                firstName !== "" ||
+                lastName !== "" ||
+                email !== "" ||
+                password !== "" ||
+                confirmPassword !== ""
+            );
+        };
+
         // This handles the cancel button by clearing all fields
         const handleCancel = () => {
-            if (confirm ("Are you sure you want to cancel? You will lose all progress")) {
-            setFirstName("");
-            setLastName("");
-            setEmail("");
-            setPassword("");
-            setConfirmPassword("");
-            router.back();
+            if (hasChanges() && confirm("Are you sure you want to cancel? You will lose all progress")) {
+                setFirstName("");
+                setLastName("");
+                setEmail("");
+                setPassword("");
+                setConfirmPassword("");
+                router.back();
+            }
+            else if (!hasChanges()) {
+                setFirstName("");
+                setLastName("");
+                setEmail("");
+                setPassword("");
+                setConfirmPassword("");
+                router.back();
             }
         };
     

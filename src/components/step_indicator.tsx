@@ -5,7 +5,6 @@
   - currentStep: The current step the user is on.
 */}
 
-
 type StepIndicatorProps = {
     length: number;
     currentStep: number; 

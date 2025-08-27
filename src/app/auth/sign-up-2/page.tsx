@@ -38,7 +38,7 @@ export default function Page() {
                         className="object-cover rounded-xl"
                     />
                 </div>
-                <div className="w-full xl:w-1/2 p-5 flex flex-col mt-0 xl:mt-2 max-h-auto xl:max-h-170 overflow-y-auto">
+                <div className="w-full xl:w-1/2 p-5 flex flex-col mt-0 xl:mt-2 max-h-auto xl:max-h-150 overflow-y-auto">
                     {/* SIGN UP HEADER*/}
                     <StepIndicator length={2} currentStep={2} />
                     <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-2">LET'S SET UP YOUR
@@ -57,7 +57,6 @@ export default function Page() {
                                 className="hidden"
                                 id="file-upload"
                                 required
-                                value={file?.name || ""}
                                 ref={fileInputRef}
                                 onChange={handleFileChange}
                             />

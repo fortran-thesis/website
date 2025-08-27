@@ -58,7 +58,7 @@ const [showPassword, setShowPassword] = useState(false);
                 </div>
 
                 {/*  Forgot Password Button */}
-                <Link href="auth/forgot-password">
+                <Link href="./forgot-password">
                   <label className="ml-1 text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-xs hover:underline cursor-pointer flex justify-end">
                     Forgot Password?
                   </label>
@@ -85,7 +85,7 @@ const [showPassword, setShowPassword] = useState(false);
               {/* Continue With Label */}
               <div className="flex items-center my-10">
                 <div className="flex-grow h-0.5 bg-[var(--moldify-black)]"></div>
-                <span className="font-[family-name:var(--font-bricolage-grotesque)] mx-4 text-xs text-[var(--moldify-black)]">continue with</span>
+                <span className="font-[family-name:var(--font-bricolage-grotesque)] mx-4 text-xs text-[var(--moldify-black)]">or continue with</span>
                 <div className="flex-grow h-0.5 bg-[var(--moldify-black)]"></div>
               </div>
 

@@ -47,13 +47,31 @@ export function useSignUp2Utils() {
         if (confirm("Are you sure you want to remove this file?")) {
             setFile(null);
             setProgress(0);
-            if (fileInputRef.current) fileInputRef.current.value = "";
+            // Only set file input value to empty string to clear it. Never set to a filename.
+            if (fileInputRef.current) {
+                try {
+                    fileInputRef.current.value = "";
+                } catch (err) {
+                    // Silently ignore if browser throws
+                }
+            }
         }
     };
 
+    // This tracks changes made by the user in the input fields
+    const hasChanges = () => {
+        return file !== null || progress > 0 || links.some(link => link !== "");
+    };
+    
     // This handles the cancel button
     const handleCancelButton = () =>{
-        if (confirm ("Are you sure you want to cancel? You will lose all progress")) {
+        if (hasChanges() && confirm ("Are you sure you want to cancel? You will lose all progress")) {
+            setFile(null);
+            setProgress(0);
+            setLinks([""]);
+            router.back();
+        }
+        else if (!hasChanges()) {
             setFile(null);
             setProgress(0);
             setLinks([""]);
