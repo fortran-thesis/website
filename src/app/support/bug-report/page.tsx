@@ -1,5 +1,6 @@
 "use client";
 import Image from 'next/image';
+import Link from 'next/link';
 import { bugReportUtils } from './bugReportUtils';
 
 const BugReportImage = '/assets/BugReport_Image.svg';
@@ -32,6 +33,16 @@ export default function SendFeedback (){
                             value={bugReport}
                             onChange={e => setBugReport(e.target.value)}
                         />
+                        <p className="text-xs text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] mt-2 text-center">
+                            Submitting this form indicates your agreement to Moldify’s data processing as stated in our&nbsp;
+                            <Link
+                                href="/terms"
+                                className="text-[var(--accent-color)] font-semibold hover:underline"
+                            >
+                                Privacy Policy
+                            </Link>
+                            .
+                        </p>
                         <div className = "flex flex-col sm:flex-row gap-x-5 gap-y-5 mt-20">
                             <div className = "flex flex-col flex-1">
                                 {/* Cancel Button */}
