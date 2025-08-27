@@ -13,6 +13,12 @@ export function sendFeedbackUtils () {
     const handleFeedbackSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
 
+        // This handles feedback length validation
+        if (!feedback || feedback.trim().length < 10) {
+            alert("Please enter at least 10 characters of feedback.");
+            return;
+        }
+
         try {
             const response = await fetch('/api/feedback', {
                 method: 'POST',
