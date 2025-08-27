@@ -1,39 +1,33 @@
 "use client";
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import StepIndicator from "@/components/step_indicator";
 import Image from "next/image";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-
+import { useSignUp1Utils } from './signUp1Utils';
 
 const LogInImage = '/assets/LogIn_Image.svg';
 
 export default function SignUp() {
-    const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [firstName, setFirstName] = useState("");
-    const [lastName, setLastName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const router = useRouter();
-    const handleCancel = () => {
-        setFirstName("");
-        setLastName("");
-        setEmail("");
-        setPassword("");
-        setConfirmPassword("");
-        router.back();
-    };
-    const handleNext = (e: React.FormEvent) => {
-        e.preventDefault();
-        // TODO: Pass data to next page (context, localStorage, etc.)
-        // For now, just navigate
-        router.push("/auth/sign-up-2");
-    };
 
-    
+    // Custom hook for sign-up step 1
+    const {
+        showPassword,
+        setShowPassword,
+        showConfirmPassword,
+        setShowConfirmPassword,
+        firstName,
+        setFirstName,
+        lastName,
+        setLastName,
+        email,
+        setEmail,
+        password,
+        setPassword,
+        confirmPassword,
+        setConfirmPassword,
+        handleCancel,
+        handleNext
+    } = useSignUp1Utils();
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
             <main className="flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">
@@ -48,7 +42,7 @@ export default function SignUp() {
                 </div>
                 <div className="w-full xl:w-1/2 p-5 flex flex-col mt-0 xl:mt-2">
                     {/* SIGN UP HEADER*/}
-                    <StepIndicator length={2} />
+                    <StepIndicator length={2} currentStep={1} />
                     <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-2">LET'S SET UP YOUR
                         <span className="inline xl:block text-[var(--accent-color)]"> ACCOUNT</span>
                     </h1>
@@ -81,6 +75,7 @@ export default function SignUp() {
                                 />
                             </div>
                         </div>
+                        
                         <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-5">Email</label>
                         {/* Email Textbox */}
                         <input
@@ -91,8 +86,8 @@ export default function SignUp() {
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         />
+
                         <label className = "font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-5 mb-1">Password</label>
-                        
                         {/* Password Textbox */}
                         <div className="relative flex items-center overflow-clip">
                         <input
@@ -155,7 +150,7 @@ export default function SignUp() {
                                 {/* Next Button */}
                                 <button
                                 type="submit"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--accent-color)] hover:border-[var(--accent-color)] transition"
+                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition"
                                 onClick={handleNext}
                                 >
                                 Next

@@ -1,6 +1,9 @@
 "use client";
 import Link from 'next/link';
 
+{/* This is the footer of the Moldify Website
+  It contains links to important pages such as About, Contact, Terms of Use, and Privacy Policy. */}
+  
 export default function Footer() {
   return (
     <footer className="bg-[var(--primary-color)] px-6 lg:px-20 pt-10 mt-4 w-full">

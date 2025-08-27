@@ -67,7 +67,7 @@ const [showPassword, setShowPassword] = useState(false);
                 {/* Log In Button */}
                 <button
                 type="submit"
-                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 rounded-lg hover:bg-[var(--accent-color)] transition mt-10"
+                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 rounded-lg hover:bg-[var(--hover-primary)] transition mt-10"
                 >
                 Log In
                 </button>

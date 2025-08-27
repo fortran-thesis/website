@@ -11,6 +11,10 @@
   --moldify-black: #22272B;
   --moldify-grey: #7E8083;
   --moldify-softGrey: #D9D9D9;
+
+  /* HOVER COLOR */
+  --hover-primary: #416600;
+  --hover-accent: #D99E2B;
 }
 body {
   background: var(--background-color);
