@@ -73,7 +73,7 @@ export default function AppealRequestPage() {
                 </div>
                 {/* Suspension Details such as reason why they are suspended, 
                 and additional details provided by the platform manager */}
-                <div className="w-full xl:w-1/2 flex flex-row xl:flex-col">
+                <div className="w-full xl:w-1/2 flex flex-col">
                     <div className="bg-[var(--taupe)] rounded-xl py-2 px-5 h-auto xl:h-82 xl:overflow-y-auto">
                         <h1 className="font-[family-name:var(--font-montserrat)] font-black text-2xl text-[var(--primary-color)] mt-3 mb-5">Why your account has been suspended</h1>
                         <ul className="list-disc pl-6 text-sm">
