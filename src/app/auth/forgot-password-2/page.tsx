@@ -2,7 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import StepIndicator from "@/components/step_indicator";
-import { forgotPasswordUtils2 } from './forgotPasswordUtils2';
+import { useForgotPasswordUtils2 } from './forgotPasswordUtils2';
 
 const CodeImage = '/assets/ForgotPassword_Code_Image.svg';
 
@@ -16,7 +16,7 @@ export default function ForgotPassword2() {
     fullCode,
     handleCancel,
     handleVerify,
-  } = forgotPasswordUtils2();
+  } = useForgotPasswordUtils2();
 
   return (
     <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">

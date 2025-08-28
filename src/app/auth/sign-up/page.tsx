@@ -3,7 +3,7 @@ import StepIndicator from "@/components/step_indicator";
 import Image from "next/image";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { signUp1Utils } from './signUp1Utils';
+import { useSignUp1Utils } from './signUp1Utils';
 
 const LogInImage = '/assets/LogIn_Image.svg';
 
@@ -27,7 +27,7 @@ export default function SignUp() {
         setConfirmPassword,
         handleCancel,
         handleNext
-    } = signUp1Utils();
+    } = useSignUp1Utils();
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
             <main className="flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">

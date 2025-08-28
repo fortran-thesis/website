@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 
 // This is a custom hook for managing the forgot password step 2 state
 
-export function forgotPasswordUtils2(){
+export function useForgotPasswordUtils2(){
 
     const [codeSegments, setCodeSegments] = useState(["", "", "", ""]);
     const router = useRouter();

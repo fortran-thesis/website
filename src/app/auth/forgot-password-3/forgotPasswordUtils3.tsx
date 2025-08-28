@@ -1,7 +1,7 @@
 import { useState} from 'react';
 import { useRouter } from 'next/navigation';
 
-export function forgotPasswordUtils3 (){
+export function useForgotPasswordUtils3 (){
     // This handles the visibility of the password fields
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);

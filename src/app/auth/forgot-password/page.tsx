@@ -1,7 +1,7 @@
 "use client";
 import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
-import { forgotPasswordUtils1 } from './forgotPasswordUtils1';
+import { useForgotPasswordUtils1 } from './forgotPasswordUtils1';
 
 const EmailImage = '/assets/ForgotPassword_Email_Image.svg';
 
@@ -16,7 +16,7 @@ export default function ForgotPassword() {
         setEmail,
         handleCancel,
         handleSendCode
-    } = forgotPasswordUtils1();
+    } = useForgotPasswordUtils1();
 
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">

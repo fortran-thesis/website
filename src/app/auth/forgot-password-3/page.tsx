@@ -3,7 +3,7 @@ import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { forgotPasswordUtils3 } from './forgotPasswordUtils3';
+import { useForgotPasswordUtils3 } from './forgotPasswordUtils3';
 
 const PasswordImage = '/assets/ForgotPassword_Password_Image.svg';
 
@@ -22,7 +22,7 @@ export default function ForgotPassword3() {
         setConfirmPassword,
         handleCancel,
         handleChangePassword
-    } = forgotPasswordUtils3();
+    } = useForgotPasswordUtils3();
 
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">

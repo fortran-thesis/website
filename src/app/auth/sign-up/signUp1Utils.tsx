@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 /// This is the first sign-up step utility hook
 /// It manages the state and behavior for the first step of the sign-up process
 
-export function signUp1Utils() {
+export function useSignUp1Utils() {
         // This handles the visibility of the password fields
         const [showPassword, setShowPassword] = useState(false);
         const [showConfirmPassword, setShowConfirmPassword] = useState(false);
