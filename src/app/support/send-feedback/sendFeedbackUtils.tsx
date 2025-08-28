@@ -19,6 +19,7 @@ export function sendFeedbackUtils () {
             return;
         }
 
+        // This handles feedback submission
         try {
             const response = await fetch('/api/feedback', {
                 method: 'POST',
