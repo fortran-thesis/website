@@ -1,7 +1,7 @@
 "use client";
 import Image from 'next/image';
 import Link from 'next/link';
-import { bugReportUtils } from './bugReportUtils';
+import { useBugReportUtils } from './bugReportUtils';
 
 const BugReportImage = '/assets/BugReport_Image.svg';
 
@@ -11,7 +11,7 @@ export default function SendFeedback (){
         setBugReport,
         handleBugReportChange,
         handleBugReportSubmit,
-        handleCancel } = bugReportUtils();
+        handleCancel } = useBugReportUtils();
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
             <main className="font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl  gap-x-10 bg-[var(--background-color)]">
@@ -23,7 +23,7 @@ export default function SendFeedback (){
                         <span className = "inline-block xl:block">REPORT</span>
                     </h1>
                     <p className="text-[var(--moldify-black)] font-regular text-sm mb-20">Encountering app issues or errors? Report them now!</p>
-                    <form className="flex flex-col" method="POST">
+                    <form onSubmit={handleBugReportSubmit} className="flex flex-col" method="POST">
                         <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Describe what happened, and what you expected instead.</label>
                         {/* Bug Report Textarea */}
                         <textarea
@@ -59,7 +59,6 @@ export default function SendFeedback (){
                                 <button
                                 type="submit"
                                 className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition"
-                                onClick={handleBugReportSubmit}
                                 >
                                 Send Bug Report
                                 </button> 

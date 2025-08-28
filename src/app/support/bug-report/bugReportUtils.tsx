@@ -2,7 +2,7 @@
 import { useState} from 'react';
 import { useRouter } from 'next/navigation';
 
-export function bugReportUtils () {
+export function useBugReportUtils () {
     const [bugReport, setBugReport] = useState("");
     const router = useRouter();
 
@@ -10,7 +10,7 @@ export function bugReportUtils () {
         setBugReport(event.target.value);
     };
 
-    const handleBugReportSubmit = async (event: React.FormEvent) => {
+    const handleBugReportSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         // This handles bug report length validation

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { appealRequestUtils } from "./appealRequestUtils";
+import { useAppealRequestUtils } from "./appealRequestUtils";
 
 export default function AppealRequestPage() {
     const { 
@@ -10,7 +10,7 @@ export default function AppealRequestPage() {
         suspensionReason,
         suspensionDetails,
         handleSubmitRequest
-    } = appealRequestUtils();
+    } = useAppealRequestUtils();
 
   return (
     <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">

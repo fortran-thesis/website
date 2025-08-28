@@ -1,7 +1,7 @@
 "use client";
 import Image from 'next/image';
 import Link from 'next/link';
-import { sendFeedbackUtils } from './sendFeedbackUtils';
+import { useSendFeedbackUtils } from './sendFeedbackUtils';
 
 const FeedbackImage = '/assets/SendFeedback_Image.svg';
 
@@ -11,7 +11,7 @@ export default function SendFeedback (){
         setFeedback,
         handleFeedbackChange, 
         handleFeedbackSubmit, 
-        handleCancel } = sendFeedbackUtils();
+        handleCancel } = useSendFeedbackUtils();
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
             <main className="font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl  gap-x-10 bg-[var(--background-color)]">
@@ -22,7 +22,7 @@ export default function SendFeedback (){
                         SEND FEEDBACK
                     </h1>
                     <p className="text-[var(--moldify-black)] font-regular text-sm mb-20">Feature or improvement ideas? Share your feedback today.</p>
-                    <form className="flex flex-col" method="POST">
+                    <form onSubmit={handleFeedbackSubmit} className="flex flex-col" method="POST">
                         <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">How can we make our app better?</label>
                         {/* Feedback Textarea */}
                         <textarea
@@ -58,7 +58,6 @@ export default function SendFeedback (){
                                 <button
                                 type="submit"
                                 className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition"
-                                onClick={handleFeedbackSubmit}
                                 >
                                 Send Feedback
                                 </button> 

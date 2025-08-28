@@ -2,7 +2,7 @@
 import { useState} from 'react';
 import { useRouter } from 'next/navigation';
 
-export function sendFeedbackUtils () {
+export function useSendFeedbackUtils() {
     const [feedback, setFeedback] = useState("");
     const router = useRouter();
 
@@ -10,7 +10,7 @@ export function sendFeedbackUtils () {
         setFeedback(event.target.value);
     };
 
-    const handleFeedbackSubmit = async (event: React.FormEvent) => {
+    const handleFeedbackSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         // This handles feedback length validation
