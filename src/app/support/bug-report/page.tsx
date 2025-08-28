@@ -16,7 +16,7 @@ export default function SendFeedback (){
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
             <main className="font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl  gap-x-10 bg-[var(--background-color)]">
                 <div className="w-full xl:w-1/2 p-5 flex flex-col">
-                    {/* SEND FEEDBACK HEADER */}
+                    {/* BUG REPORT HEADER */}
                     <p className="text-[var(--accent-color)] font-bold text-xs mb-10">Bug Report</p>
                     <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-3">
                         SUBMIT BUG&nbsp; 
@@ -25,7 +25,7 @@ export default function SendFeedback (){
                     <p className="text-[var(--moldify-black)] font-regular text-sm mb-20">Encountering app issues or errors? Report them now!</p>
                     <form className="flex flex-col" method="POST">
                         <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Describe what happened, and what you expected instead.</label>
-                        {/* Feedback Textarea */}
+                        {/* Bug Report Textarea */}
                         <textarea
                             placeholder="Enter your bug report here..."
                             className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none h-32 resize-none"
