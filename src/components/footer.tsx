@@ -1,5 +1,7 @@
 "use client";
 import Link from 'next/link';
+import Image from 'next/image';
+const MoldifyLogo = '/assets/Moldify_Logo.png';
 
 {/* This is the footer of the Moldify Website
   It contains links to important pages such as About, Contact, Terms of Use, and Privacy Policy. */}
@@ -10,14 +12,18 @@ export default function Footer() {
       {/* Top section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-0">
         {/* Logo & tagline */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
-          {/* Circle icon */}
-          <div className="w-20 h-20 rounded-full bg-[var(--accent-color)]" />
-          <div>
-            <h2 className="text-[var(--accent-color)] font-[family-name:var(--font-montserrat)] font-black text-2xl">MOLDIFY</h2>
-            <p className="text-[var(--background-color)] text-md font-[family-name:var(--font-bricolage-grotesque)]">Identify mold with Moldify</p>
+        <div className="flex flex-row items-start justify-center gap-4 p-6">
+          <Image 
+              src={MoldifyLogo} 
+              alt="Moldify Logo" 
+              width={60} 
+              height={60} 
+          />
+          <div className = "flex flex-col justify-center">
+              <h2 className="text-[var(--accent-color)] font-[family-name:var(--font-montserrat)] font-black text-3xl">MOLDIFY</h2>
+              <p className="text-[var(--background-color)] text-xs font-[family-name:var(--font-bricolage-grotesque)]">Identify mold with Moldify</p>
           </div>
-        </div>
+          </div>
 
         {/* About */}
         <div className = "pl-0 lg:pl-30">

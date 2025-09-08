@@ -82,7 +82,7 @@ export default function AppealRequestPage() {
                                 : <li>{suspensionReason}</li>
                             }
                         </ul>   
-                        <div className="h-0.5 bg-[var(--moldify-grey)] w-full my-4"></div>
+                        <div className="h-0.5 bg-[var(--moldify-grey)] w-full my-4"/>
                         <label className ="font-bold text-[var(--primary-color)] text-xs">Additional Details</label>
                         <p className = "text-[var(--moldify-black)] text-sm text-justify">
                             {suspensionDetails}

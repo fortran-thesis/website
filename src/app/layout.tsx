@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
-
+import LayoutClient from "@/components/layout_client";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -25,10 +25,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${montserrat.variable} ${bricolageGrotesque.variable} antialiased`}
-      >
-        {children}
+      <body className={`${montserrat.variable} ${bricolageGrotesque.variable} antialiased`}>
+        <LayoutClient>{children}</LayoutClient>
       </body>
     </html>
   );
