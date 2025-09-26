@@ -3,14 +3,14 @@ import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { useForgotPasswordUtils3 } from './forgotPasswordUtils3';
+import { useAccountRecoveryUtils3 } from './accountRecoveryUtils3';
 
 const PasswordImage = '/assets/ForgotPassword_Password_Image.svg';
 
 {/* This is the step 3 when user forgets password
     It asks the user to enter their new password and confirm password to reset their password */}
 
-export default function ForgotPassword3() {
+export default function AccountRecovery3() {
     const {
         showPassword,
         setShowPassword,
@@ -22,7 +22,7 @@ export default function ForgotPassword3() {
         setConfirmPassword,
         handleCancel,
         handleChangePassword
-    } = useForgotPasswordUtils3();
+    } = useAccountRecoveryUtils3();
 
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">

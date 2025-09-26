@@ -14,6 +14,14 @@ const LogInImage = '/assets/LogIn_Image.svg';
 
 export default function Auth() {
 const [showPassword, setShowPassword] = useState(false);
+
+// Handler to set which recovery type was clicked
+const handleRecoveryClick = (type: "forgot-username" | "forgot-password") => {
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("recoveryType", type);
+  }
+};
+
   return (
       <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
         <main className="flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl  gap-x-10 bg-[var(--background-color)]">
@@ -26,16 +34,25 @@ const [showPassword, setShowPassword] = useState(false);
 
             {/* LOG IN FORM*/}
             <form className="mt-8 flex flex-col" method = "POST">
-                <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Email</label>
-                {/* Email Textbox */}
+                <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Username</label>
+                {/* Username Textbox */}
                 <input
-                  type="email"
-                  placeholder="Enter email"
+                  type="text"
+                  placeholder="Enter username"
                   className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
                   required
                 />
+                {/*  Forgot Username Button */}
+                <Link 
+                  href="./account-recovery"
+                  onClick={() => handleRecoveryClick("forgot-username")}
+                >
+                  <label className="ml-1 text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-xs hover:underline cursor-pointer flex justify-end">
+                    Forgot Username?
+                  </label>
+                </Link>
+
                 <label className = "font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-8 mb-1">Password</label>
-                
                 {/* Password Textbox */}
                 <div className="relative flex items-center overflow-clip">
                   <input
@@ -58,7 +75,10 @@ const [showPassword, setShowPassword] = useState(false);
                 </div>
 
                 {/*  Forgot Password Button */}
-                <Link href="./forgot-password">
+                <Link 
+                  href="./account-recovery"
+                  onClick={() => handleRecoveryClick("forgot-password")}
+                >
                   <label className="ml-1 text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-xs hover:underline cursor-pointer flex justify-end">
                     Forgot Password?
                   </label>

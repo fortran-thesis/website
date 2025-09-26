@@ -1,30 +1,43 @@
 "use client";
+import { useEffect, useState } from "react";
 import Image from 'next/image';
 import Link from 'next/link';
 import StepIndicator from "@/components/step_indicator";
-import { useForgotPasswordUtils2 } from './forgotPasswordUtils2';
+import { useAccountRecoveryUtils2 } from './accountRecoveryUtils2';
 
 const CodeImage = '/assets/ForgotPassword_Code_Image.svg';
 
 {/* This is the step 2 when user forgets password
     It asks the user to enter the 4-digit code sent to their email address */}
 
-export default function ForgotPassword2() {
+export default function AccountRecovery2() {
+  const [stepLength, setStepLength] = useState(2);
+  const [recoveryType, setRecoveryType] = useState("forgot-username");
+    
+  useEffect(() => {
+      const type = sessionStorage.getItem("recoveryType") || "forgot-username";
+      setRecoveryType(type);
+      setStepLength(type === "forgot-password" ? 3 : 2);
+  }, []);
+
+  // This is the custom hook for forgot password step 2    
   const {
     codeSegments,
     handleCodeChange,
     fullCode,
     handleCancel,
     handleVerify,
-  } = useForgotPasswordUtils2();
+  } = useAccountRecoveryUtils2();
+
+  const headerLabel = recoveryType === "forgot-password" ? "Forgot Password" : "Forgot Username";
 
   return (
     <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
       <main className="font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">
         <div className="w-full xl:w-1/2 p-5 flex flex-col">
           {/* FORGOT PASSWORD HEADER - STEP 2 */}
-          <p className="text-[var(--accent-color)] font-bold text-xs mb-10">Forgot Password</p>
-          <StepIndicator currentStep={2} length={3} />
+          <p className="text-[var(--accent-color)] font-bold text-xs mb-10">{headerLabel}</p>
+          <StepIndicator currentStep={2} length={stepLength} />
           <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-3">
             GET YOUR CODE
           </h1>

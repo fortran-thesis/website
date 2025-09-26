@@ -28,6 +28,7 @@ export default function SignUp() {
         handleCancel,
         handleNext
     } = useSignUp1Utils();
+
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
             <main className="flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">
@@ -40,7 +41,7 @@ export default function SignUp() {
                         className="object-cover rounded-xl"
                     />
                 </div>
-                <div className="w-full xl:w-1/2 p-5 flex flex-col mt-0 xl:mt-2">
+                <div className="w-full xl:w-1/2 p-5 flex flex-col mt-0 xl:mt-2 max-h-auto xl:max-h-150 overflow-y-auto">
                     {/* SIGN UP HEADER*/}
                     <StepIndicator length={2} currentStep={1} />
                     <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-2">LET'S SET UP YOUR
@@ -49,7 +50,15 @@ export default function SignUp() {
 
                     {/* SIGN UP FORM*/}
                     <form className = "mt-8 flex flex-col" method = "POST">
-                        <div className = "flex flex-col xl:flex-row gap-x-5 gap-y-5">
+                         <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Username</label>
+                        {/* Username Textbox */}
+                        <input
+                        type="text"
+                        placeholder="Enter username"
+                        className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                        required
+                        />
+                        <div className = "flex flex-col xl:flex-row gap-x-5 gap-y-5 mt-5">
                             <div className = "flex flex-col flex-1">
                                 <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">First Name</label>
                                 {/* First Name Textbox */}
