@@ -10,90 +10,103 @@ import Image from "next/image";
 import CaseDetailsTab from '../investigation-tabs/case_details';
 import InVitroTab from '../investigation-tabs/in_vitro';
 import InVivoTab from '../investigation-tabs/in_vivo';
+import { useState } from 'react';
+import AssignCaseModal from '@/components/modals/assign_case_modal';
+
+const mycologists: { name: string; status: "available" | "at-capacity"; cases: number }[] = [
+  { name: "Dr. Lisa Wong", status: "available", cases: 4 },
+  { name: "Dr. John Doe", status: "at-capacity", cases: 8 },
+  { name: "Dr. Jane Smith", status: "available", cases: 2 },
+];
 
 export default function Investigation() {
-
-   const userRole = "Administrator";
-   const imageUrl = "/profile-placeholder.png";
-   const name = "Lauren Bishmilla";
-   const email = "laurenbishmilla@gmail.com";
-   const phone = "09674306842";
+    const [isModalOpen, setModalOpen] = useState(false);
+    const handleAssign = (mycologist: any, priority: string, endDate: Date | null) => {
+    console.log("Assigned to:", mycologist, priority, endDate);
+    setModalOpen(false);
+    };
+    const userRole = "Administrator";
+    const imageUrl = "/profile-placeholder.png";
+    const name = "Lauren Bishmilla";
+    const email = "laurenbishmilla@gmail.com";
+    const phone = "09674306842";
     const tabs = [
-    {
-      label: "Case Details",
-      icon: faClipboardList,
-      content: <CaseDetailsTab
-        entries={[
-            {
-            date: "October 2, 2025 • 09:14 PM",
-            notes: "Observed white spots on leaves.",
-            images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg"],
-            },
-            {
-            date: "October 2, 2025 • 09:14 PM",
-            notes: "Observed white spots on leaves.",
-            images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg", "/assets/moldify-logo-v3.svg", "/assets/moldify-logo-v3.svg", "/assets/moldify-logo-v3.svg"],
-            },
-            {
-            date: "October 2, 2025 • 09:14 PM",
-            notes: "Observed white spots on leaves.",
-            images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg", "/assets/moldify-logo-v3.svg", "/assets/moldify-logo-v3.svg", "/assets/moldify-logo-v3.svg"],
-            },
+        {
+        label: "Case Details",
+        icon: faClipboardList,
+        content: <CaseDetailsTab
+            entries={[
+                {
+                date: "October 2, 2025 • 09:14 PM",
+                notes: "Observed white spots on leaves.",
+                images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg"],
+                },
+                {
+                date: "October 2, 2025 • 09:14 PM",
+                notes: "Observed white spots on leaves.",
+                images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg", "/assets/moldify-logo-v3.svg", "/assets/moldify-logo-v3.svg", "/assets/moldify-logo-v3.svg"],
+                },
+                {
+                date: "October 2, 2025 • 09:14 PM",
+                notes: "Observed white spots on leaves.",
+                images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg", "/assets/moldify-logo-v3.svg", "/assets/moldify-logo-v3.svg", "/assets/moldify-logo-v3.svg"],
+                },
 
-        ]}
-        />
-    },
-    {
-      label: "In Vitro",
-      icon: faFlask,
-      content: <InVitroTab
-        dateTime="Last Updated: November 01, 2025 • 10:00 AM"
-        growthMedium="Potato Dextrose Agar (PDA)"
-        incubationTemperature="25°C"
-        inVitroEntries={[
-             {
-                date: "November 01, 2025 • 10:00 AM",
-                imagePath: "/images/sample1.jpg",
-                sizeValue: "5 mm",
-                colorValue: "White",
-                notes: "Colony growing steadily.",
-            },
-            {
-                date: "November 01, 2025 • 10:00 AM",
-                imagePath: "/images/sample2.jpg",
-                sizeValue: "7 mm",
-                colorValue: "Cream",
-                notes: "Some contamination observed.",
-            },
-        ]}
-        />
-    },
-    {
-      label: "In Vivo",
-      icon: faSeedling,
-      content: <InVivoTab
-        dateTime="Last Updated: November 01, 2025 • 10:00 AM"
-        growthMedium="Potato Dextrose Agar (PDA)"
-        incubationTemperature="25°C"
-        inVivoEntries={[
-             {
-                date: "November 01, 2025 • 10:00 AM",
-                imagePath: "/images/sample1.jpg",
-                sizeValue: "5 mm",
-                colorValue: "White",
-                notes: "Colony growing steadily.",
-            },
-            {
-                date: "November 01, 2025 • 10:00 AM",
-                imagePath: "/images/sample2.jpg",
-                sizeValue: "7 mm",
-                colorValue: "Cream",
-                notes: "Some contamination observed.",
-            },
-        ]}
-        />
-    },
-  ];
+            ]}
+            />
+        },
+        {
+        label: "In Vitro",
+        icon: faFlask,
+        content: <InVitroTab
+            dateTime="Last Updated: November 01, 2025 • 10:00 AM"
+            growthMedium="Potato Dextrose Agar (PDA)"
+            incubationTemperature="25°C"
+            inVitroEntries={[
+                {
+                    date: "November 01, 2025 • 10:00 AM",
+                    imagePath: "/images/sample1.jpg",
+                    sizeValue: "5 mm",
+                    colorValue: "White",
+                    notes: "Colony growing steadily.",
+                },
+                {
+                    date: "November 01, 2025 • 10:00 AM",
+                    imagePath: "/images/sample2.jpg",
+                    sizeValue: "7 mm",
+                    colorValue: "Cream",
+                    notes: "Some contamination observed.",
+                },
+            ]}
+            />
+        },
+        {
+        label: "In Vivo",
+        icon: faSeedling,
+        content: <InVivoTab
+            dateTime="Last Updated: November 01, 2025 • 10:00 AM"
+            growthMedium="Potato Dextrose Agar (PDA)"
+            incubationTemperature="25°C"
+            inVivoEntries={[
+                {
+                    date: "November 01, 2025 • 10:00 AM",
+                    imagePath: "/images/sample1.jpg",
+                    sizeValue: "5 mm",
+                    colorValue: "White",
+                    notes: "Colony growing steadily.",
+                },
+                {
+                    date: "November 01, 2025 • 10:00 AM",
+                    imagePath: "/images/sample2.jpg",
+                    sizeValue: "7 mm",
+                    colorValue: "Cream",
+                    notes: "Some contamination observed.",
+                },
+            ]}
+            />
+        },
+    ];
+    
     return (
         
         <div className="flex flex-col min-h-screen xl:py-2 py-10">
@@ -120,6 +133,7 @@ export default function Investigation() {
                         id="action"
                         className="bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold p-4 rounded-lg cursor-pointer focus:outline-none w-full"
                         defaultValue=""
+                        onChange={(e) => e.target.value === "assign" && setModalOpen(true)}
                     >
                         <option value="" className="bg-[var(--taupe)]" disabled>
                         Choose Action
@@ -127,7 +141,7 @@ export default function Investigation() {
                         <option value="assign" className="bg-[var(--taupe)]">Assign Case</option>
                         <option value="reject" className="bg-[var(--taupe)]">Reject Case</option>
                     </select>
-                    <div className="w-full min-h-screen p-6 bg-[var(--taupe)] mt-2 rounded-lg flex flex-col justify-start">
+                        <div className="w-full min-h-screen p-6 bg-[var(--taupe)] mt-2 rounded-lg flex flex-col justify-start">
                         <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] items-start font-extrabold">Farmer Information</p>
                         <div className="mt-4 flex flex-col items-center">
                             <div className="w-50 h-50 rounded-full overflow-hidden shadow-sm">
@@ -211,6 +225,12 @@ export default function Investigation() {
                      <TabBar tabs={tabs} initialIndex={0} />
                 </main>
             </div>
+             <AssignCaseModal
+                            isOpen={isModalOpen}
+                            onClose={() => setModalOpen(false)}
+                            mycologists={mycologists}
+                            onAssign={handleAssign}
+                        />
         </div>
     );
 }
