@@ -7,7 +7,7 @@
   --accent-color: #E7B343;
   --taupe: #F4EEDE;
   --moldify-red: #E44C37;
-  --moldify-blue: #4986EB;
+  --moldify-blue: #114EB0;
   --moldify-black: #22272B;
   --moldify-grey: #7E8083;
   --moldify-softGrey: #D9D9D9;
@@ -15,6 +15,11 @@
   /* HOVER COLOR */
   --hover-primary: #416600;
   --hover-accent: #D99E2B;
+
+  /* PRIORITY LEVEL COLORS */
+  --moldify-light-green: #B4D37F;
+  --moldify-light-yellow: #F9CC69;
+  --moldify-light-red: #FFA397;
 }
 body {
   background: var(--background-color);

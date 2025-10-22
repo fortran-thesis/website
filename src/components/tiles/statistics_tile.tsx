@@ -1,29 +1,24 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCircleInfo } from '@fortawesome/free-solid-svg-icons';
 
-export default function StatisticsTile({ title, statNum }: { title: string, statNum: number }) {
+export default function StatisticsTile({ icon, iconColor, title, statNum }: { icon: any; iconColor: string; title: string, statNum: number }) {
     return (
-        <div className = "bg-[var(--taupe)] rounded-lg p-5 shadow-md w-full max-w-sm">
-            <div className="flex flex-row justify-between items-center relative group">
-                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] text-sm mb-2">
-                    {title}
-                </p>
-                <div className="relative flex items-center">
+        <div className = "bg-[var(--taupe)] rounded-xl p-5 w-full">
+            <div className="flex flex-row items-center gap-4">
+                <div className = "bg-[var(--background-color)] p-5 rounded-xl">
                     <FontAwesomeIcon
-                        icon={faCircleInfo}
-                        className="text-[var(--moldify-grey)] cursor-pointer"
-                        style={{ width: '16px', height: '16px' }}
+                        icon={icon}
+                        style={{ width: "1.5rem", height: "1.5rem", color: iconColor }}
                     />
-                    <span className="absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 bg-[var(--moldify-grey)] text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                        More info about {title}
-                    </span>
+                </div>
+                <div className = "flex flex-col items-start">
+                    <h2 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-4xl mb-1">
+                        {statNum}
+                    </h2>
+                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-xs mb-2">{title}</p>
                 </div>
             </div>
-
-            <p className = "font-[family-name:var(--font-montserrat)] text-[var(--moldify-black)] font-black text-3xl">
-                {statNum}
-            </p>
+            
         </div>
     );
 }
