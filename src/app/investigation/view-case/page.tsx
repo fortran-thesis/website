@@ -12,6 +12,7 @@ import InVitroTab from '../investigation-tabs/in_vitro';
 import InVivoTab from '../investigation-tabs/in_vivo';
 import { useState } from 'react';
 import AssignCaseModal from '@/components/modals/assign_case_modal';
+import ConfirmModal from '@/components/modals/confirmation_modal';
 
 const mycologists: { name: string; status: "available" | "at-capacity"; cases: number }[] = [
   { name: "Dr. Lisa Wong", status: "available", cases: 4 },
@@ -20,10 +21,12 @@ const mycologists: { name: string; status: "available" | "at-capacity"; cases: n
 ];
 
 export default function Investigation() {
-    const [isModalOpen, setModalOpen] = useState(false);
+    const [isAssignModalOpen, setAssignModalOpen] = useState(false);
+    const [isRejectModalOpen, setRejectModalOpen] = useState(false);
+
     const handleAssign = (mycologist: any, priority: string, endDate: Date | null) => {
     console.log("Assigned to:", mycologist, priority, endDate);
-    setModalOpen(false);
+    setAssignModalOpen(false);
     };
     const userRole = "Administrator";
     const imageUrl = "/profile-placeholder.png";
@@ -133,7 +136,10 @@ export default function Investigation() {
                         id="action"
                         className="bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold p-4 rounded-lg cursor-pointer focus:outline-none w-full"
                         defaultValue=""
-                        onChange={(e) => e.target.value === "assign" && setModalOpen(true)}
+                       onChange={(e) => {
+                            if (e.target.value === "assign") setAssignModalOpen(true);
+                            if (e.target.value === "reject") setRejectModalOpen(true);
+                        }}
                     >
                         <option value="" className="bg-[var(--taupe)]" disabled>
                         Choose Action
@@ -225,12 +231,29 @@ export default function Investigation() {
                      <TabBar tabs={tabs} initialIndex={0} />
                 </main>
             </div>
+
+            {/* This is the assign case Modal
+            It will show if user selects the assign case option in the select input. */}
              <AssignCaseModal
-                            isOpen={isModalOpen}
-                            onClose={() => setModalOpen(false)}
-                            mycologists={mycologists}
-                            onAssign={handleAssign}
-                        />
+                isOpen={isAssignModalOpen}
+                onClose={() => setAssignModalOpen(false)}
+                mycologists={mycologists}
+                onAssign={handleAssign}
+            />
+            {/* This is the confirmation Modal
+            It will show if user selects the reject case option in the select input. */}
+            <ConfirmModal
+                isOpen={isRejectModalOpen}
+                title="Are you sure you want to reject this case?"
+                subtitle="This action is permanent and cannot be undone."
+                cancelText="Cancel"
+                confirmText="Yes"
+                onCancel={() => setRejectModalOpen(false)}
+                onConfirm={() => {
+                    console.log("Case rejected!");
+                    setRejectModalOpen(false);
+                }}
+            />
         </div>
     );
 }

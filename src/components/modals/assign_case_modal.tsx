@@ -153,7 +153,7 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists, onAssign
                 key={level}
                 type="button"
                 className={`flex-1 px-4 py-2 rounded-lg font-semibold cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--moldify-black)] ${
-                  priority === level ? priorityColor[level as keyof typeof priorityColor] : "bg-transparent border-2 border-[var(--moldify-grey)]"
+                  priority === level ? priorityColor[level as keyof typeof priorityColor] : "bg-transparent border-2 border-[var(--moldify-softGrey)]"
                 }`}
                 onClick={() => setPriority(level as any)}
               >
