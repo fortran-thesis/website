@@ -92,7 +92,7 @@ export default function Investigation() {
    const userRole = "Administrator";
 
     return (
-        <main className="relative flex flex-col xl:py-2 py-10 w-full overflow-x-auto">
+        <main className="relative flex flex-col xl:py-2 py-10 w-full">
 
             {/* Header Section */}
             <div className="flex flex-row justify-between">

@@ -157,7 +157,7 @@ export default function Investigation() {
       <BackButton />
 
       <div className="flex flex-col lg:flex-row flex-1 mt-2 gap-6">
-        {/* Sidebar */}
+
         <aside className="lg:sticky lg:top-10 lg:self-start w-full lg:w-1/3 bg-transparent rounded-xl overflow-y-auto">
           {userRole !== "Mycologist" && !assignedMycologist && (
             <select
@@ -215,9 +215,12 @@ export default function Investigation() {
               <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer">
                 <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4 text-[var(--accent-color)]" /> Export PDF
               </button>
-              <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer">
+                <button
+                className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer"
+                onClick={() => (window.location.href = "/investigation/identification-history")}
+                >
                 <FontAwesomeIcon icon={faClockRotateLeft} className="w-4 h-4 text-[var(--accent-color)]" /> View Identification History
-              </button>
+                </button>
               <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer">
                 <FontAwesomeIcon icon={faSprayCan} className="w-4 h-4 text-[var(--accent-color)]" /> View Treatment History
               </button>
