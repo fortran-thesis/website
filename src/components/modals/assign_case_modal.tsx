@@ -6,7 +6,6 @@ import { faArrowTrendUp, faCalendar } from "@fortawesome/free-solid-svg-icons";
 
 
 {/* IMAGES */}
-
 const MoldifyLogov2 = '/assets/moldify-logo-v3.svg';
 
 interface Mycologist {

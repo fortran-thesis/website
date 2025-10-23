@@ -61,7 +61,7 @@ export default function Investigation() {
 
   type UserRole = "Administrator" | "Mycologist";
 
-  const [userRole, setUserRole] = useState<UserRole>("Mycologist");
+  const [userRole, setUserRole] = useState<UserRole>("Administrator");
   const imageUrl = "/profile-placeholder.png";
   const name = "Lauren Bishmilla";
   const email = "laurenbishmilla@gmail.com";
