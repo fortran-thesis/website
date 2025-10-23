@@ -4,7 +4,7 @@ import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
 import { useAccountRecovery1 } from './accountRecoveryUtils1';
 
-const EmailImage = '/assets/ForgotPassword_Email_Image.svg';
+const EmailImage = '/assets/email-recover-image.svg';
 
 {/* This is the step 1 when user forgets password
     It asks the user to enter associated email address */}
@@ -31,11 +31,11 @@ export default function AccountRecovery() {
 
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
-            <main className="font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl  gap-x-10 bg-[var(--background-color)]">
-                <div className="w-full xl:w-1/2 p-5 flex flex-col">
+            <main className="p-5 font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl  gap-x-10 bg-[var(--background-color)]">
+                <div className="w-full xl:w-1/2 flex flex-col">
 
                     {/* FORGOT PASSWORD HEADER - STEP 1*/}
-                    <p className="text-[var(--accent-color)] font-bold text-xs mb-10">{headerLabel}</p>
+                    <p className="text-[var(--primary-color)] font-bold text-xs mb-10">{headerLabel}</p>
                     <StepIndicator currentStep={1} length={stepLength} />
                     <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-3">MAIL ADDRESS
                         <span className="inline xl:block"> HERE </span>
@@ -44,9 +44,10 @@ export default function AccountRecovery() {
 
                     {/* FORGOT PASSWORD FORM - STEP 1 */}
                     <form className="flex flex-col" method = "POST">
-                        <label className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Email</label>
+                        <label htmlFor="email" className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Email</label>
                         {/* Email Textbox */}
                         <input
+                        id = "email"
                         type="email"
                         placeholder="Enter email"
                         className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"

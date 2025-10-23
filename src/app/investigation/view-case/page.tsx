@@ -8,11 +8,12 @@ import TabBar from "@/components/tab_bar";
 import StatusBox from "@/components/tiles/status_tile";
 import AssignCaseModal from "@/components/modals/assign_case_modal";
 import ConfirmModal from "@/components/modals/confirmation_modal";
-import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan } from "@fortawesome/free-solid-svg-icons";
+import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import CaseDetailsTab from "../investigation-tabs/case_details";
 import InVitroTab from "../investigation-tabs/in_vitro";
 import InVivoTab from "../investigation-tabs/in_vivo";
+import AddTreatmentModal from "@/components/modals/add_treatment_modal";
 
 type Mycologist = {
   name: string;
@@ -30,6 +31,7 @@ export default function Investigation() {
   const [isAssignModalOpen, setAssignModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isConfirmAssignOpen, setConfirmAssignOpen] = useState(false);
+  const [isAddTreatmentOpen, setAddTreatmentOpen] = useState(false);
   const [assignedMycologist, setAssignedMycologist] = useState<string | null>(null);
   const [isRejected, setIsRejected] = useState(false);
 
@@ -57,8 +59,9 @@ export default function Investigation() {
     setRejectModalOpen(false);
   };
 
-  // User info
-  const userRole = "Administrator";
+  type UserRole = "Administrator" | "Mycologist";
+
+  const [userRole, setUserRole] = useState<UserRole>("Mycologist");
   const imageUrl = "/profile-placeholder.png";
   const name = "Lauren Bishmilla";
   const email = "laurenbishmilla@gmail.com";
@@ -72,8 +75,16 @@ export default function Investigation() {
       content: (
         <CaseDetailsTab
           entries={[
-            { date: "October 2, 2025 • 09:14 PM", notes: "Observed white spots on leaves.", images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg"] },
-            { date: "October 2, 2025 • 09:14 PM", notes: "Observed white spots on leaves.", images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg", "/assets/moldify-logo-v3.svg"] },
+            { 
+              date: "October 2, 2025 • 09:14 PM", 
+              notes: "Observed white spots on leaves.", 
+              images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg"] 
+            },
+            { 
+              date: "October 2, 2025 • 09:14 PM", 
+              notes: "Observed white spots on leaves.", 
+              images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg", "/assets/moldify-logo-v3.svg"] 
+            },
           ]}
         />
       ),
@@ -87,8 +98,20 @@ export default function Investigation() {
           growthMedium="Potato Dextrose Agar (PDA)"
           incubationTemperature="25°C"
           inVitroEntries={[
-            { date: "November 01, 2025 • 10:00 AM", imagePath: "/images/sample1.jpg", sizeValue: "5 mm", colorValue: "White", notes: "Colony growing steadily." },
-            { date: "November 01, 2025 • 10:00 AM", imagePath: "/images/sample2.jpg", sizeValue: "7 mm", colorValue: "Cream", notes: "Some contamination observed." },
+            { 
+              date: "November 01, 2025 • 10:00 AM", 
+              imagePath: "/images/sample1.jpg", 
+              sizeValue: "5 mm", 
+              colorValue: "White", 
+              notes: "Colony growing steadily." 
+            },
+            { 
+              date: "November 01, 2025 • 10:00 AM", 
+              imagePath: "/images/sample2.jpg", 
+              sizeValue: "7 mm", 
+              colorValue: "Cream", 
+              notes: "Some contamination observed." 
+            },
           ]}
         />
       ),
@@ -102,8 +125,20 @@ export default function Investigation() {
           growthMedium="Potato Dextrose Agar (PDA)"
           incubationTemperature="25°C"
           inVivoEntries={[
-            { date: "November 01, 2025 • 10:00 AM", imagePath: "/images/sample1.jpg", sizeValue: "5 mm", colorValue: "White", notes: "Colony growing steadily." },
-            { date: "November 01, 2025 • 10:00 AM", imagePath: "/images/sample2.jpg", sizeValue: "7 mm", colorValue: "Cream", notes: "Some contamination observed." },
+            { 
+              date: "November 01, 2025 • 10:00 AM", 
+              imagePath: "/images/sample1.jpg", 
+              sizeValue: "5 mm", 
+              colorValue: "White", 
+              notes: "Colony growing steadily." 
+            },
+            { 
+              date: "November 01, 2025 • 10:00 AM", 
+              imagePath: "/images/sample2.jpg", 
+              sizeValue: "7 mm", 
+              colorValue: "Cream", 
+              notes: "Some contamination observed." 
+            },
           ]}
         />
       ),
@@ -125,7 +160,7 @@ export default function Investigation() {
       <div className="flex flex-col lg:flex-row flex-1 mt-2 gap-6">
         {/* Sidebar */}
         <aside className="lg:sticky lg:top-10 lg:self-start w-full lg:w-1/3 bg-transparent rounded-xl overflow-y-auto">
-          {!assignedMycologist && (
+          {userRole !== "Mycologist" && !assignedMycologist && (
             <select
               id="action"
               className={`bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold p-4 rounded-lg cursor-pointer focus:outline-none w-full
@@ -167,9 +202,17 @@ export default function Investigation() {
                 <p className="text-sm font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{phone}</p>
               </div>
             </div>
-            <hr className="my-10 border-t border-[var(--moldify-grey)]" />
+            <hr className="my-8 border-t border-[var(--moldify-grey)]" />
 
             <div className="flex flex-col gap-2">
+             {userRole !== "Administrator" && (
+                <button 
+                  className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer"
+                  onClick={() => setAddTreatmentOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faPlus} className="w-4 h-4 text-[var(--accent-color)]" /> Add Treatment
+                </button>
+              )}
               <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer">
                 <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4 text-[var(--accent-color)]" /> Export PDF
               </button>
@@ -238,6 +281,10 @@ export default function Investigation() {
         confirmText="Yes, Assign"
         onCancel={() => setConfirmAssignOpen(false)}
         onConfirm={handleConfirmAssign}
+      />
+      <AddTreatmentModal
+        isOpen={isAddTreatmentOpen}
+        onClose={() => setAddTreatmentOpen(false)}
       />
     </div>
   );
