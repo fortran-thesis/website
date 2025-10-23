@@ -51,7 +51,7 @@ export default function InVitroTab({
       {/* Growth & Incubation */}
       <div className="flex flex-wrap justify-between gap-4 mt-3">
         <div>
-          <p className="text-xs font-bold text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
+          <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
             Growth Medium
           </p>
           <p className="text-base font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
@@ -59,7 +59,7 @@ export default function InVitroTab({
           </p>
         </div>
         <div>
-          <p className="text-xs font-bold text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
+          <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
             Incubation Temperature
           </p>
           <p className="text-base font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">

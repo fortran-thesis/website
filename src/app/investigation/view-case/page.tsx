@@ -122,8 +122,7 @@ export default function Investigation() {
       content: (
         <InVivoTab
           dateTime="Last Updated: November 01, 2025 • 10:00 AM"
-          growthMedium="Potato Dextrose Agar (PDA)"
-          incubationTemperature="25°C"
+          environmentalTemperature="30°C"
           inVivoEntries={[
             { 
               date: "November 01, 2025 • 10:00 AM", 

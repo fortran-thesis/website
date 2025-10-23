@@ -14,15 +14,13 @@ interface InVivoEntry {
 
 interface InVivoTabProps {
   dateTime: string;
-  growthMedium: string;
-  incubationTemperature: string;
+  environmentalTemperature: string;
   inVivoEntries: InVivoEntry[];
 }
 
 export default function InVivoTab({
   dateTime,
-  growthMedium,
-  incubationTemperature,
+  environmentalTemperature,
   inVivoEntries,
 }: InVivoTabProps) {
 
@@ -41,7 +39,7 @@ export default function InVivoTab({
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-          In Vitro
+          In Vivo
         </h2>
         <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
           {dateTime}
@@ -49,23 +47,13 @@ export default function InVivoTab({
       </div>
 
       {/* Growth & Incubation */}
-      <div className="flex flex-wrap justify-between gap-4 mt-3">
-        <div>
-          <p className="text-xs font-bold text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-            Growth Medium
+      <div className="flex flex-col justify-between mt-3">
+          <p className="text-sm  text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
+            Environmental Temperature
           </p>
           <p className="text-base font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-            {growthMedium}
+            {environmentalTemperature}
           </p>
-        </div>
-        <div>
-          <p className="text-xs font-bold text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-            Incubation Temperature
-          </p>
-          <p className="text-base font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-            {incubationTemperature}
-          </p>
-        </div>
       </div>
 
       {/* Empty State */}
