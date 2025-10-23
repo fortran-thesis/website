@@ -181,6 +181,7 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists, onAssign
                 [&::-webkit-calendar-picker-indicator]:right-3 
                 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 name="endDate"
+                required
             />
             <FontAwesomeIcon
                 icon={faCalendar}
