@@ -58,7 +58,7 @@ export default function Investigation() {
     {
       caseName: "Tomato Mold",
       cropName: "Kamatis Tagalog",
-      submittedBy: "Faith Gabrielle Gamboa Faith Gabrielle Gamboa Faith Gabrielle Gamboa Faith Gabrielle Gamboa",
+      submittedBy: "Faith Gabrielle Gamboa",
       location: "Ilocos Region",
       priority: "High Priority",
       status: "Resolved",
@@ -92,7 +92,7 @@ export default function Investigation() {
    const userRole = "Administrator";
 
     return (
-        <main className="relative flex flex-col xl:py-2 py-10 w-full">
+        <main className="relative flex flex-col xl:py-2 py-10 px-5 w-full">
 
             {/* Header Section */}
             <div className="flex flex-row justify-between">
@@ -173,14 +173,17 @@ export default function Investigation() {
 
 
             {/* Submitted Cases Table */}
-            <div className="mt-6 w-full">
-              <CaseTable
-                  cases={cases}
-                  onEdit={(c) => {
-                      window.location.href = '/investigation/view-case';
-                  }}
-              />
-          </div>
+            <div className="mt-6 w-full overflow-x-auto">
+                <div className="min-w-[900px]">
+                    <CaseTable
+                        cases={cases}
+                        onEdit={(c) => {
+                            
+                            window.location.href = '/investigation/view-case';
+                        }}
+                    />
+                </div>
+            </div>  
             
         </main>
     );
