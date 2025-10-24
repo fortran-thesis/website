@@ -17,7 +17,7 @@ export default function IdentificationHistoryTable({
   return (
     <div className="mt-4 rounded-xl border border-[var(--primary-color)] w-full bg-[var(--background-color)] shadow">
       {/* Scrollable container with fixed height */}
-      <div className="h-[480px] overflow-y-auto rounded-xl">
+      <div className="h-[600px] overflow-y-auto rounded-xl">
         <table className="min-w-[800px] w-full text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)]">
           <thead className="bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center sticky top-0 z-10">
             <tr>

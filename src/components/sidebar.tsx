@@ -72,7 +72,7 @@ export default function Sidebar() {
                     <div className = "flex flex-col gap-y-4">
                         <SidebarLink icon={faHouseChimney} 
                             text="Dashboard" 
-                            href="/home" />
+                            href="/dashboard" />
                         <SidebarLink icon={faUsers} 
                             text="User Management" 
                             href="/content" />

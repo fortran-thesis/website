@@ -10,82 +10,38 @@ export default function Investigation() {
     {
       caseName: "Tomato Mold",
       cropName: "Kamatis Tagalog",
-      submittedBy: "Faith Gabrielle Gamboa",
       location: "Ilocos Region",
+      submittedBy: "Faith Gabrielle Gamboa",
+      dateSubmitted: "2023-09-01",
       priority: "Low Priority",
       status: "In Progress",
     },
     {
       caseName: "Tomato Mold",
       cropName: "Kamatis Tagalog",
-      submittedBy: "Faith Gabrielle Gamboa",
       location: "Ilocos Region",
-      priority: "High Priority",
-      status: "Resolved",
-    },
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
       submittedBy: "Faith Gabrielle Gamboa",
-      location: "Ilocos Region",
-      priority: "Medium Priority",
-      status: "Closed",
-    },
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
-      submittedBy: "Faith Gabrielle Gamboa",
-      location: "Ilocos Region",
-      priority: "------",
-      status: "Pending",
-    },
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
-      submittedBy: "Faith Gabrielle Gamboa",
-      location: "Ilocos Region",
-      priority: "------",
-      status: "Rejected",
-    },
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
-      submittedBy: "Faith Gabrielle Gamboa",
-      location: "Ilocos Region",
+      dateSubmitted: "2023-09-01",
       priority: "Low Priority",
       status: "In Progress",
     },
     {
       caseName: "Tomato Mold",
       cropName: "Kamatis Tagalog",
-      submittedBy: "Faith Gabrielle Gamboa Faith Gabrielle Gamboa Faith Gabrielle Gamboa Faith Gabrielle Gamboa",
       location: "Ilocos Region",
-      priority: "High Priority",
-      status: "Resolved",
+      submittedBy: "Faith Gabrielle Gamboa",
+      dateSubmitted: "2023-09-01",
+      priority: "Low Priority",
+      status: "In Progress",
     },
     {
       caseName: "Tomato Mold",
       cropName: "Kamatis Tagalog",
-      submittedBy: "Faith Gabrielle Gamboa",
       location: "Ilocos Region",
-      priority: "Medium Priority",
-      status: "Closed",
-    },
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
       submittedBy: "Faith Gabrielle Gamboa",
-      location: "Ilocos Region",
-      priority: "------",
-      status: "Pending",
-    },
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
-      submittedBy: "Faith Gabrielle Gamboa",
-      location: "Ilocos Region",
-      priority: "------",
-      status: "Rejected",
+      dateSubmitted: "2023-09-01",
+      priority: "Low Priority",
+      status: "In Progress",
     },
   ];
 
@@ -117,7 +73,7 @@ export default function Investigation() {
             {/* Submitted Cases Section */}
             <div className="flex flex-col md:flex-row md:items-center mt-10 gap-4 w-full">
                 {/* Left Label */}
-                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold text-sm">
+                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold">
                     Submitted Cases
                 </p>
 

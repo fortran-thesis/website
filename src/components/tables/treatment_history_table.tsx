@@ -17,7 +17,7 @@ export default function TreatmentHistoryTable({
 }: TreatmentHistoryTableProps) {
   return (
     <div className="mt-4 rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow overflow-hidden">
-      <div className="h-[480px] overflow-y-auto overflow-x-auto">
+      <div className="h-[600px] overflow-y-auto overflow-x-auto">
         <table className="w-[1183px] text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] border-collapse">
           <thead className="bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center sticky top-0 z-10">
             <tr>

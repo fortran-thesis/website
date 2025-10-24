@@ -161,6 +161,7 @@ export default function Investigation() {
         <aside className="lg:sticky lg:top-10 lg:self-start w-full lg:w-1/3 bg-transparent rounded-xl overflow-y-auto">
           {userRole !== "Mycologist" && !assignedMycologist && (
             <select
+              aria-label="action-options"
               id="action"
               className={`bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold p-4 rounded-lg cursor-pointer focus:outline-none w-full
               ${isRejected ? "opacity-50 cursor-not-allowed" : ""}`}

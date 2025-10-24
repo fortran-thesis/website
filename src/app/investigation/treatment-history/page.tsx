@@ -64,7 +64,7 @@ export default function Home() {
 
             <div className="flex flex-col md:flex-row md:items-center mt-7 gap-4 w-full">
                 {/* Left Label */}
-                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold text-sm">
+                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold">
                     Treatment  History
                 </p>
 

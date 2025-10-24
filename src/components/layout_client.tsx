@@ -5,7 +5,7 @@ import Footer from "@/components/footer";
 
 export default function LayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideLayout = pathname.startsWith("/auth");
+  const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support");
 
   return hideLayout ? (
     <main>{children}</main>
