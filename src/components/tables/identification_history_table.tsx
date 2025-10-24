@@ -33,7 +33,7 @@ export default function IdentificationHistoryTable({
         </div>
 
         {/* Scrollable body */}
-        <div className="max-h-[480px] overflow-y-auto">
+        <div className="h-[480px] overflow-y-auto">
           <table className="min-w-full text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)]">
             <colgroup>
               <col className="w-[33%]" />

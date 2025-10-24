@@ -20,7 +20,7 @@ interface CaseTableProps {
 
 export default function CaseTable({ cases, onEdit }: CaseTableProps) {
   return (
-    <div className="min-w-full overflow-x-auto">
+    <div className="min-w-full overflow-x-auto mt-4 rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
         {/* Wrapper for both header and body */}
         <div className="inline-block w-full align-middle">
           {/* Header */}

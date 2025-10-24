@@ -221,7 +221,9 @@ export default function Investigation() {
                 >
                 <FontAwesomeIcon icon={faClockRotateLeft} className="w-4 h-4 text-[var(--accent-color)]" /> View Identification History
                 </button>
-              <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer">
+              <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer"
+              onClick={() => (window.location.href = "/investigation/treatment-history")}
+              >
                 <FontAwesomeIcon icon={faSprayCan} className="w-4 h-4 text-[var(--accent-color)]" /> View Treatment History
               </button>
             </div>
