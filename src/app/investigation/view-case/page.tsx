@@ -251,7 +251,7 @@ export default function Investigation() {
               <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">Ilocos Region</h2>
             </div>
             <div className="flex flex-col">
-              <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Date Planted:</p>
+              <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Date First Observed:</p>
               <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">October 25, 2025</h2>
             </div>
           </div>

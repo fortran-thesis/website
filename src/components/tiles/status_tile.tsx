@@ -13,11 +13,11 @@ export default function StatusBox({ status, fontSize = "0.75rem" }: StatusBoxPro
         return "var(--accent-color)";
       case "in progress":
         return "var(--moldify-blue)";
-      case "resolved":
+      case "resolved": case "active":
         return "var(--primary-color)";
       case "closed":
         return "var(--moldify-grey)";
-      case "rejected":
+      case "rejected": case "inactive": case "unresolved":
         return "var(--moldify-red)";
       case "low priority":
         return "var(--moldify-light-green)";

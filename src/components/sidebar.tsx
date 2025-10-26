@@ -75,7 +75,7 @@ export default function Sidebar() {
                             href="/dashboard" />
                         <SidebarLink icon={faUsers} 
                             text="User Management" 
-                            href="/content" />
+                            href="/user" />
                         <SidebarLink icon={faClipboard} 
                             text="Investigation Oversight" 
                             href="/investigation" />
