@@ -2,9 +2,9 @@
 import { useState} from 'react';
 import { useRouter } from 'next/navigation';
 
-// This is a custom hook for managing the forgot password step 2 state
+// This is a custom hook for managing the account recovery step 2 state
 
-export function useForgotPasswordUtils2(){
+export function useAccountRecoveryUtils2(){
 
     const [codeSegments, setCodeSegments] = useState(["", "", "", ""]);
     const router = useRouter();
@@ -52,7 +52,17 @@ export function useForgotPasswordUtils2(){
       const handleVerify = (e: React.FormEvent) => {
         e.preventDefault();
         if (fullCode.length === 4) {
-          router.push("/auth/forgot-password-3");
+          // Check recovery type from sessionStorage
+            const recoveryType = typeof window !== "undefined" ? sessionStorage.getItem("recoveryType") : null;
+            if (recoveryType === "forgot-username") {
+                // This is the last step for forgot username
+                alert("Username recovery complete! Please check your email.");
+                // Optionally, redirect to login or home
+                router.push("/auth/log-in");
+            } else {
+                // Continue to next step for forgot password
+                router.push("/auth/account-recovery-3");
+            }
         } else {
           alert("Please enter a valid 4-digit code.");
         }

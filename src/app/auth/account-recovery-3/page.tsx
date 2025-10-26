@@ -3,14 +3,14 @@ import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
-import { useForgotPasswordUtils3 } from './forgotPasswordUtils3';
+import { useAccountRecoveryUtils3 } from './accountRecoveryUtils3';
 
-const PasswordImage = '/assets/ForgotPassword_Password_Image.svg';
+const PasswordImage = '/assets/password-recover-image.svg';
 
 {/* This is the step 3 when user forgets password
     It asks the user to enter their new password and confirm password to reset their password */}
 
-export default function ForgotPassword3() {
+export default function AccountRecovery3() {
     const {
         showPassword,
         setShowPassword,
@@ -22,24 +22,25 @@ export default function ForgotPassword3() {
         setConfirmPassword,
         handleCancel,
         handleChangePassword
-    } = useForgotPasswordUtils3();
+    } = useAccountRecoveryUtils3();
 
     return (
         <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
-            <main className="font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">
-                <div className="w-full xl:w-1/2 p-5 flex flex-col">
+            <main className="p-5 font-[family-name:var(--font-bricolage-grotesque)] flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">
+                <div className="w-full xl:w-1/2 flex flex-col">
                     {/* FORGOT PASSWORD HEADER - STEP 3 */}
-                    <p className="text-[var(--accent-color)] font-bold text-xs mb-10">Forgot Password</p>
+                    <p className="text-[var(--primary-color)] font-bold text-xs mb-10">Forgot Password</p>
                     <StepIndicator currentStep={3} length={3} />
                     <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-3">
                         SET NEW <span className = "inline-block xl:block"> PASSWORD </span> 
                     </h1>
                     <p className="text-[var(--moldify-black)] font-regular text-sm mb-10">Please enter new password to update your account</p>
                     <form className="flex flex-col" method="POST">
-                        <label className = "font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-5 mb-1">Password</label>
+                        <label htmlFor="password" className = "font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-5 mb-1">Password</label>
                         {/* Password Textbox */}
                         <div className="relative flex items-center overflow-clip">
                             <input
+                                id = "password"
                                 type={showPassword ? "text" : "password"}
                                 placeholder="Enter password"
                                 className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none mb-1 w-full pr-10"
@@ -60,11 +61,12 @@ export default function ForgotPassword3() {
                             </button>
                         </div>
 
-                        <label className = "font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-5 mb-1">Confirm Password</label>
+                        <label htmlFor="confirm-password" className = "font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-5 mb-1">Confirm Password</label>
                         
                         {/* Confirm Password Textbox */}
                         <div className="relative flex items-center overflow-clip">
                             <input
+                                id = "confirm-password"
                                 type={showConfirmPassword ? "text" : "password"}
                                 placeholder="Enter confirm password"
                                 className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none mb-1 w-full pr-10"

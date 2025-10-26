@@ -2,7 +2,7 @@
 import { useState} from 'react';
 import { useRouter } from 'next/navigation';
 
-export function useForgotPasswordUtils1(){
+export function useAccountRecovery1(){
     const [email, setEmail] = useState("");
     const router = useRouter();
 
@@ -28,7 +28,7 @@ export function useForgotPasswordUtils1(){
             alert("Please enter your email address.");
             return;
         } else {
-            router.push("/auth/forgot-password-2");
+            router.push("/auth/account-recovery-2");
         }
     }
 

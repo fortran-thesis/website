@@ -1,12 +1,11 @@
 "use client";
 import { usePathname } from "next/navigation";
-import SideBar from "@/components/sidebar";
-import Footer from "@/components/footer";
 import Sidebar from "@/components/sidebar";
+import Footer from "@/components/footer";
 
 export default function LayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideLayout = pathname.startsWith("/auth");
+  const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support");
 
   return hideLayout ? (
     <main>{children}</main>
@@ -17,8 +16,8 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
             <Sidebar />
 
             {/* Main content */}
-            <div className="flex flex-col flex-grow ml-0">
-                <main className="flex-grow px-4 sm:px-6 py-4">{children}</main>
+            <div className="flex flex-col flex-grow min-w-0">
+                <main className="flex-grow px-4 sm:px-6 py-4 overflow-x-auto">{children}</main>
                 <Footer />
             </div>
         </div>
