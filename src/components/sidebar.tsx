@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHouseChimney, faClipboard, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { usePathname } from 'next/navigation';
+import { useLogout } from '@/hooks/useLogout';
 
 const MoldifyLogo = '/assets/Moldify_Logo.png';
 
@@ -15,6 +16,7 @@ const MoldifyLogo = '/assets/Moldify_Logo.png';
 export default function Sidebar() {
     const [navOpen, setNavOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const logout = useLogout();
 
     //Detect scroll
     useEffect(() => {
@@ -91,9 +93,17 @@ export default function Sidebar() {
                             text="Settings" 
                             href="/settings" />
                         <div className="h-px bg-[#576146] w-full" />
-                        <SidebarLink icon={faRightFromBracket} 
-                            text="Log Out" 
-                            href="/logout" />
+                        <button
+                            onClick={logout}
+                            className="cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 text-left w-full"
+                        >
+                            <FontAwesomeIcon
+                                icon={faRightFromBracket}
+                                className="mt-1 text-[var(--background-color)]"
+                                style={{ width: "1.5rem", height: "1.5rem" }}
+                            />
+                            <span className="mt-1 text-sm">Log Out</span>
+                        </button>
                     </div>
                 </div>
             </nav>

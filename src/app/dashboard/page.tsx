@@ -7,6 +7,7 @@ import Breadcrumbs from '@/components/breadcrumbs_nav';
 import MonthlyCasesChart from '@/components/charts/monthly-chart';
 import PriorityBreakdown from '@/components/tiles/priority_breakdown_tile';
 import CaseTable from '@/components/tables/case_table';
+import AuthDebug from '@/components/auth-debug';
 
 const userRole = "Administrator";
 
@@ -83,6 +84,9 @@ export default function Home() {
 
     return (
         <main className="relative flex flex-col xl:py-2 py-10">
+            {/* Debug Component - Remove this in production */}
+            <AuthDebug />
+            
             {/* Header Section */}
             <div className="flex flex-row justify-between">
                 <div className="flex flex-col w-full">

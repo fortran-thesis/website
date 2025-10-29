@@ -2,8 +2,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { setUserData } from '@/utils/auth';
 
 {/* IMAGES */}
 const GoogleIcon = '/assets/Google_Icon.svg';
@@ -14,14 +16,70 @@ const MoldifyLogov2 = '/assets/moldify-logo-v3.svg';
   It allows platform managers and mold curators to log in to their accounts */}
 
 export default function Auth() {
-const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+  });
 
-// Handler to set which recovery type was clicked
-const handleRecoveryClick = (type: "forgot-username" | "forgot-password") => {
-  if (typeof window !== "undefined") {
-    sessionStorage.setItem("recoveryType", type);
-  }
-};
+  // Handler to set which recovery type was clicked
+  const handleRecoveryClick = (type: "forgot-username" | "forgot-password") => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("recoveryType", type);
+    }
+  };
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+    // Clear error when user starts typing
+    if (error) setError(null);
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Call our same-origin proxy which will forward to the auth backend
+      const proxyRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: formData.username, password: formData.password }),
+        credentials: 'include',
+      });
+
+      const data = await proxyRes.json().catch(() => ({}));
+      console.log('🔍 Login proxy response:', proxyRes.status, data);
+
+      if (proxyRes.ok && (data.success || proxyRes.status === 200)) {
+        // Proxy should set a same-origin HttpOnly cookie (session) when login succeeds
+        if (data?.user) setUserData(data.user);
+
+        // Small delay to let browser persist cookie
+        await new Promise(resolve => setTimeout(resolve, 100));
+        window.location.href = '/dashboard';
+      } else {
+        setError(data?.error || data?.message || 'Login failed. Please try again.');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
       <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
@@ -41,8 +99,15 @@ const handleRecoveryClick = (type: "forgot-username" | "forgot-password") => {
             
             <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)]">LOG IN</h1>
 
+            {/* Error Message */}
+            {error && (
+              <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
             {/* LOG IN FORM*/}
-            <form className="mt-8 flex flex-col" method = "POST">
+            <form className="mt-8 flex flex-col" onSubmit={handleSubmit}>
                 <label
                   htmlFor="username" 
                   className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">
@@ -51,9 +116,13 @@ const handleRecoveryClick = (type: "forgot-username" | "forgot-password") => {
                 {/* Username Textbox */}
                 <input
                   id="username"
+                  name="username"
                   type="text"
                   placeholder="Enter username"
-                  className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 mb-1 rounded-lg focus:outline-none"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  disabled={isLoading}
+                  className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 mb-1 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   required
                 />
                 {/*  Forgot Username Button */}
@@ -75,9 +144,13 @@ const handleRecoveryClick = (type: "forgot-username" | "forgot-password") => {
                 <div className="relative flex items-center overflow-clip">
                   <input
                     id="password"
+                    name="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter Password"
-                    className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none mb-1 w-full pr-10"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                    className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none mb-1 w-full pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
                     required
                   />
 
@@ -105,10 +178,11 @@ const handleRecoveryClick = (type: "forgot-username" | "forgot-password") => {
 
                 {/* Log In Button */}
                 <button
-                type="submit"
-                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-20"
+                  type="submit"
+                  disabled={isLoading}
+                  className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                Log In
+                  {isLoading ? 'Logging in...' : 'Log In'}
                 </button>
             </form>
           </div>
