@@ -4,48 +4,61 @@ import { faSearch, faClipboard} from '@fortawesome/free-solid-svg-icons';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
+import {useState, useEffect} from 'react'
 
 export default function Investigation() {
-    const cases = [
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
-      location: "Ilocos Region",
-      submittedBy: "Faith Gabrielle Gamboa",
-      dateSubmitted: "2023-09-01",
-      priority: "Low Priority",
-      status: "In Progress",
-    },
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
-      location: "Ilocos Region",
-      submittedBy: "Faith Gabrielle Gamboa",
-      dateSubmitted: "2023-09-01",
-      priority: "Low Priority",
-      status: "In Progress",
-    },
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
-      location: "Ilocos Region",
-      submittedBy: "Faith Gabrielle Gamboa",
-      dateSubmitted: "2023-09-01",
-      priority: "Low Priority",
-      status: "In Progress",
-    },
-    {
-      caseName: "Tomato Mold",
-      cropName: "Kamatis Tagalog",
-      location: "Ilocos Region",
-      submittedBy: "Faith Gabrielle Gamboa",
-      dateSubmitted: "2023-09-01",
-      priority: "Low Priority",
-      status: "In Progress",
-    },
-  ];
+        const [caseStats, setCaseStats] = useState({ total: 0, pending: 0, in_progress: 0, resolved: 0, closed: 0 });
+        const [cases, setCases] = useState<any[]>([]); // You can update this to fetch actual cases if needed
+        const userRole = "Administrator";
 
-   const userRole = "Administrator";
+    useEffect(() => {
+        const fetchAll = async () => {
+            try {
+                const [statsRes, casesRes] = await Promise.all([
+                    fetch('/api/v1/mold-reports/count/status', { cache: 'no-store' }),
+                    fetch('/api/v1/mold-reports?limit=10', { cache: 'no-store' }),
+                ]);
+
+                if (statsRes.ok) {
+                    const body = await statsRes.json();
+                    if (body.success && body.data) setCaseStats(body.data);
+                }
+
+                if (casesRes.ok) {
+                    const body = await casesRes.json();
+                    const items = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
+                    const mapped = items.map((it: any) => {
+                        // Prefer structured metadata created_at (seconds) -> ISO, fall back to date_observed
+                        let dateSubmittedISO = '';
+                        if (it.metadata?.created_at?._seconds) {
+                            dateSubmittedISO = new Date(it.metadata.created_at._seconds * 1000).toISOString();
+                        } else if (it.date_observed) {
+                            dateSubmittedISO = it.date_observed;
+                        }
+                        const dateSubmitted = dateSubmittedISO
+                            ? new Date(dateSubmittedISO).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: '2-digit' })
+                            : '';
+                        const description = Array.isArray(it.case_details) && it.case_details[0]?.description ? it.case_details[0].description : '';
+                        return {
+                            id: it.id,
+                            caseName: it.case_name || '',
+                            cropName: it.host || '',
+                            location: it.reporter?.address || '',
+                            submittedBy: it.reporter?.name || '',
+                            dateSubmitted,
+                            priority: it.mold_case?.priority.charAt(0).toUpperCase() + it.mold_case?.priority.slice(1) || 'Unassigned',
+                            status: it.status.charAt(0).toUpperCase() + it.status.slice(1) || 'Pending',
+                            description,
+                        };
+                    });
+                    setCases(mapped);
+                }
+            } catch (err) {
+                // ignore for now
+            }
+        };
+        fetchAll();
+    }, []);
 
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
@@ -64,10 +77,10 @@ export default function Investigation() {
             
             {/* Statistics Tiles */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3 mt-6">
-                <StatisticsTile icon={faClipboard} iconColor="var(--moldify-black)" title="Total Cases" statNum={0} />
-                <StatisticsTile icon={faClipboard} iconColor="var(--accent-color)" title="Pending Mold Cases" statNum={0} />
-                <StatisticsTile icon={faClipboard} iconColor="var(--moldify-blue)" title="In Progress Mold Cases" statNum={0} />
-                <StatisticsTile icon={faClipboard} iconColor="var(--primary-color)" title="Resolved Mold Cases" statNum={0} />
+                <StatisticsTile icon={faClipboard} iconColor="var(--moldify-black)" title="Total Cases" statNum={caseStats.total} />
+                <StatisticsTile icon={faClipboard} iconColor="var(--accent-color)" title="Pending Mold Cases" statNum={caseStats.pending} />
+                <StatisticsTile icon={faClipboard} iconColor="var(--moldify-blue)" title="In Progress Mold Cases" statNum={caseStats.in_progress} />
+                <StatisticsTile icon={faClipboard} iconColor="var(--primary-color)" title="Resolved Mold Cases" statNum={caseStats.resolved} />
             </div>
             
             {/* Submitted Cases Section */}
@@ -132,8 +145,8 @@ export default function Investigation() {
             <div className="mt-6 w-full">
               <CaseTable
                   cases={cases}
-                  onEdit={(c) => {
-                      window.location.href = '/investigation/view-case';
+                  onEdit={(c: any) => {
+                      window.location.href = `/investigation/view-case?id=${c.id}`;
                   }}
               />
           </div>

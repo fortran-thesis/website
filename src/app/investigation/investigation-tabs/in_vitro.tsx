@@ -17,6 +17,7 @@ interface InVitroTabProps {
   growthMedium: string;
   incubationTemperature: string;
   inVitroEntries: InVitroEntry[];
+  emptyMessage?: string; // Custom empty state message
 }
 
 export default function InVitroTab({
@@ -24,6 +25,7 @@ export default function InVitroTab({
   growthMedium,
   incubationTemperature,
   inVitroEntries,
+  emptyMessage,
 }: InVitroTabProps) {
  
   const timelineEntries: TimelineEntry[] = inVitroEntries.map(e => ({
@@ -48,37 +50,42 @@ export default function InVitroTab({
         </p>
       </div>
 
-      {/* Growth & Incubation */}
-      <div className="flex flex-wrap justify-between gap-4 mt-3">
-        <div>
-          <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-            Growth Medium
-          </p>
-          <p className="text-base font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-            {growthMedium}
-          </p>
+      {/* Growth & Incubation - Only show if both values exist */}
+      {(growthMedium || incubationTemperature) && (
+        <div className="flex flex-wrap justify-between gap-4 mt-3">
+          {growthMedium && (
+            <div>
+              <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
+                Growth Medium
+              </p>
+              <p className="text-base font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
+                {growthMedium}
+              </p>
+            </div>
+          )}
+          {incubationTemperature && (
+            <div>
+              <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
+                Incubation Temperature
+              </p>
+              <p className="text-base font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
+                {incubationTemperature}
+              </p>
+            </div>
+          )}
         </div>
-        <div>
-          <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-            Incubation Temperature
-          </p>
-          <p className="text-base font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-            {incubationTemperature}
-          </p>
-        </div>
-      </div>
-
+      )}
       {/* Empty State */}
       {inVitroEntries.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-gray-400">
           <FontAwesomeIcon icon={faFlaskVial} size="2x" />
-          <p className="mt-2 text-sm">No entries made yet.</p>
+          <p className="mt-2 text-sm">{emptyMessage || "No entries made yet."}</p>
         </div>
       )}
 
       {/* Timeline */}
       <ol className="relative border-l-2 border-[var(--primary-color)] ml-5">
-        {timelineEntries.map((entry, idx) => (
+        {timelineEntries.map((entry: TimelineEntry, idx: number) => (
           <TimelineTile
             key={idx}
             entry={entry}

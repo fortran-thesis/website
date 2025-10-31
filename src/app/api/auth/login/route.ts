@@ -18,37 +18,71 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      // do not include credentials to upstream unless upstream expects them
+      credentials: 'include', // Important: allow cookies to be received
     });
 
     const text = await fbRes.text();
     let fbJson: any = {};
     try { fbJson = text ? JSON.parse(text) : {}; } catch { fbJson = { message: text }; }
 
+    console.log('🔍 Backend response:', fbRes.status, fbJson);
+
+    // Try to get Set-Cookie header from backend (for mobile compatibility)
+    // Note: fetch() API may not expose this, so we have multiple strategies
+    let backendCookie = null;
+    
+    // Strategy 1: Try standard headers.get
+    backendCookie = fbRes.headers.get('set-cookie') || fbRes.headers.get('Set-Cookie');
+    
+    // Strategy 2: If available, use raw headers (Node.js specific)
+    if (!backendCookie && typeof (fbRes.headers as any).raw === 'function') {
+      const rawHeaders = (fbRes.headers as any).raw();
+      backendCookie = rawHeaders['set-cookie']?.[0];
+    }
+    
+    console.log('🍪 Backend Set-Cookie header:', backendCookie ? 'FOUND' : 'NOT FOUND');
+
     const res = NextResponse.json(fbJson, { status: fbRes.status });
 
-    // If upstream returned Set-Cookie header, try to mirror it on our origin
-    const upstreamSetCookie = fbRes.headers.get('set-cookie') || fbRes.headers.get('Set-Cookie');
-    if (upstreamSetCookie) {
-      // Strip any Domain= attributes so cookie is set for our origin
-      // and forward the rest of the attributes (Secure, HttpOnly, SameSite, Max-Age)
-      const parts = upstreamSetCookie.split(';').map(p => p.trim()).filter(Boolean);
-      const nameValue = parts[0];
-      const attrs = parts.slice(1).filter(p => !p.toLowerCase().startsWith('domain='));
-      const cookieHeader = `${nameValue}; ${attrs.join('; ')}`;
-      res.headers.set('Set-Cookie', cookieHeader);
+    // If we got the cookie from backend, forward it but strip the domain
+    if (backendCookie) {
+      console.log('✅ Forwarding backend cookie (stripping domain for localhost)');
+      // Parse and modify the cookie to work on localhost
+      const parts = backendCookie.split(';').map((p: string) => p.trim()).filter(Boolean);
+      const nameValue = parts[0]; // e.g., "session=abc123"
+      
+      // Filter out Domain attribute and keep everything else
+      const attrs = parts.slice(1).filter((p: string) => !p.toLowerCase().startsWith('domain='));
+      
+      // Ensure it has the necessary attributes for localhost
+      if (!attrs.some((a: string) => a.toLowerCase().startsWith('path='))) {
+        attrs.push('Path=/');
+      }
+      if (!attrs.some((a: string) => a.toLowerCase().startsWith('samesite='))) {
+        attrs.push('SameSite=Lax');
+      }
+      
+      const finalCookie = `${nameValue}; ${attrs.join('; ')}`;
+      console.log('🍪 Final cookie:', finalCookie.substring(0, 100) + '...');
+      res.headers.set('Set-Cookie', finalCookie);
       return res;
     }
 
-    // Otherwise, if upstream returned a token/session in body, set same-origin cookie
-    const token = fbJson?.token || fbJson?.session || fbJson?.sessionId || fbJson?.data?.token;
-    if (token) {
-      const maxAge = 60 * 60 * 24 * 5; // 7 days
-      const cookie = `session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
-      res.headers.set('Set-Cookie', cookie);
+    // Fallback: Try to extract session from response body
+    const sessionToken = fbJson?.session || fbJson?.token || fbJson?.sessionId || fbJson?.data?.session || fbJson?.data?.token;
+    
+    if (sessionToken) {
+      console.log('✅ Found session in body, setting cookie manually');
+      const maxAge = 60 * 60 * 24 * 7; // 7 days
+      const cookieString = `session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
+      res.headers.set('Set-Cookie', cookieString);
       return res;
     }
 
+    console.error('❌ No session found in Set-Cookie header OR response body');
+    console.error('   Backend must either:');
+    console.error('   1. Set res.cookie("session", value, {...}), OR');
+    console.error('   2. Return { session: "value" } in JSON');
     return res;
   } catch (err) {
     console.error('Login proxy error', err);

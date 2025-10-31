@@ -18,9 +18,9 @@ export const endpoints = {
   user: {
     profile: '/user/profile',
     updateProfile: '/user/profile',
-    list: '/users',
-    getById: (id: string) => `/users/${id}`,
-    delete: (id: string) => `/users/${id}`,
+    list: '/user',
+    getById: (id: string) => `/user/${id}`,
+    delete: (id: string) => `/user/${id}`,
   },
 
   // Cases/Investigations

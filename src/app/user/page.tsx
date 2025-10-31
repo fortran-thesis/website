@@ -6,51 +6,115 @@ import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import DonutChart from '@/components/charts/donut-chart';
 import UserTable from '@/components/tables/user_table';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AddMycoModal, { MycoFormData } from '@/components/modals/create_myco_acc_modal';
 
 
 export default function Users() {
-    const [isAddMycoModal, setShowAddMycoModal] = useState(false);
 
+        const userRole = "Administrator";
 
-   const userRole = "Administrator";
+        // UI state
+        const [users, setUsers] = useState<any[]>([]);
+        const [isAddMycoModal, setShowAddMycoModal] = useState(false);
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState<string | null>(null);
+
+    // Stats from API endpoints
+    const [roleCounts, setRoleCounts] = useState({ farmer: 0, mycologist: 0, admin: 0 });
+    const [disabledCounts, setDisabledCounts] = useState({ active: 0, inactive: 0 });
+
+    const totalUsers = roleCounts.farmer + roleCounts.mycologist + roleCounts.admin;
+    const totalFarmers = roleCounts.farmer;
+    const totalMycologists = roleCounts.mycologist;
+    const totalAdmins = roleCounts.admin;
+
+    const inactiveCount = disabledCounts.inactive;
+    const activeCount = disabledCounts.active;
     const userStatusData = [
-        { name: "Inactive", value: 10, color: "var(--moldify-red)" },
-        { name: "Active", value: 30, color: "var(--primary-color)" },
+        { name: "Inactive", value: inactiveCount, color: "var(--moldify-red)" },
+        { name: "Active", value: activeCount, color: "var(--primary-color)" },
     ];
-     const users = [
-    {
-      id: "PDIRecT6",
-      name: "Karl Manuel Diata",
-      email: "karl123456789@gmail.com",
-      role: "Farmer",
-      status: "Active",
-    },
-    {
-      id: "PDIRecT6",
-      name: "Karl Manuel Diata",
-      email: "karl123456789@gmail.com",
-      role: "Mycologist",
-      status: "Inactive",
-    },
-    {
-      id: "PDIRecT6",
-      name: "Karl Manuel Diata",
-      email: "karl123456789@gmail.com",
-      role: "Administrator",
-      status: "Active",
-    },
-  ];
 
-  const handleMycoSubmit = (data: MycoFormData) => {
-    console.log('Form submitted:', data);
-    // Add your API call or logic here
-    // For example: await createMycologist(data);
+        // Fetch initial users page (no pagination for now)
+        useEffect(() => {
+        // Fetch role and disabled counts
+        const fetchCounts = async () => {
+            try {
+                const [rolesRes, disabledRes] = await Promise.all([
+                    fetch('/api/v1/users/counts/roles', { cache: 'no-store' }),
+                    fetch('/api/v1/users/counts/disabled', { cache: 'no-store' })
+                ]);
+                if (rolesRes.ok) {
+                    const rolesBody = await rolesRes.json();
+                    if (rolesBody.success && rolesBody.data) setRoleCounts(rolesBody.data);
+                }
+                if (disabledRes.ok) {
+                    const disabledBody = await disabledRes.json();
+                    if (disabledBody.success && disabledBody.data) setDisabledCounts(disabledBody.data);
+                }
+            } catch (err) {
+                // Optionally handle error
+            }
+        };
+        fetchCounts();
+            let mounted = true;
+            const fetchUsers = async () => {
+                setLoading(true);
+                setError(null);
+                try {
+                    const res = await fetch('/api/v1/users?limit=10', { cache: 'no-store' });
+                    if (!res.ok) {
+                        const body = await res.json().catch(() => ({}));
+                        throw new Error(body?.error || 'Failed to load users');
+                    }
+                    const body = await res.json();
+                    console.log(body);
+                    const data = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
+                    if (mounted) setUsers(data);
+                } catch (e: any) {
+                    console.error('Failed to load users', e);
+                    if (mounted) setError(e?.message || 'Failed to load users');
+                } finally {
+                    if (mounted) setLoading(false);
+                }
+            };
+            fetchUsers();
+            return () => { mounted = false; };
+        }, []);
+
+    const handleMycoSubmit = async (data: MycoFormData) => {
+        console.log('Form submitted:', data);
+        
+        // Refresh users list and counts
+        try {
+            const [rolesRes, disabledRes] = await Promise.all([
+                fetch('/api/v1/users/counts/roles', { cache: 'no-store' }),
+                fetch('/api/v1/users/counts/disabled', { cache: 'no-store' })
+            ]);
+            if (rolesRes.ok) {
+                const rolesBody = await rolesRes.json();
+                if (rolesBody.success && rolesBody.data) setRoleCounts(rolesBody.data);
+            }
+            if (disabledRes.ok) {
+                const disabledBody = await disabledRes.json();
+                if (disabledBody.success && disabledBody.data) setDisabledCounts(disabledBody.data);
+            }
+
+            // Refresh users list
+            const usersRes = await fetch('/api/v1/users?limit=10', { cache: 'no-store' });
+            if (usersRes.ok) {
+                const usersBody = await usersRes.json();
+                const usersData = Array.isArray(usersBody.data?.snapshot) ? usersBody.data.snapshot : [];
+                setUsers(usersData);
+            }
+        } catch (err) {
+            console.error('Failed to refresh data:', err);
+        }
     
-    // Close modal after successful submission
-    setShowAddMycoModal(false);
-  };
+        // Close modal after successful submission
+        setShowAddMycoModal(false);
+    };
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
 
@@ -69,10 +133,10 @@ export default function Users() {
             {/* Statistics Tiles */}
             <div className ="flex flex-col xl:flex-row w-full mt-6 gap-x-2 gap-y-2">
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 w-full xl:w-2/3">
-                    <StatisticsTile icon={faUsers} iconColor="var(--accent-color)" title="Total Users" statNum={0} />
-                    <StatisticsTile icon={faUsers} iconColor="var(--primary-color)" title="Total Farmers" statNum={0} />
-                    <StatisticsTile icon={faUsers} iconColor="var(--moldify-blue)" title="Total Mycologists" statNum={0} />
-                    <StatisticsTile icon={faUsers} iconColor="var(--moldify-red)" title="Total Administrators" statNum={0} />
+                    <StatisticsTile icon={faUsers} iconColor="var(--accent-color)" title="Total Users" statNum={totalUsers} />
+                    <StatisticsTile icon={faUsers} iconColor="var(--primary-color)" title="Total Farmers" statNum={totalFarmers} />
+                    <StatisticsTile icon={faUsers} iconColor="var(--moldify-blue)" title="Total Mycologists" statNum={totalMycologists} />
+                    <StatisticsTile icon={faUsers} iconColor="var(--moldify-red)" title="Total Administrators" statNum={totalAdmins} />
                 </div>
                 <div className="w-fill xl:w-1/3">
                     <DonutChart 
@@ -149,9 +213,11 @@ export default function Users() {
 
 
             {/* Submitted Cases Table */}
-            <div className="mt-6 w-full">
-              <UserTable data={users} />
-          </div>
+                                <div className="mt-6 w-full">
+                            {loading && <p>Loading users...</p>}
+                            {error && <p className="text-red-600">{error}</p>}
+                            {!loading && !error && <UserTable data={users} />}
+                    </div>
         
              <AddMycoModal
                 isOpen={isAddMycoModal}

@@ -33,27 +33,103 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const handleChange = (field: keyof MycoFormData, value: string) => {
     setFormData({ ...formData, [field]: value });
+    setError(null); // Clear error when user starts typing
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
-    // Reset form after submission
-    setFormData({
-      firstName: "",
-      lastName: "",
-      username: "",
-      email: "",
-      password: "",
-      confirmPassword: "",
-    });
-    setShowPassword(false);
-    setShowConfirmPassword(false);
+    setError(null);
+    setSuccessMessage(null);
+
+    // Validation
+    if (!formData.firstName.trim()) {
+      setError("First name is required");
+      return;
+    }
+    if (!formData.lastName.trim()) {
+      setError("Last name is required");
+      return;
+    }
+    if (!formData.username.trim()) {
+      setError("Username is required");
+      return;
+    }
+    if (!formData.email.trim() || !formData.email.includes("@")) {
+      setError("Valid email is required");
+      return;
+    }
+    if (!formData.password) {
+      setError("Password is required");
+      return;
+    }
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/v1/mycologists", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        }),
+        credentials: "include",
+      });
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(result?.error || result?.message || "Failed to create account");
+        return;
+      }
+
+      setSuccessMessage("Mycologist account created successfully!");
+      
+      // Call parent's onSubmit callback for additional handling (e.g., refresh user list)
+      onSubmit(formData);
+      
+      // Reset form after successful submission
+      setFormData({
+        firstName: "",
+        lastName: "",
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+      });
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+
+      // Close modal after 1.5 seconds
+      setTimeout(() => {
+        onClose();
+        setSuccessMessage(null);
+      }, 1500);
+    } catch (err: any) {
+      setError(err?.message || "An error occurred while creating the account");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -90,6 +166,24 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
             <p className="text-[var(--moldify-black)] text-sm mb-4 font-[family-name:var(--font-bricolage-grotesque)]">
             Register new mycologists to the system.
             </p>
+
+            {/* Error Message */}
+            {error && (
+              <div className="bg-[var(--moldify-red)]/10 border-l-4 border-[var(--moldify-red)] p-3 mb-4 rounded">
+                <p className="text-[var(--moldify-red)] text-sm font-[family-name:var(--font-bricolage-grotesque)]">
+                  {error}
+                </p>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {successMessage && (
+              <div className="bg-green-100 border-l-4 border-green-500 p-3 mb-4 rounded">
+                <p className="text-green-700 text-sm font-[family-name:var(--font-bricolage-grotesque)]">
+                  {successMessage}
+                </p>
+              </div>
+            )}
 
             {/* FORM */}
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -224,9 +318,10 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
             {/* Submit Button */}
             <button
                 type="submit"
-                className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5"
+                disabled={isLoading}
+                className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-                Create Account
+                {isLoading ? "Creating..." : "Create Account"}
             </button>
             </form>
             </div>

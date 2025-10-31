@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from 'next/image';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faCalendar } from "@fortawesome/free-solid-svg-icons";
@@ -12,20 +12,79 @@ interface Mycologist {
   name: string;
   status: "available" | "at-capacity";
   cases: number;
+  id?: string; // Add ID for assignment
 }
 
 interface AssignCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mycologists: Mycologist[];
+  mycologists?: Mycologist[]; // Make optional since we'll fetch from backend
   onAssign?: (mycologist: Mycologist, priority: string, endDate: Date | null) => void; 
 }
 
-export default function AssignCaseModal({ isOpen, onClose, mycologists, onAssign }: AssignCaseModalProps) {
+const CAPACITY_THRESHOLD = 8; // Mycologists with >= 8 cases are at capacity
+
+export default function AssignCaseModal({ isOpen, onClose, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
   const [filter, setFilter] = useState<"all" | "available" | "at-capacity">("all");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [mycologists, setMycologists] = useState<Mycologist[]>(propMycologists || []);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch mycologists and assigned cases when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Fetch all mycologists
+        const mycologistsRes = await fetch('/api/v1/users/mycologists', { cache: 'no-store' });
+        const mycologistsBody = await mycologistsRes.json();
+        
+        // Fetch assigned cases
+        const assignedRes = await fetch('/api/v1/mold-reports/assigned', { cache: 'no-store' });
+        const assignedBody = await assignedRes.json();
+
+        if (mycologistsBody.success && assignedBody.success) {
+          const mycologistsList = mycologistsBody.data.snapshot || [];
+          const assignedCases = assignedBody.data.snapshot || [];
+
+          // Count cases per mycologist
+          const caseCounts: Record<string, number> = {};
+          assignedCases.forEach((report: any) => {
+            const mycologistId = report.assigned_mycologist_id;
+            if (mycologistId) {
+              caseCounts[mycologistId] = (caseCounts[mycologistId] || 0) + 1;
+            }
+          });
+
+          // Transform mycologists with case counts and status
+          const transformedMycologists: Mycologist[] = mycologistsList.map((m: any) => {
+            const userId = m.id || m.user?.id;
+            const cases = caseCounts[userId] || 0;
+            const status = cases >= CAPACITY_THRESHOLD ? "at-capacity" : "available";
+            
+            return {
+              name: m.details?.displayName || m.user?.username || "Unknown",
+              status,
+              cases,
+              id: userId, // Keep ID for later use
+            };
+          });
+
+          setMycologists(transformedMycologists);
+        }
+      } catch (error) {
+        console.error('Failed to load mycologists:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -88,6 +147,11 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists, onAssign
             />
             <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)] text-xs">Workload Status</p>
         </div>
+        {loading ? (
+          <div className="flex justify-center items-center py-10">
+            <p className="text-[var(--moldify-grey)] text-sm font-[family-name:var(--font-bricolage-grotesque)]">Loading mycologists...</p>
+          </div>
+        ) : (
         <div className="flex justify-between mb-7 text-center">
           <div>
             <h1 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--moldify-blue)]">{mycologists.length}</h1>
@@ -102,6 +166,7 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists, onAssign
             <p className="text-[var(--moldify-grey)] text-sm font-[family-name:var(--font-bricolage-grotesque)]">At Capacity</p>
           </div>
         </div>
+        )}
 
         {/* Mycologist dropdown */}
         <div className="mb-7">

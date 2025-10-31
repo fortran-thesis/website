@@ -16,12 +16,14 @@ interface InVivoTabProps {
   dateTime: string;
   environmentalTemperature: string;
   inVivoEntries: InVivoEntry[];
+  emptyMessage?: string; // Custom empty state message
 }
 
 export default function InVivoTab({
   dateTime,
   environmentalTemperature,
   inVivoEntries,
+  emptyMessage,
 }: InVivoTabProps) {
 
   const timelineEntries: TimelineEntry[] = (inVivoEntries ?? []).map(e => ({
@@ -46,21 +48,23 @@ export default function InVivoTab({
         </p>
       </div>
 
-      {/* Growth & Incubation */}
-      <div className="flex flex-col justify-between mt-3">
+      {/* Environmental Temperature - Only show if value exists */}
+      {environmentalTemperature && (
+        <div className="flex flex-col justify-between mt-3">
           <p className="text-sm  text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
             Environmental Temperature
           </p>
           <p className="text-base font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
             {environmentalTemperature}
           </p>
-      </div>
+        </div>
+      )}
 
       {/* Empty State */}
       {inVivoEntries.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-gray-400">
           <FontAwesomeIcon icon={faFlaskVial} size="2x" />
-          <p className="mt-2 text-sm">No entries made yet.</p>
+          <p className="mt-2 text-sm">{emptyMessage || "No entries made yet."}</p>
         </div>
       )}
 

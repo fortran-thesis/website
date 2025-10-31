@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
@@ -19,15 +20,18 @@ type Mycologist = {
   name: string;
   status: "available" | "at-capacity";
   cases: number;
+  id?: string;
 };
 
-const mycologists: Mycologist[] = [
-  { name: "Dr. Lisa Wong", status: "available", cases: 4 },
-  { name: "Dr. John Doe", status: "at-capacity", cases: 8 },
-  { name: "Dr. Jane Smith", status: "available", cases: 2 },
-];
-
 export default function Investigation() {
+  const searchParams = useSearchParams();
+  const caseId = searchParams.get('id');
+  
+  const [caseData, setCaseData] = useState<any>(null);
+  const [moldCase, setMoldCase] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [isAssignModalOpen, setAssignModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isConfirmAssignOpen, setConfirmAssignOpen] = useState(false);
@@ -37,6 +41,52 @@ export default function Investigation() {
 
   const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; priority: string; endDate: Date | null } | null>(null);
 
+  // Fetch case data by ID
+  useEffect(() => {
+    if (!caseId) {
+      setError('No case ID provided');
+      setLoading(false);
+      return;
+    }
+
+    const fetchCase = async () => {
+      try {
+        const res = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
+        if (!res.ok) {
+          throw new Error('Failed to load case details');
+        }
+        const body = await res.json();
+        if (body.success && body.data) {
+          setCaseData(body.data);
+          
+          // If case has assigned mycologist, fetch the mold-case
+          if (body.data.assigned_mycologist_id) {
+            try {
+              const moldCaseRes = await fetch(`/api/v1/mold-cases/by-report/${caseId}`, { cache: 'no-store' });
+              if (moldCaseRes.ok) {
+                const moldCaseBody = await moldCaseRes.json();
+                if (moldCaseBody.success && moldCaseBody.data) {
+                  setMoldCase(moldCaseBody.data);
+                }
+              }
+              // If 404, mold-case doesn't exist yet (State 2)
+            } catch (err: any) {
+              console.error('Failed to fetch mold-case:', err);
+            }
+          }
+        } else {
+          throw new Error(body.error || 'Failed to load case');
+        }
+      } catch (err: any) {
+        setError(err?.message || 'Failed to load case');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCase();
+  }, [caseId]);
+
   // Called from AssignCaseModal -> opens confirmation modal
   const handleAssignClick = (mycologist: Mycologist, priority: string, endDate: Date | null) => {
     setPendingAssign({ mycologist, priority, endDate });
@@ -44,28 +94,225 @@ export default function Investigation() {
   };
 
   // Called from confirmation modal -> finalize assignment
-  const handleConfirmAssign = () => {
-    if (!pendingAssign) return;
-    setAssignedMycologist(pendingAssign.mycologist.name);
-    console.log("Assigned to:", pendingAssign.mycologist, pendingAssign.priority, pendingAssign.endDate);
-    setPendingAssign(null);
-    setConfirmAssignOpen(false);
-    setAssignModalOpen(false);
+  const handleConfirmAssign = async () => {
+    if (!pendingAssign || !caseId || !caseData) return;
+
+    try {
+      // Step 1: PATCH to assign mycologist to the mold-report
+      const assignRes = await fetch(`/api/v1/mold-reports/${caseId}/assign`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assigned_mycologist_id: pendingAssign.mycologist.id,
+        }),
+      });
+
+      if (!assignRes.ok) {
+        throw new Error('Failed to assign mycologist');
+      }
+
+      // Step 2: POST to create a mold-case
+      const moldCasePayload = {
+        mycologist_id: pendingAssign.mycologist.id,
+        name: caseData.case_name,
+        mold_report_id: caseId,
+        photo_url: caseData.case_details?.[0]?.cover_photo || "",
+        priority: pendingAssign.priority,
+        start_date: new Date().toISOString(),
+        end_date: pendingAssign.endDate
+          ? pendingAssign.endDate.toISOString()
+          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        cultivation_details: {
+          in_vivo_details: {},
+          in_vitro_details: {},
+        },
+        cultivation_logs: [],
+        is_archived: false,
+      };
+
+      const caseRes = await fetch('/api/v1/mold-cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(moldCasePayload),
+      });
+
+      if (!caseRes.ok) {
+        throw new Error('Failed to create mold case');
+      }
+
+      // Success
+      setAssignedMycologist(pendingAssign.mycologist.name);
+      console.log("Assignment complete:", pendingAssign.mycologist, pendingAssign.priority, pendingAssign.endDate);
+      setPendingAssign(null);
+      setConfirmAssignOpen(false);
+      setAssignModalOpen(false);
+
+      // Optionally refresh case data
+      const refreshRes = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
+      if (refreshRes.ok) {
+        const body = await refreshRes.json();
+        if (body.success && body.data) {
+          setCaseData(body.data);
+        }
+      }
+    } catch (err: any) {
+      console.error('Assignment failed:', err);
+      alert(err?.message || 'Failed to assign case');
+    }
   };
 
-  const handleReject = () => {
-    console.log("Case rejected!");
-    setIsRejected(true);
-    setRejectModalOpen(false);
+  const handleReject = async () => {
+    if (!caseId) return;
+
+    try {
+      const rejectRes = await fetch(`/api/v1/mold-reports/${caseId}/reject`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      if (!rejectRes.ok) {
+        throw new Error('Failed to reject case');
+      }
+
+      console.log("Case rejected!");
+      setIsRejected(true);
+      setRejectModalOpen(false);
+
+      // Optionally refresh case data
+      const refreshRes = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
+      if (refreshRes.ok) {
+        const body = await refreshRes.json();
+        if (body.success && body.data) {
+          setCaseData(body.data);
+        }
+      }
+    } catch (err: any) {
+      console.error('Rejection failed:', err);
+      alert(err?.message || 'Failed to reject case');
+    }
   };
 
   type UserRole = "Administrator" | "Mycologist";
 
   const [userRole, setUserRole] = useState<UserRole>("Administrator");
-  const imageUrl = "/profile-placeholder.png";
-  const name = "Lauren Bishmilla";
-  const email = "laurenbishmilla@gmail.com";
-  const phone = "09674306842";
+  
+  // Use data from API or fallback to placeholder
+  const caseName = caseData?.case_name || "Loading...";
+  const cropName = caseData?.host || "Loading...";
+  const location = caseData?.host || "Loading...";
+  const dateObserved = caseData?.date_observed 
+    ? new Date(caseData.date_observed).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    : "Loading...";
+  const status = caseData?.status.charAt(0).toUpperCase() + caseData?.status.slice(1) || "Pending";
+  const priority = caseData?.priority || "------";
+  
+  // Reporter info
+  const reporterName = caseData?.reporter?.details.displayName || "Loading...";
+  const reporterEmail = caseData?.reporter?.details.email || "N/A";
+  const reporterPhone = caseData?.reporter?.details.phone_number || "N/A";
+  const imageUrl = caseData?.reporter?.details.photo_url || "/profile-placeholder.png";
+
+  // Normalize `case_details` from backend into the shape CaseDetailsTab expects
+  const caseDetailsEntries = (caseData?.case_details ?? []).map((d: any) => {
+    const createdSec = d?.metadata?.created_at?._seconds;
+    const date = createdSec
+      ? new Date(createdSec * 1000).toLocaleString("en-US", { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: 'numeric' })
+      : (d?.created_at ? new Date(d.created_at).toLocaleString() : "");
+
+    return {
+      date,
+      notes: d?.description || "",
+      images: d?.cover_photo ? (Array.isArray(d.cover_photo) ? d.cover_photo : [d.cover_photo]) : [],
+    };
+  });
+
+  // Determine in vitro state and entries
+  const getInVitroContent = () => {
+    if (!caseData || !caseData.assigned_mycologist_id) {
+      return (
+        <InVitroTab
+          dateTime=""
+          growthMedium=""
+          incubationTemperature=""
+          inVitroEntries={[]}
+          emptyMessage="No mycologist assigned to this case yet"
+        />
+      );
+    }
+    
+    if (!moldCase || !moldCase.cultivation_logs || moldCase.cultivation_logs.length === 0) {
+      return (
+        <InVitroTab
+          dateTime=""
+          growthMedium={moldCase?.cultivation_details?.in_vitro_details?.growthMedium || ""}
+          incubationTemperature={moldCase?.cultivation_details?.in_vitro_details?.incubationTemperature || ""}
+          inVitroEntries={[]}
+          emptyMessage="Mycologist assigned. No cultivation activity recorded yet."
+        />
+      );
+    }
+    
+    const vitroLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vitro");
+    const vitroEntries = vitroLogs.map((log: any) => ({
+      date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
+      imagePath: log.image_urls?.[0] || "/images/placeholder.jpg",
+      sizeValue: log.characteristics?.size || "N/A",
+      colorValue: log.characteristics?.color || "N/A",
+      notes: log.additional_info || "",
+    }));
+    
+    return (
+      <InVitroTab
+        dateTime={moldCase.start_date ? `Started: ${new Date(moldCase.start_date).toLocaleString()}` : ""}
+        growthMedium={moldCase.cultivation_details?.in_vitro_details?.growthMedium || ""}
+        incubationTemperature={moldCase.cultivation_details?.in_vitro_details?.incubationTemperature || ""}
+        inVitroEntries={vitroEntries}
+      />
+    );
+  };
+
+  // Determine in vivo state and entries
+  const getInVivoContent = () => {
+    if (!caseData || !caseData.assigned_mycologist_id) {
+      return (
+        <InVivoTab
+          dateTime=""
+          environmentalTemperature=""
+          inVivoEntries={[]}
+          emptyMessage="No mycologist assigned to this case yet"
+        />
+      );
+    }
+    
+    if (!moldCase || !moldCase.cultivation_logs || moldCase.cultivation_logs.length === 0) {
+      return (
+        <InVivoTab
+          dateTime=""
+          environmentalTemperature={moldCase?.cultivation_details?.in_vivo_details?.environmentalTemperature || ""}
+          inVivoEntries={[]}
+          emptyMessage="Mycologist assigned. No cultivation activity recorded yet."
+        />
+      );
+    }
+    
+    const vivoLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vivo");
+    const vivoEntries = vivoLogs.map((log: any) => ({
+      date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
+      imagePath: log.image_urls?.[0] || "/images/placeholder.jpg",
+      sizeValue: log.characteristics?.size || "N/A",
+      colorValue: log.characteristics?.color || "N/A",
+      notes: log.additional_info || "",
+    }));
+    
+    return (
+      <InVivoTab
+        dateTime={moldCase.start_date ? `Started: ${new Date(moldCase.start_date).toLocaleString()}` : ""}
+        environmentalTemperature={moldCase.cultivation_details?.in_vivo_details?.environmentalTemperature || ""}
+        inVivoEntries={vivoEntries}
+      />
+    );
+  };
 
   // Tabs
   const tabs = [
@@ -74,73 +321,19 @@ export default function Investigation() {
       icon: faClipboardList,
       content: (
         <CaseDetailsTab
-          entries={[
-            { 
-              date: "October 2, 2025 • 09:14 PM", 
-              notes: "Observed white spots on leaves.", 
-              images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg"] 
-            },
-            { 
-              date: "October 2, 2025 • 09:14 PM", 
-              notes: "Observed white spots on leaves.", 
-              images: ["/assets/moldify-logo-v3.svg", "/sample2.jpg", "/assets/moldify-logo-v3.svg"] 
-            },
-          ]}
+          entries={caseDetailsEntries}
         />
       ),
     },
     {
       label: "In Vitro",
       icon: faFlask,
-      content: (
-        <InVitroTab
-          dateTime="Last Updated: November 01, 2025 • 10:00 AM"
-          growthMedium="Potato Dextrose Agar (PDA)"
-          incubationTemperature="25°C"
-          inVitroEntries={[
-            { 
-              date: "November 01, 2025 • 10:00 AM", 
-              imagePath: "/images/sample1.jpg", 
-              sizeValue: "5 mm", 
-              colorValue: "White", 
-              notes: "Colony growing steadily." 
-            },
-            { 
-              date: "November 01, 2025 • 10:00 AM", 
-              imagePath: "/images/sample2.jpg", 
-              sizeValue: "7 mm", 
-              colorValue: "Cream", 
-              notes: "Some contamination observed." 
-            },
-          ]}
-        />
-      ),
+      content: getInVitroContent(),
     },
     {
       label: "In Vivo",
       icon: faSeedling,
-      content: (
-        <InVivoTab
-          dateTime="Last Updated: November 01, 2025 • 10:00 AM"
-          environmentalTemperature="30°C"
-          inVivoEntries={[
-            { 
-              date: "November 01, 2025 • 10:00 AM", 
-              imagePath: "/images/sample1.jpg", 
-              sizeValue: "5 mm", 
-              colorValue: "White", 
-              notes: "Colony growing steadily." 
-            },
-            { 
-              date: "November 01, 2025 • 10:00 AM", 
-              imagePath: "/images/sample2.jpg", 
-              sizeValue: "7 mm", 
-              colorValue: "Cream", 
-              notes: "Some contamination observed." 
-            },
-          ]}
-        />
-      ),
+      content: getInVivoContent(),
     },
   ];
 
@@ -156,6 +349,19 @@ export default function Investigation() {
 
       <BackButton />
 
+      {loading && (
+        <div className="flex justify-center items-center h-64">
+          <p className="text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">Loading case details...</p>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex justify-center items-center h-64">
+          <p className="text-red-600 font-[family-name:var(--font-bricolage-grotesque)]">{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && caseData && (
       <div className="flex flex-col lg:flex-row flex-1 mt-2 gap-6">
 
         <aside className="lg:sticky lg:top-10 lg:self-start w-full lg:w-1/3 bg-transparent rounded-xl overflow-y-auto">
@@ -192,14 +398,14 @@ export default function Investigation() {
             </p>
             <div className="mt-4 flex flex-col items-center">
               <div className="w-50 h-50 rounded-full overflow-hidden shadow-sm">
-                <Image src={imageUrl} alt={`${name}'s profile picture`} width={50} height={50} className="object-cover w-full h-full" />
+                <Image src={imageUrl} alt={`${reporterName}'s profile picture`} width={50} height={50} className="object-cover w-full h-full" />
               </div>
               <div className="flex flex-col mt-4 items-center justify-center">
-                <h1 className="font-[family-name:var(--font-montserrat)] text-lg font-black text-[var(--primary-color)]">{name}</h1>
+                <h1 className="font-[family-name:var(--font-montserrat)] text-lg font-black text-[var(--primary-color)]">{reporterName}</h1>
                 <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Email Address:</p>
-                <p className="text-sm font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{email}</p>
+                <p className="text-sm font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{reporterEmail}</p>
                 <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Phone Number:</p>
-                <p className="text-sm font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{phone}</p>
+                <p className="text-sm font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{reporterPhone}</p>
               </div>
             </div>
             <hr className="my-8 border-t border-[var(--moldify-grey)]" />
@@ -234,37 +440,37 @@ export default function Investigation() {
         {/* Main Content */}
         <main className="flex-1 px-2 mt-2 lg:mt-0">
           <div className="flex items-center">
-            <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] mr-5">Tomato Mold</h1>
+            <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] mr-5">{caseName}</h1>
             <div className="flex gap-2">
-              <StatusBox status="Pending" />
-              <StatusBox status="Low Priority" />
+              <StatusBox status={status} />
+              {priority !== "------" && <StatusBox status={priority} />}
             </div>
           </div>
 
           <div className="flex justify-between items-center mt-3 mb-10">
             <div className="flex flex-col">
               <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Crop Name:</p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">Kamatis Tagalog</h2>
+              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{cropName}</h2>
             </div>
             <div className="flex flex-col">
               <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Location:</p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">Ilocos Region</h2>
+              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{location}</h2>
             </div>
             <div className="flex flex-col">
               <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Date First Observed:</p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">October 25, 2025</h2>
+              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{dateObserved}</h2>
             </div>
           </div>
 
           <TabBar tabs={tabs} initialIndex={0} />
         </main>
       </div>
+      )}
 
       {/* Modals */}
       <AssignCaseModal
         isOpen={isAssignModalOpen}
         onClose={() => setAssignModalOpen(false)}
-        mycologists={mycologists}
         onAssign={handleAssignClick}
       />
 

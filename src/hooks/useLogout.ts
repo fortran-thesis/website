@@ -14,17 +14,20 @@ export const useLogout = () => {
 
   const logout = useCallback(async () => {
     try {
-      // Clear client-side user data
-      removeAuthToken(); // This just clears localStorage user data
+      console.log('🚪 Logging out...');
       
-      // Clear the HttpOnly session cookie via Next.js API route
-      await fetch('/api/clear-auth-cookie', { 
+      // Clear client-side user data
+      removeAuthToken(); // This clears localStorage user data
+      
+      // Clear the HttpOnly session cookie via the logout proxy
+      // This will also call the backend logout endpoint
+      const response = await fetch('/api/auth/logout', { 
         method: 'POST', 
         credentials: 'include' 
       });
       
-      // Optional: Call backend logout endpoint if it exists
-      // await fetch(backendLogoutUrl, { method: 'POST', credentials: 'include' });
+      const data = await response.json().catch(() => ({}));
+      console.log('✅ Logout response:', response.status, data);
       
       // Small delay to ensure cookies are cleared
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -32,7 +35,7 @@ export const useLogout = () => {
       // Force a hard navigation to ensure middleware runs with cleared cookies
       window.location.href = '/auth/log-in';
     } catch (err) {
-      console.warn('Logout error:', err);
+      console.warn('⚠️ Logout error:', err);
       // Still try to redirect even if API call fails
       window.location.href = '/auth/log-in';
     }

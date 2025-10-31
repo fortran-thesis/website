@@ -92,7 +92,7 @@ function CaseTimelineTile({
         </div>
 
         {/* Images */}
-        {imageUrls.length > 0 && (
+        {imageUrls && imageUrls.length > 0 ? (
           <div className="flex flex-wrap gap-3">
             {imageUrls.map((url, idx) => (
               <button
@@ -112,6 +112,11 @@ function CaseTimelineTile({
                 />
               </button>
             ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-6 text-gray-400">
+            <FontAwesomeIcon icon={faCircleInfo} size="lg" />
+            <p className="mt-2 text-sm">No images were provided.</p>
           </div>
         )}
       </div>
