@@ -213,11 +213,15 @@ export default function Users() {
 
 
             {/* Submitted Cases Table */}
-                                <div className="mt-6 w-full">
-                            {loading && <p>Loading users...</p>}
-                            {error && <p className="text-red-600">{error}</p>}
-                            {!loading && !error && <UserTable data={users} />}
-                    </div>
+            <div className="mt-6 w-full">
+                {loading && <p>Loading users...</p>}
+                {error && <p className="text-red-600">{error}</p>}
+                {!loading && !error && <UserTable data={users} 
+                    onEdit={(c: any) => {
+                        window.location.href = `/user/view-user?id=${c.id}`;
+                    }}
+                />}
+            </div> 
         
              <AddMycoModal
                 isOpen={isAddMycoModal}
