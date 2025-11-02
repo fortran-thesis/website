@@ -5,16 +5,25 @@ import Image from "next/image";
 import { useState } from "react";
 import StatusBox from "@/components/tiles/status_tile";
 import UserLogTile, { UserLogTileEntry } from "@/components/tiles/user_log_tile";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import AddMycoModal from "@/components/modals/create_myco_acc_modal";
+import EditMycoModal from "@/components/modals/edit_myco_acc_modal";
 
 type UserRole = "Farmer" | "Administrator" | "Mycologist";
-const userRole: UserRole = "Administrator"; // This would typically come from props or context
+const userRole: UserRole = "Farmer"; 
 
 
 export default function ViewUser({ src }: { src?: string }) {
+  const [isEditMycoModal, setShowEditMycoModal] = useState(false);
+
+  const handleMycoSubmit = (data: any) => {
+    setShowEditMycoModal(false);
+  };
+
   //User Data Variables
   const userName = "Faith Gabrielle Gamboa";
   const userStatus = "Active";
-  const userRoleDisplay = "Farmer"; 
   const username = "lauren123";
   const userEmail = "lauren@gmail.com";
   const userPhone = "09674306842";
@@ -23,12 +32,12 @@ export default function ViewUser({ src }: { src?: string }) {
 
   //Activity Log Data
   const userLogs: UserLogTileEntry[] = [
-    { date: "Nov 2, 2025", time: "10:15 AM", description: "User logged in successfully." },
-    { date: "Nov 1, 2025", time: "08:45 PM", description: "Updated profile picture." },
-    { date: "Oct 31, 2025", time: "05:10 PM", description: "Changed password." },
-    { date: "Nov 2, 2025", time: "10:15 AM", description: "User logged in successfully." },
-    { date: "Nov 1, 2025", time: "08:45 PM", description: "Updated profile picture." },
-    { date: "Oct 31, 2025", time: "05:10 PM", description: "Changed password." },
+    { date: "Nov 2, 2025", time: "10:15 AM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
+    { date: "Nov 1, 2025", time: "08:45 PM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
+    { date: "Oct 31, 2025", time: "05:10 PM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
+    { date: "Nov 2, 2025", time: "10:15 AM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
+    { date: "Nov 1, 2025", time: "08:45 PM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
+    { date: "Oct 31, 2025", time: "05:10 PM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
   ];
 
   const [imgSrc, setImgSrc] = useState(src || userProfileImage);
@@ -69,10 +78,10 @@ export default function ViewUser({ src }: { src?: string }) {
             <StatusBox status={userStatus} />
           </div>
           <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)] text-sm mr-5">
-            {userRoleDisplay}
+            {userRole}
           </p>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-10 gap-y-6 mt-3 mb-10 w-full">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-10 gap-y-6 my-3 w-full">
             {/* Username */}
             <div className="flex flex-col items-center md:items-start">
               <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">
@@ -116,6 +125,14 @@ export default function ViewUser({ src }: { src?: string }) {
               </>
             )}
           </div>
+          {userRole === "Mycologist" && (
+            <button
+              className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-2 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
+              onClick={() => setShowEditMycoModal(true)}
+            >
+              <span>Edit Profile</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -123,6 +140,11 @@ export default function ViewUser({ src }: { src?: string }) {
         Activity Log
       </p>
       <UserLogTile items={userLogs} />
+       <EditMycoModal
+          isOpen={isEditMycoModal}
+          onClose={() => setShowEditMycoModal(false)}
+          onSubmit={handleMycoSubmit}
+        />
     </main>
   );
 }
