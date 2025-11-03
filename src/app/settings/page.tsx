@@ -39,7 +39,7 @@ export default function Settings() {
 
   // Executes save after confirming
   const handleConfirmSave = () => {
-    console.log("✅ Saved Profile:", profile);
+    console.log("Saved Profile:", profile);
     setSaveModalOpen(false);
   };
 
@@ -73,7 +73,7 @@ export default function Settings() {
   // Actually saves the password after confirming
   const handleConfirmSavePassword = () => {
     if (pendingPasswordData) {
-      console.log("✅ Password Updated:", pendingPasswordData);
+      console.log("Password Updated:", pendingPasswordData);
     }
     setPasswordSaveModalOpen(false);
     setPendingPasswordData(null);
