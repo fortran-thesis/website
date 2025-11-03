@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
-import { useRouter } from 'next/navigation';
 import { useAccountRecovery1 } from './accountRecoveryUtils1';
 
 const EmailImage = '/assets/email-recover-image.svg';
@@ -13,7 +12,6 @@ const EmailImage = '/assets/email-recover-image.svg';
 export default function AccountRecovery() {
     const [stepLength, setStepLength] = useState(2);
     const [recoveryType, setRecoveryType] = useState("forgot-username");
-    const router = useRouter();
     
     // This is the custom hook for forgot password step 1
     const {
