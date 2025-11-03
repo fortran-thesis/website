@@ -22,6 +22,7 @@ export function middleware(request: NextRequest) {
     isPublic,
     hasAuth: !!authToken,
   });
+  console.log('Session cookie value:', authToken ? '***EXISTS***' : 'MISSING');
 
   // Redirect unauthenticated users away from protected routes
   if (!authToken && isProtected) {

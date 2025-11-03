@@ -14,7 +14,7 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const upstreamUrl = `${envOptions.apiUrl}/mold-reports/${id}/reject`;
+    const upstreamUrl = `${envOptions.apiUrl}/mold-report/${id}/reject`;
 
     const upstreamRes = await fetch(upstreamUrl, {
       method: 'PATCH',

@@ -4,19 +4,10 @@ import { envOptions } from '@/configs/envOptions';
 import { endpoints } from '@/services/endpoints';
 
 /**
- * Simple in-memory cache for user list responses.
- * Keyed by: session|limit|pageToken
- * TTL: 30 seconds
- */
-const CACHE_TTL = 30_000; // 30s
-const cache = new Map<string, { ts: number; payload: any }>();
-
-
-/**
  * GET /api/v1/users
  * Proxy to upstream `${envOptions.apiUrl}${endpoints.user.list}`
  * Supports pagination via ?limit and ?pageToken
- * Performs server-side validation of the session token and uses a short in-memory cache.
+ * No caching - all requests go directly to backend
  */
 export async function GET(req: NextRequest) {
   try {
@@ -30,17 +21,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing session' }, { status: 403 });
     }
 
-    // Try cache
-    const cacheKey = `${sessionCookie}|limit=${limit}|pageToken=${pageToken}`;
-    const cached = cache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < CACHE_TTL) {
-      return NextResponse.json(cached.payload, { status: 200 });
-    }
-
     // Build upstream URL with query params
     const upstreamUrl = new URL(`${envOptions.apiUrl}${endpoints.user.list}`);
     if (limit) upstreamUrl.searchParams.set('limit', limit);
     if (pageToken) upstreamUrl.searchParams.set('pageToken', pageToken);
+
+    console.log('📤 GET /api/v1/users proxy');
+    console.log('  Query params:', { limit, pageToken: pageToken ? `${pageToken.substring(0, 20)}...` : 'NONE' });
+    console.log('  Upstream URL:', upstreamUrl.toString());
 
     const upstreamRes = await fetch(upstreamUrl.toString(), {
       method: 'GET',
@@ -48,7 +36,6 @@ export async function GET(req: NextRequest) {
         'Content-Type': 'application/json',
         'Cookie': `session=${sessionCookie}`,
       },
-      // no cache for validation purpose; we cache manually above
       cache: 'no-store'
     });
 
@@ -56,14 +43,13 @@ export async function GET(req: NextRequest) {
     let payload: any = {};
     try { payload = text ? JSON.parse(text) : {}; } catch { payload = { data: text }; }
 
+    console.log('  Backend response status:', upstreamRes.status);
+    console.log('  Backend nextPageToken:', payload.data?.nextPageToken ? `${payload.data.nextPageToken.substring(0, 20)}...` : 'NONE');
+    console.log('  Backend snapshot length:', payload.data?.snapshot?.length || 0);
+
     // If upstream returns unauthorized/forbidden, forward as 403
     if (upstreamRes.status === 401 || upstreamRes.status === 403) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
-    }
-
-    // Store successful responses in cache
-    if (upstreamRes.ok) {
-      cache.set(cacheKey, { ts: Date.now(), payload });
     }
 
     const res = NextResponse.json(payload, { status: upstreamRes.status });
