@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Image from 'next/image';
 import Link from 'next/link';
 import StepIndicator from "@/components/step_indicator";
+import { useRouter } from 'next/navigation';
 import { useAccountRecoveryUtils2 } from './accountRecoveryUtils2';
 
 const CodeImage = '/assets/code-recover-image.svg';
@@ -13,12 +14,23 @@ const CodeImage = '/assets/code-recover-image.svg';
 export default function AccountRecovery2() {
   const [stepLength, setStepLength] = useState(2);
   const [recoveryType, setRecoveryType] = useState("forgot-username");
+  const router = useRouter();
     
   useEffect(() => {
-      const type = sessionStorage.getItem("recoveryType") || "forgot-username";
-      setRecoveryType(type);
-      setStepLength(type === "forgot-password" ? 3 : 2);
-  }, []);
+    // GUARD: Step 2 requires email and type in sessionStorage (from Step 1)
+    const email = typeof window !== "undefined" ? sessionStorage.getItem("recoveryEmail") : null;
+    const type = typeof window !== "undefined" ? sessionStorage.getItem("recoveryType") : null;
+
+    // If either email or type is missing, redirect back to step 1
+    if (!email || !type) {
+      console.warn("⚠️ Step 2 accessed without email or type in sessionStorage - redirecting to step 1");
+      router.push("/auth/account-recovery");
+      return;
+    }
+
+    setRecoveryType(type);
+    setStepLength(type === "forgot-password" ? 3 : 2);
+  }, [router]);
 
   // This is the custom hook for forgot password step 2    
   const {
@@ -27,6 +39,8 @@ export default function AccountRecovery2() {
     fullCode,
     handleCancel,
     handleVerify,
+    isLoading,
+    error,
   } = useAccountRecoveryUtils2();
 
   const headerLabel = recoveryType === "forgot-password" ? "Forgot Password" : "Forgot Username";
@@ -41,8 +55,11 @@ export default function AccountRecovery2() {
           <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-3">
             GET YOUR CODE
           </h1>
-          <p className="text-[var(--moldify-black)] font-regular text-sm mb-20">Please enter the 4-digit code sent to your email.</p>
-          <form className="flex flex-col" method="POST">
+          <p className="text-[var(--moldify-black)] font-regular text-sm mb-10">Please enter the 4-digit code sent to your email.</p>
+          {error && (
+            <p className="text-red-500 text-sm mb-5">{error}</p>
+          )}
+          <form className="flex flex-col" onSubmit={handleVerify}>
             <div className="flex gap-x-13">
             {/* Textboxes to input the 4-digit code */}
               {codeSegments.map((segment, idx) => (
@@ -64,7 +81,7 @@ export default function AccountRecovery2() {
                 {/* Resend Code Button */}
                 <Link href="#" className="text-[var(--primary-color)] font-black hover:underline"> Resend</Link>
             </p>
-            <div className = "flex flex-col sm:flex-row gap-x-5 gap-y-5 mt-20">
+            <div className = "flex flex-col sm:flex-row gap-x-5 gap-y-5 mt-10">
                 <div className = "flex flex-col flex-1">
                     {/* Cancel Button */}
                     <button
@@ -79,10 +96,10 @@ export default function AccountRecovery2() {
                     {/* Verify Code Button */}
                     <button
                     type="submit"
-                    className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition"
-                    onClick={handleVerify}
+                    className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isLoading}
                     >
-                    Verify Code
+                    {isLoading ? "Verifying..." : "Verify Code"}
                     </button> 
                 </div>
             </div>

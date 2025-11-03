@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getEnvOptions } from '@/configs/envOptions';
+import { envOptions } from '@/configs/envOptions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,8 +14,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiUrl = getEnvOptions().apiUrl;
-    const backendUrl = `${apiUrl}/mycologist`;
+    const apiUrl = envOptions.apiUrl;
+    const backendUrl = `${apiUrl}/mycologist/register`;
+
+    console.log('Creating mycologist at:', backendUrl);
+    console.log('Request body:', body);
 
     // Forward the request to the backend with the session cookie
     const response = await fetch(backendUrl, {
@@ -28,11 +31,16 @@ export async function POST(request: NextRequest) {
     });
 
     const responseText = await response.text();
+    console.log('Backend response status:', response.status);
+    console.log('Backend response text:', responseText);
+
     let data;
     try {
       data = JSON.parse(responseText);
-    } catch {
-      data = { raw: responseText };
+    } catch (e) {
+      console.error('Failed to parse JSON response:', e);
+      console.error('Response was:', responseText.substring(0, 200));
+      data = { error: 'Invalid response format from backend' };
     }
 
     if (!response.ok) {
@@ -46,7 +54,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating mycologist:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: String(error) },
       { status: 500 }
     );
   }

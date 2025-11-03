@@ -1,8 +1,10 @@
 "use client";
+import { useEffect, useState } from "react";
 import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
+import { useRouter } from 'next/navigation';
 import { useAccountRecoveryUtils3 } from './accountRecoveryUtils3';
 
 const PasswordImage = '/assets/password-recover-image.svg';
@@ -11,6 +13,22 @@ const PasswordImage = '/assets/password-recover-image.svg';
     It asks the user to enter their new password and confirm password to reset their password */}
 
 export default function AccountRecovery3() {
+    const router = useRouter();
+
+    useEffect(() => {
+        // GUARD: Step 3 requires email, type, and token in sessionStorage (from Step 2)
+        const email = typeof window !== "undefined" ? sessionStorage.getItem("recoveryEmail") : null;
+        const token = typeof window !== "undefined" ? sessionStorage.getItem("recoveryToken") : null;
+        const type = typeof window !== "undefined" ? sessionStorage.getItem("recoveryType") : null;
+
+        // If any of these are missing, redirect back to step 1 (can't recover without completing steps 1-2)
+        if (!email || !token || !type) {
+            console.warn("⚠️ Step 3 accessed without email, token, or type in sessionStorage - redirecting to step 1");
+            router.push("/auth/account-recovery");
+            return;
+        }
+    }, [router]);
+
     const {
         showPassword,
         setShowPassword,
@@ -21,7 +39,9 @@ export default function AccountRecovery3() {
         confirmPassword,
         setConfirmPassword,
         handleCancel,
-        handleChangePassword
+        handleChangePassword,
+        isLoading,
+        error,
     } = useAccountRecoveryUtils3();
 
     return (
@@ -34,8 +54,11 @@ export default function AccountRecovery3() {
                     <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-3">
                         SET NEW <span className = "inline-block xl:block"> PASSWORD </span> 
                     </h1>
-                    <p className="text-[var(--moldify-black)] font-regular text-sm mb-10">Please enter new password to update your account</p>
-                    <form className="flex flex-col" method="POST">
+                    <p className="text-[var(--moldify-black)] font-regular text-sm mb-5">Please enter new password to update your account</p>
+                    {error && (
+                        <p className="text-red-500 text-sm mb-5">{error}</p>
+                    )}
+                    <form className="flex flex-col" onSubmit={handleChangePassword}>
                         <label htmlFor="password" className = "font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-5 mb-1">Password</label>
                         {/* Password Textbox */}
                         <div className="relative flex items-center overflow-clip">
@@ -101,10 +124,10 @@ export default function AccountRecovery3() {
                                 {/* Change Password Button */}
                                 <button
                                 type="submit"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition"
-                                onClick={handleChangePassword}
+                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isLoading}
                                 >
-                                Change Password
+                                {isLoading ? "Changing..." : "Change Password"}
                                 </button> 
                             </div>
                         </div>

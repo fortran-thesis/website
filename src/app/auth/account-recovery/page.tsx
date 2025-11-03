@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
+import { useRouter } from 'next/navigation';
 import { useAccountRecovery1 } from './accountRecoveryUtils1';
 
 const EmailImage = '/assets/email-recover-image.svg';
@@ -12,20 +13,30 @@ const EmailImage = '/assets/email-recover-image.svg';
 export default function AccountRecovery() {
     const [stepLength, setStepLength] = useState(2);
     const [recoveryType, setRecoveryType] = useState("forgot-username");
+    const router = useRouter();
     
-    useEffect(() => {
-        const type = sessionStorage.getItem("recoveryType") || "forgot-username";
-        setRecoveryType(type);
-        setStepLength(type === "forgot-password" ? 3 : 2);
-    }, []);
-
     // This is the custom hook for forgot password step 1
     const {
         email,
         setEmail,
+        isLoading,
         handleCancel,
         handleSendCode
     } = useAccountRecovery1();
+    
+    useEffect(() => {
+        // Step 1 doesn't require protection - it's the entry point
+        // Read recovery type from sessionStorage (set by login page)
+        const type = typeof window !== "undefined" ? sessionStorage.getItem("recoveryType") || "forgot-username" : "forgot-username";
+        setRecoveryType(type);
+        setStepLength(type === "forgot-password" ? 3 : 2);
+
+        // Prefill email from sessionStorage if it exists (returning user)
+        const prefillEmail = typeof window !== "undefined" ? sessionStorage.getItem("recoveryEmail") : null;
+        if (prefillEmail) {
+            setEmail(prefillEmail);
+        }
+    }, [setEmail]);
 
     const headerLabel = recoveryType === "forgot-password" ? "Forgot Password" : "Forgot Username";
 
@@ -43,7 +54,7 @@ export default function AccountRecovery() {
                     <p className="text-[var(--moldify-black)] font-regular text-sm mb-20">Please enter the email associated to your account.</p>
 
                     {/* FORGOT PASSWORD FORM - STEP 1 */}
-                    <form className="flex flex-col" method = "POST">
+                    <form className="flex flex-col" onSubmit={handleSendCode}>
                         <label htmlFor="email" className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">Email</label>
                         {/* Email Textbox */}
                         <input
@@ -70,10 +81,10 @@ export default function AccountRecovery() {
                                 {/* Send Code Button */}
                                 <button
                                 type="submit"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition"
-                                onClick={handleSendCode}
+                                disabled={isLoading}
+                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                Send Code
+                                {isLoading ? "Sending..." : "Send Code"}
                                 </button> 
                             </div>
                         </div>

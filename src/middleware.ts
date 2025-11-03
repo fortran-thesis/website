@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const protectedRoutes = ['/dashboard', '/investigation', '/user', '/support', '/api/v1'];
 const publicRoutes = ['/auth/log-in', '/auth/sign-up', '/auth', '/auth/account-recovery'];
+// Public API routes (auth endpoints that don't require session)
+const publicApiRoutes = ['/api/v1/auth/send-verification', '/api/v1/auth/check-verification', '/api/v1/auth/verified-change-password', '/api/v1/auth/verified-forget-username'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -13,15 +15,19 @@ export function middleware(request: NextRequest) {
   
   const normalizedPath = pathname.replace(/\/$/, '').toLowerCase();
   
+  // Check if it's a public API route first
+  const isPublicApi = publicApiRoutes.some(route => normalizedPath.startsWith(route));
   const isPublic = publicRoutes.some(route => normalizedPath.startsWith(route));
-  const isProtected = protectedRoutes.some(route => normalizedPath.startsWith(route));
+  const isProtected = protectedRoutes.some(route => normalizedPath.startsWith(route)) && !isPublicApi;
   const authToken = request.cookies.get('session')?.value;
 
   console.log('Auth Status:', {
     isProtected,
     isPublic,
+    isPublicApi,
     hasAuth: !!authToken,
   });
+  console.log('Session cookie value:', authToken ? '***EXISTS***' : 'MISSING');
 
   // Redirect unauthenticated users away from protected routes
   if (!authToken && isProtected) {

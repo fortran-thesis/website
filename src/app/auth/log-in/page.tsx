@@ -29,9 +29,11 @@ export default function Auth() {
 
   // Handler to set which recovery type was clicked
   const handleRecoveryClick = (type: "forgot-username" | "forgot-password") => {
+    // Set recovery type in sessionStorage for account recovery pages
     if (typeof window !== "undefined") {
       sessionStorage.setItem("recoveryType", type);
     }
+    router.push("/auth/account-recovery");
   };
 
   // Handle input changes
@@ -126,10 +128,7 @@ export default function Auth() {
                   required
                 />
                 {/*  Forgot Username Button */}
-                <Link 
-                  href="./account-recovery"
-                  onClick={() => handleRecoveryClick("forgot-username")}
-                >
+                <Link href="/auth/account-recovery" onClick={(e) => { e.preventDefault(); handleRecoveryClick("forgot-username"); }}>
                   <p className="ml-1 text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-xs hover:underline cursor-pointer flex justify-end">
                     Forgot Username?
                   </p>
@@ -167,10 +166,7 @@ export default function Auth() {
                 </div>
 
                 {/*  Forgot Password Button */}
-                <Link 
-                  href="./account-recovery"
-                  onClick={() => handleRecoveryClick("forgot-password")}
-                >
+                <Link href="/auth/account-recovery" onClick={(e) => { e.preventDefault(); handleRecoveryClick("forgot-password"); }}>
                   <p className="ml-1 text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-xs hover:underline cursor-pointer flex justify-end">
                     Forgot Password?
                   </p>

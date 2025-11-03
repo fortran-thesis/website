@@ -9,7 +9,7 @@ const MoldifyLogov2 = "/assets/moldify-logo-v3.svg";
 interface AddMycoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: MycoFormData) => void;
+  onSubmit: (data: MycoFormData) => Promise<void> | void;
 }
 
 export interface MycoFormData {
@@ -96,7 +96,15 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
         credentials: "include",
       });
 
-      const result = await response.json().catch(() => ({}));
+      let result;
+      const responseText = await response.text();
+      
+      try {
+        result = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error('Failed to parse response:', responseText);
+        result = { error: 'Invalid response from server' };
+      }
 
       if (!response.ok) {
         setError(result?.error || result?.message || "Failed to create account");
@@ -106,7 +114,8 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
       setSuccessMessage("Mycologist account created successfully!");
       
       // Call parent's onSubmit callback for additional handling (e.g., refresh user list)
-      onSubmit(formData);
+      // Wait for onSubmit to complete before closing modal
+      await Promise.resolve(onSubmit(formData));
       
       // Reset form after successful submission
       setFormData({
@@ -120,11 +129,8 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
       setShowPassword(false);
       setShowConfirmPassword(false);
 
-      // Close modal after 1.5 seconds
-      setTimeout(() => {
-        onClose();
-        setSuccessMessage(null);
-      }, 1500);
+      // Close modal after parent callback completes
+      onClose();
     } catch (err: any) {
       setError(err?.message || "An error occurred while creating the account");
     } finally {
