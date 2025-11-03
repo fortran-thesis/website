@@ -36,7 +36,6 @@ export default function AccountRecovery2() {
   const {
     codeSegments,
     handleCodeChange,
-    fullCode,
     handleCancel,
     handleVerify,
     isLoading,
@@ -77,7 +76,7 @@ export default function AccountRecovery2() {
                 />
               ))}
             </div>
-            <p className="flex mt-3 justify-center items-center text-xs font-semibold text-[var(--moldify-black)]"> If you didn't receive code,&nbsp;
+            <p className="flex mt-3 justify-center items-center text-xs font-semibold text-[var(--moldify-black)]"> If you didn&apos;t receive code,&nbsp;
                 {/* Resend Code Button */}
                 <Link href="#" className="text-[var(--primary-color)] font-black hover:underline"> Resend</Link>
             </p>

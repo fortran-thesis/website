@@ -67,9 +67,8 @@ export function useAccountRecovery1(){
             }
             // Navigate to step 2 with clean URL (no query params)
             router.push("/auth/account-recovery-2");
-        } catch (err: any) {
-            setError(err?.message || 'An error occurred');
-            alert(err?.message || 'An error occurred while sending the code');
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setIsLoading(false);
         }

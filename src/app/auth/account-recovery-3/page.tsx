@@ -1,5 +1,4 @@
 "use client";
-import { useEffect, useState } from "react";
 import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
