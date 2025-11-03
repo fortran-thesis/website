@@ -12,16 +12,16 @@ import AddMycoModal, { MycoFormData } from '@/components/modals/create_myco_acc_
 
 export default function Users() {
 
-        const userRole = "Administrator";
+    const userRole = "Administrator";
 
-        // UI state
-        const [users, setUsers] = useState<any[]>([]);
-        const [isAddMycoModal, setShowAddMycoModal] = useState(false);
-        const [loading, setLoading] = useState(false);
-        const [isLoadingMore, setIsLoadingMore] = useState(false);
-        const [error, setError] = useState<string | null>(null);
-        const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-        const loadMoreRef = useRef<HTMLDivElement>(null);
+    // UI state
+    const [users, setUsers] = useState<any[]>([]);
+    const [isAddMycoModal, setShowAddMycoModal] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+    const loadMoreRef = useRef<HTMLDivElement>(null);
 
     // Stats from API endpoints
     const [roleCounts, setRoleCounts] = useState({ farmer: 0, mycologist: 0, admin: 0 });
@@ -39,8 +39,8 @@ export default function Users() {
         { name: "Active", value: activeCount, color: "var(--primary-color)" },
     ];
 
-        // Fetch initial users page (no pagination for now)
-        useEffect(() => {
+    // Fetch initial users page (no pagination for now)
+    useEffect(() => {
         // Fetch role and disabled counts
         const fetchCounts = async () => {
             try {
@@ -61,37 +61,37 @@ export default function Users() {
             }
         };
         fetchCounts();
-            let mounted = true;
-            const fetchUsers = async () => {
-                setLoading(true);
-                setError(null);
-                try {
-                    const res = await fetch('/api/v1/users?limit=10', { cache: 'no-store' });
-                    if (!res.ok) {
-                        const body = await res.json().catch(() => ({}));
-                        throw new Error(body?.error || 'Failed to load users');
-                    }
-                    const body = await res.json();
-                    console.log(body);
-                    const data = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
-                    if (mounted) {
-                        setUsers(data);
-                        setNextPageToken(body.data?.nextPageToken || null);
-                    }
-                } catch (e: any) {
-                    console.error('Failed to load users', e);
-                    if (mounted) setError(e?.message || 'Failed to load users');
-                } finally {
-                    if (mounted) setLoading(false);
+        let mounted = true;
+        const fetchUsers = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const res = await fetch('/api/v1/users?limit=10', { cache: 'no-store' });
+                if (!res.ok) {
+                    const body = await res.json().catch(() => ({}));
+                    throw new Error(body?.error || 'Failed to load users');
                 }
-            };
-            fetchUsers();
-            return () => { mounted = false; };
-        }, []);
+                const body = await res.json();
+                console.log(body);
+                const data = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
+                if (mounted) {
+                    setUsers(data);
+                    setNextPageToken(body.data?.nextPageToken || null);
+                }
+            } catch (e: any) {
+                console.error('Failed to load users', e);
+                if (mounted) setError(e?.message || 'Failed to load users');
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+        fetchUsers();
+        return () => { mounted = false; };
+    }, []);
 
     const handleMycoSubmit = async (data: MycoFormData) => {
         console.log('Form submitted:', data);
-        
+
         // Refresh users list and counts (reset pagination)
         try {
             const [rolesRes, disabledRes] = await Promise.all([
@@ -137,7 +137,7 @@ export default function Users() {
                 }
                 const body = await res.json();
                 const newData = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
-                
+
                 // Safety check: if token didn't change and we got data, stop loading
                 const newToken = body.data?.nextPageToken || null;
                 if (newToken === nextPageToken && newData.length > 0) {
@@ -146,7 +146,7 @@ export default function Users() {
                     setIsLoadingMore(false);
                     return;
                 }
-                
+
                 setUsers(prev => [...prev, ...newData]);
                 setNextPageToken(newToken);
             } catch (err) {
@@ -190,9 +190,9 @@ export default function Users() {
 
             </div>
             {/* End Header Section */}
-            
+
             {/* Statistics Tiles */}
-            <div className ="flex flex-col xl:flex-row w-full mt-6 gap-x-2 gap-y-2">
+            <div className="flex flex-col xl:flex-row w-full mt-6 gap-x-2 gap-y-2">
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 w-full xl:w-2/3">
                     <StatisticsTile icon={faUsers} iconColor="var(--accent-color)" title="Total Users" statNum={totalUsers} />
                     <StatisticsTile icon={faUsers} iconColor="var(--primary-color)" title="Total Farmers" statNum={totalFarmers} />
@@ -200,14 +200,14 @@ export default function Users() {
                     <StatisticsTile icon={faUsers} iconColor="var(--moldify-red)" title="Total Administrators" statNum={totalAdmins} />
                 </div>
                 <div className="w-fill xl:w-1/3">
-                    <DonutChart 
-                        title="User Status Breakdown" 
-                        data={userStatusData} 
+                    <DonutChart
+                        title="User Status Breakdown"
+                        data={userStatusData}
                     />
                 </div>
             </div>
-            
-            
+
+
             {/* Submitted Cases Section */}
             <div className="flex flex-col md:flex-row md:items-center mt-10 gap-4 w-full justify-between">
                 {/* Left Label */}
@@ -222,7 +222,7 @@ export default function Users() {
                 >
                     <span>Create Mycologist Account</span>
                     <FontAwesomeIcon icon={faPlus} />
-                </button>    
+                </button>
             </div>
             <div className="flex flex-col mt-5 md:flex-row md:ml-auto gap-x-2 gap-y-3 w-full">
                 {/* Search Bar */}
@@ -247,7 +247,7 @@ export default function Users() {
                         defaultValue=""
                     >
                         <option value="" className="bg-[var(--taupe)]" disabled>
-                        Filter By Priority
+                            Filter By Priority
                         </option>
                         <option value="low" className="bg-[var(--taupe)]">Low Priority</option>
                         <option value="medium" className="bg-[var(--taupe)]">Medium Priority</option>
@@ -262,7 +262,7 @@ export default function Users() {
                         defaultValue=""
                     >
                         <option value="" className="bg-[var(--taupe)]" disabled>
-                        Filter By Status
+                            Filter By Status
                         </option>
                         <option value="in-progress" className="bg-[var(--taupe)]">In Progress</option>
                         <option value="resolved" className="bg-[var(--taupe)]">Resolved</option>
@@ -274,18 +274,18 @@ export default function Users() {
 
 
             {/* Submitted Cases Table */}
-                                <div className="mt-6 w-full">
-                            {loading && <p>Loading users...</p>}
-                            {error && <p className="text-red-600">{error}</p>}
-                            {!loading && !error && <UserTable data={users} />}
-                            
-                            {/* Infinite scroll trigger */}
-                            <div ref={loadMoreRef} className="py-4 text-center">
-                                {isLoadingMore && <p className="text-sm text-[var(--moldify-grey)]">Loading more users...</p>}
-                            </div>
-                    </div>
-        
-             <AddMycoModal
+            <div className="mt-6 w-full">
+                {loading && <p>Loading users...</p>}
+                {error && <p className="text-red-600">{error}</p>}
+                {!loading && !error && <UserTable data={users} />}
+
+                {/* Infinite scroll trigger */}
+                <div ref={loadMoreRef} className="py-4 text-center">
+                    {isLoadingMore && <p className="text-sm text-[var(--moldify-grey)]">Loading more users...</p>}
+                </div>
+            </div>
+
+            <AddMycoModal
                 isOpen={isAddMycoModal}
                 onClose={() => setShowAddMycoModal(false)}
                 onSubmit={handleMycoSubmit}

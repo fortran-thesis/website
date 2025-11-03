@@ -19,11 +19,11 @@ export default function StatusBox({ status, fontSize = "0.75rem" }: StatusBoxPro
         return "var(--moldify-grey)";
       case "rejected": case "inactive": case "unresolved":
         return "var(--moldify-red)";
-      case "low priority":
+      case "low":
         return "var(--moldify-light-green)";
-      case "medium priority":
+      case "medium":
         return "var(--moldify-light-yellow)";
-      case "high priority":
+      case "high":
         return "var(--moldify-light-red)";
       default:
         return "rgba(0, 0, 0, 0.15)";
@@ -31,7 +31,7 @@ export default function StatusBox({ status, fontSize = "0.75rem" }: StatusBoxPro
   };
 
   const textColor =
-    ["pending", "low priority", "medium priority", "high priority"].includes(
+    ["pending", "low", "medium", "high"].includes(
       status.toLowerCase()
     )
       ? "var(--moldify-black)"

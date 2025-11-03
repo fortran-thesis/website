@@ -61,7 +61,7 @@ export default function Sidebar() {
                         height={60} 
                     />
                     <div className = "flex flex-col justify-center">
-                        <h2 className="text-[var(--accent-color)] font-[family-name:var(--font-montserrat)] font-black text-3xl">MOLDIFY</h2>
+                        <h2 className="text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-black text-2xl">MOLDIFY</h2>
                         <p className="text-[var(--background-color)] text-xs font-[family-name:var(--font-bricolage-grotesque)]">Identify mold with Moldify</p>
                     </div>
                 </div>

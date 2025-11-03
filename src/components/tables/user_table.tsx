@@ -66,15 +66,19 @@ export default function UserTable({ data, onEdit }: UserTableProps) {
                                 <td
                                     className={`py-3 px-6 font-bold ${
                                         (user.user?.role?.toLowerCase() === "administrator" || user.user?.role?.toLowerCase() === "admin")
-                                            ? "text-[var(--moldify-red)]"
-                                            : user.user?.role?.toLowerCase() === "mycologist"
-                                            ? "text-[var(--moldify-blue)]"
-                                            : "text-[var(--primary-color)]"
+                                        ? "text-[var(--moldify-red)]"
+                                        : user.user?.role?.toLowerCase() === "mycologist"
+                                        ? "text-[var(--moldify-blue)]"
+                                        : user.user?.role?.toLowerCase() === "user"
+                                        ? "text-[var(--primary-color)]" 
+                                        : "text-[var(--primary-color)]"
                                     }`}
-                                >
-                                    {user.user?.role
-                                        ? user.user.role.charAt(0).toUpperCase() + user.user.role.slice(1)
-                                        : ""}
+                                    >
+                                    {
+                                        user.user?.role?.toLowerCase() === "user"
+                                        ? "Farmer"
+                                        : user.user?.role?.charAt(0).toUpperCase() + user.user?.role?.slice(1) 
+                                    }
                                 </td>
                                 <td className="py-3 px-6">
                                     <StatusBox status={user.details?.disabled === false ? "Active" : "Inactive"} />

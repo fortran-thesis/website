@@ -6,10 +6,10 @@ import Image from "next/image";
 
 const MoldifyLogov2 = "/assets/moldify-logo-v3.svg";
 
-interface AddMycoModalProps {
+interface EditMycoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: MycoFormData) => Promise<void> | void;
+  onSubmit: (data: MycoFormData) => void;
 }
 
 export interface MycoFormData {
@@ -21,7 +21,7 @@ export interface MycoFormData {
   confirmPassword: string;
 }
 
-export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModalProps) {
+export default function EditMycoModal({ isOpen, onClose, onSubmit }: EditMycoModalProps) {
   const [formData, setFormData] = useState<MycoFormData>({
     firstName: "",
     lastName: "",
@@ -31,8 +31,6 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
     confirmPassword: "",
   });
 
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -96,15 +94,7 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
         credentials: "include",
       });
 
-      let result;
-      const responseText = await response.text();
-      
-      try {
-        result = JSON.parse(responseText);
-      } catch (jsonError) {
-        console.error('Failed to parse response:', responseText);
-        result = { error: 'Invalid response from server' };
-      }
+      const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         setError(result?.error || result?.message || "Failed to create account");
@@ -114,8 +104,7 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
       setSuccessMessage("Mycologist account created successfully!");
       
       // Call parent's onSubmit callback for additional handling (e.g., refresh user list)
-      // Wait for onSubmit to complete before closing modal
-      await Promise.resolve(onSubmit(formData));
+      onSubmit(formData);
       
       // Reset form after successful submission
       setFormData({
@@ -126,11 +115,12 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
         password: "",
         confirmPassword: "",
       });
-      setShowPassword(false);
-      setShowConfirmPassword(false);
 
-      // Close modal after parent callback completes
-      onClose();
+      // Close modal after 1.5 seconds
+      setTimeout(() => {
+        onClose();
+        setSuccessMessage(null);
+      }, 1500);
     } catch (err: any) {
       setError(err?.message || "An error occurred while creating the account");
     } finally {
@@ -167,10 +157,10 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
             </div>
 
             <h2 className="text-2xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-            CREATE MYCOLOGIST ACCOUNT
+              EDIT MYCOLOGIST ACCOUNT
             </h2>
             <p className="text-[var(--moldify-black)] text-sm mb-4 font-[family-name:var(--font-bricolage-grotesque)]">
-            Register new mycologists to the system.
+              Edit existing mycologist information.
             </p>
 
             {/* Error Message */}
@@ -269,71 +259,13 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
                 />
             </div>
 
-            {/* Password */}
-            <div>
-                <label
-                htmlFor="password"
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold text-[var(--primary-color)] mb-2 block"
-                >
-                Password
-                </label>
-                <div className="relative">
-                <input
-                    id="password"
-                    placeholder="Enter Password"
-                    type={showPassword ? "text" : "password"}
-                    value={formData.password}
-                    onChange={(e) => handleChange("password", e.target.value)}
-                    required
-                    className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 rounded-lg focus:outline-none appearance-none"
-                />
-                <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary-color)] hover:text-[var(--hover-primary)] transition cursor-pointer"
-                    aria-label="Toggle password visibility"
-                >
-                    <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} className="w-4 h-4" />
-                </button>
-                </div>
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-                <label
-                htmlFor="confirm-password"
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold text-[var(--primary-color)] mb-2 block"
-                >
-                Confirm Password
-                </label>
-                <div className="relative">
-                <input
-                    id="confirm-password"
-                    placeholder="Confirm Password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                    required
-                    className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 rounded-lg focus:outline-none appearance-none"
-                />
-                <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary-color)] hover:text-[var(--hover-primary)] transition cursor-pointer"
-                    aria-label="Toggle confirm password visibility"
-                >
-                    <FontAwesomeIcon icon={showConfirmPassword ? faEye : faEyeSlash} className="w-4 h-4" />
-                </button>
-                </div>
-            </div>
-
             {/* Submit Button */}
             <button
                 type="submit"
                 disabled={isLoading}
                 className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-                {isLoading ? "Creating..." : "Create Account"}
+              > 
+                {isLoading ? "Saving..." : "Save Changes"}
             </button>
             </form>
             </div>

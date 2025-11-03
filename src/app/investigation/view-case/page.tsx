@@ -23,7 +23,7 @@ type Mycologist = {
   id?: string;
 };
 
-export default function Investigation() {
+export default function Investigation({ src }: { src?: string }) {
   const searchParams = useSearchParams();
   const caseId = searchParams.get('id');
   
@@ -336,6 +336,8 @@ export default function Investigation() {
       content: getInVivoContent(),
     },
   ];
+  
+  const [imgSrc, setImgSrc] = useState(src || imageUrl);
 
   return (
     <div className="flex flex-col min-h-screen xl:py-2 py-10">
@@ -398,7 +400,7 @@ export default function Investigation() {
             </p>
             <div className="mt-4 flex flex-col items-center">
               <div className="w-50 h-50 rounded-full overflow-hidden shadow-sm">
-                <Image src={imageUrl} alt={`${reporterName}'s profile picture`} width={50} height={50} className="object-cover w-full h-full" />
+                <Image src={imageUrl} alt={`${reporterName}'s profile picture`} width={50} height={50} className="object-cover w-full h-full"  onError={() => setImgSrc("/assets/default-fallback.png")}/>
               </div>
               <div className="flex flex-col mt-4 items-center justify-center">
                 <h1 className="font-[family-name:var(--font-montserrat)] text-lg font-black text-[var(--primary-color)]">{reporterName}</h1>
