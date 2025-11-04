@@ -40,7 +40,7 @@ export default function InVivoTab({
     <div className="overflow-y-auto space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
+        <h2 className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
           In Vivo
         </h2>
         <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">

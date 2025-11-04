@@ -184,7 +184,7 @@ export default function Users() {
                 <div className="flex flex-col">
                     <Breadcrumbs role={userRole} />
                     <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-                        INVESTIGATION OVERSIGHT
+                        USER MANAGEMENT
                     </h1>
                 </div>
 
@@ -246,12 +246,13 @@ export default function Users() {
                         className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
                         defaultValue=""
                     >
-                        <option value="" className="bg-[var(--taupe)]" disabled>
-                            Filter By Priority
+                        <option value="" className="bg-[var(--taupe)] font-bold text-[var(--primary-color)]">
+                            Filter By Role
                         </option>
-                        <option value="low" className="bg-[var(--taupe)]">Low Priority</option>
-                        <option value="medium" className="bg-[var(--taupe)]">Medium Priority</option>
-                        <option value="high" className="bg-[var(--taupe)]">High Priority</option>
+                        <option value="all" className="bg-[var(--taupe)]">All</option>
+                        <option value="farmer" className="bg-[var(--taupe)]">Farmer</option>
+                        <option value="mycologist" className="bg-[var(--taupe)]">Mycologist</option>
+                        <option value="admin" className="bg-[var(--taupe)]">Admin</option>
                     </select>
 
                     {/* Filter by Status */}
@@ -261,13 +262,12 @@ export default function Users() {
                         className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
                         defaultValue=""
                     >
-                        <option value="" className="bg-[var(--taupe)]" disabled>
+                        <option value="" className="bg-[var(--taupe)] font-bold text-[var(--primary-color)]">
                             Filter By Status
                         </option>
-                        <option value="in-progress" className="bg-[var(--taupe)]">In Progress</option>
-                        <option value="resolved" className="bg-[var(--taupe)]">Resolved</option>
-                        <option value="closed" className="bg-[var(--taupe)]">Closed</option>
-                        <option value="pending" className="bg-[var(--taupe)]">Pending</option>
+                        <option value="all" className="bg-[var(--taupe)]">All</option>
+                        <option value="active" className="bg-[var(--taupe)]">Active</option>
+                        <option value="inactive" className="bg-[var(--taupe)]">Inactive</option>
                     </select>
                 </div>
             </div>
@@ -277,7 +277,10 @@ export default function Users() {
             <div className="mt-6 w-full">
                 {loading && <p>Loading users...</p>}
                 {error && <p className="text-red-600">{error}</p>}
-                {!loading && !error && <UserTable data={users} />}
+                {!loading && !error && <UserTable data={users} 
+                    onEdit={(c: any) => {
+                      window.location.href = `/user/view-user?id=${c.id}`;
+                  }}/>}
 
                 {/* Infinite scroll trigger */}
                 <div ref={loadMoreRef} className="py-4 text-center">

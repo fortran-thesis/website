@@ -81,7 +81,7 @@ export default function Reports() {
                             className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
                             defaultValue=""
                         >
-                            <option value="" className="bg-[var(--taupe)]" disabled>
+                            <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold" disabled>
                             Filter By Status
                             </option>
                             <option value="all" className="bg-[var(--taupe)]">All</option>

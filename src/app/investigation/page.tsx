@@ -113,9 +113,10 @@ export default function Investigation() {
                             className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
                             defaultValue=""
                         >
-                            <option value="" className="bg-[var(--taupe)]" disabled>
+                            <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold" disabled>
                             Filter By Priority
                             </option>
+                            <option value="all" className="bg-[var(--taupe)]">All</option>
                             <option value="low" className="bg-[var(--taupe)]">Low Priority</option>
                             <option value="medium" className="bg-[var(--taupe)]">Medium Priority</option>
                             <option value="high" className="bg-[var(--taupe)]">High Priority</option>
@@ -128,9 +129,10 @@ export default function Investigation() {
                             className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
                             defaultValue=""
                         >
-                            <option value="" className="bg-[var(--taupe)]" disabled>
+                            <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold" disabled>
                             Filter By Status
                             </option>
+                            <option value="all" className="bg-[var(--taupe)]">All</option>
                             <option value="in-progress" className="bg-[var(--taupe)]">In Progress</option>
                             <option value="resolved" className="bg-[var(--taupe)]">Resolved</option>
                             <option value="closed" className="bg-[var(--taupe)]">Closed</option>

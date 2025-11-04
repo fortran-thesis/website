@@ -399,8 +399,16 @@ export default function Investigation({ src }: { src?: string }) {
               Farmer Information
             </p>
             <div className="mt-4 flex flex-col items-center">
-              <div className="w-50 h-50 rounded-full overflow-hidden shadow-sm">
-                <Image src={imageUrl} alt={`${reporterName}'s profile picture`} width={50} height={50} className="object-cover w-full h-full"  onError={() => setImgSrc("/assets/default-fallback.png")}/>
+              <div className="relative w-50 h-50 rounded-full overflow-hidden shadow-sm">
+                <Image
+                  key={imgSrc}
+                  src={imgSrc}
+                  alt="Profile Picture"
+                  fill
+                  className="object-cover rounded-full"
+                  onError={() => setImgSrc("/assets/default-fallback.png")}
+                  priority
+                />
               </div>
               <div className="flex flex-col mt-4 items-center justify-center">
                 <h1 className="font-[family-name:var(--font-montserrat)] text-lg font-black text-[var(--primary-color)]">{reporterName}</h1>

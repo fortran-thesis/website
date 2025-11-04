@@ -125,14 +125,6 @@ export default function ViewUser({ src }: { src?: string }) {
               </>
             )}
           </div>
-          {userRole === "Mycologist" && (
-            <button
-              className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-2 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
-              onClick={() => setShowEditMycoModal(true)}
-            >
-              <span>Edit Profile</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -140,11 +132,6 @@ export default function ViewUser({ src }: { src?: string }) {
         Activity Log
       </p>
       <UserLogTile items={userLogs} />
-       <EditMycoModal
-          isOpen={isEditMycoModal}
-          onClose={() => setShowEditMycoModal(false)}
-          onSubmit={handleMycoSubmit}
-        />
     </main>
   );
 }
