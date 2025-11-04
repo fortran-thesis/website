@@ -31,6 +31,8 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [mycologists, setMycologists] = useState<Mycologist[]>(propMycologists || []);
   const [loading, setLoading] = useState(false);
+  const [isAssigned, setIsAssigned] = useState(false); 
+
 
   // Fetch mycologists and assigned cases when modal opens
   useEffect(() => {
@@ -98,13 +100,16 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
     high: "bg-[var(--moldify-light-red)]",
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("🔍 Modal - Selected priority:", priority);
+    console.log("🔍 Modal - Selected mycologist:", selectedMycologist);
+    console.log("🔍 Modal - End date:", endDate);
     if (selectedMycologist) {
       if (onAssign) {
         onAssign(selectedMycologist, priority, endDate);
+        setIsAssigned(true);
       }
-      
     }
   };
 
@@ -188,7 +193,7 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
             >
               <option value="">Choose Mycologist</option>
               {filteredMycologists.map((m) => (
-                <option key={m.name} value={m.name} className="bg-[var(--background-color)]">
+                <option key={m.id} value={m.name} className="bg-[var(--background-color)]">
                   {m.name} ({m.cases} cases)
                 </option>
               ))}
@@ -256,8 +261,9 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
         <button
           type="submit"
           className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5"
+          disabled={isAssigned} // Disable button if assigned
         >
-          Assign Case
+          {isAssigned ? "Assigned" : "Assign Case"} {/* Change button text */}
         </button>
       </form>
     </div>

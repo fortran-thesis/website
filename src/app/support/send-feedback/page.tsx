@@ -10,7 +10,6 @@ export default function SendFeedback (){
     const { 
         feedback, 
         setFeedback,
-        handleFeedbackChange, 
         handleFeedbackSubmit, 
         handleCancel } = useSendFeedbackUtils();
     return (

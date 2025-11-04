@@ -5,10 +5,7 @@ import Image from "next/image";
 import { useState } from "react";
 import StatusBox from "@/components/tiles/status_tile";
 import UserLogTile, { UserLogTileEntry } from "@/components/tiles/user_log_tile";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
-import AddMycoModal from "@/components/modals/create_myco_acc_modal";
-import EditMycoModal from "@/components/modals/edit_myco_acc_modal";
+
 
 type UserRole = "Farmer" | "Administrator" | "Mycologist";
 const userRole: UserRole = "Farmer"; 

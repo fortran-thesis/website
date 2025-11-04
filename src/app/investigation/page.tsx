@@ -84,16 +84,16 @@ export default function Investigation() {
             </div>
             
             {/* Submitted Cases Section */}
-            <div className="flex flex-col md:flex-row md:items-center mt-10 gap-4 w-full">
+            <div className="flex flex-col lg:flex-row lg:items-center mt-10 gap-4 w-full">
                 {/* Left Label */}
                 <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold">
                     Submitted Cases
                 </p>
 
                 {/* Right Section */}
-                <div className="flex flex-col md:flex-row md:ml-auto gap-x-2 gap-y-3 w-full md:w-auto">
+                <div className="flex flex-col lg:flex-row lg:ml-auto gap-x-2 gap-y-3 w-full lg:w-auto">
                     {/* Search Bar */}
-                    <div className="relative flex items-center w-full md:w-100">
+                    <div className="relative flex items-center w-full lg:w-100">
                         <label htmlFor="search" className="sr-only">Search Cases</label>
                         <input
                             id="search"
@@ -105,12 +105,12 @@ export default function Investigation() {
                     </div>
 
                     {/* Filter Dropdowns */}
-                    <div className="flex gap-2 w-full md:w-auto">
+                    <div className="flex gap-2 w-full lg:w-auto">
                         {/* Filter by Priority */}
                         <label htmlFor="priority" className="sr-only">Filter by Priority</label>
                         <select
                             id="priority"
-                            className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
+                            className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full lg:w-auto"
                             defaultValue=""
                         >
                             <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold" disabled>
@@ -126,7 +126,7 @@ export default function Investigation() {
                         <label htmlFor="status" className="sr-only">Filter by Status</label>
                         <select
                             id="status"
-                            className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
+                            className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full lg:w-auto"
                             defaultValue=""
                         >
                             <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold" disabled>

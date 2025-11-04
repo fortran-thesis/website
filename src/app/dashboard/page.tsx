@@ -111,7 +111,7 @@ export default function Home() {
 
                     {/* Profile Info */}
                     <div className="flex gap-x-2 items-center">
-                        <img
+                        <Image
                             src={user?.profileImageUrl || "/assets/default-fallback.png"}
                             alt="pfp"
                             width={40}
@@ -160,7 +160,7 @@ export default function Home() {
                     cases={cases} 
                     showPriority={false} 
                     showStatus={false} 
-                    onEdit={(c) => {
+                    onEdit={(c: any) => {
                       window.location.href = '/investigation/view-case';
                   }}
                 />

@@ -1,8 +1,7 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faClipboard, faUsers, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faUsers, faPlus } from '@fortawesome/free-solid-svg-icons';
 import StatisticsTile from '@/components/tiles/statistics_tile';
-import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import DonutChart from '@/components/charts/donut-chart';
 import UserTable from '@/components/tables/user_table';

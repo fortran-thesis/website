@@ -3,7 +3,7 @@
 import React from "react";
 import StatusBox from "@/components/tiles/status_tile";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faPen } from "@fortawesome/free-solid-svg-icons";
+import { faEye } from "@fortawesome/free-solid-svg-icons";
 
 export interface User {
   id: string
