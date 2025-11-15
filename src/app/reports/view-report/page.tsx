@@ -13,7 +13,7 @@ import StatusBox from "@/components/tiles/status_tile";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import RequestRevisionModal from "@/components/modals/request_revision_modal";
 
-export default function ViewReport({ src }: { src?: string }) {
+export default function ViewReport() {
   const userName = "Faith Gabrielle Gamboa";
   const username = "lauren123";
   const userEmail = "lauren@gmail.com";
@@ -29,7 +29,7 @@ export default function ViewReport({ src }: { src?: string }) {
     "Molds are a fascinating group of fungi that thrive in diverse environments, from damp basements to decaying organic matter. These microscopic organisms play a crucial role in ecosystems by breaking down complex organic materials, recycling nutrients, and contributing to soil health...";
   const userRole = "Administrator";
 
-  const [imgSrc, setImgSrc] = useState(src || userProfileImage);
+  const [imgSrc, setImgSrc] = useState(userProfileImage);
   const [hasImage, setHasImage] = useState(true);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isReqRevisionsModalOpen, setIsReqRevisionsModalOpen] = useState(false);
