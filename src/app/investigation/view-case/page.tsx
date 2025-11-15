@@ -23,7 +23,7 @@ type Mycologist = {
   id?: string;
 };
 
-export default function Investigation({ src }: { src?: string }) {
+export default function ViewCase({ src }: { src?: string }) {
   const searchParams = useSearchParams();
   const caseId = searchParams.get('id');
   
@@ -36,8 +36,6 @@ export default function Investigation({ src }: { src?: string }) {
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isConfirmAssignOpen, setConfirmAssignOpen] = useState(false);
   const [isAddTreatmentOpen, setAddTreatmentOpen] = useState(false);
-  const [assignedMycologist, setAssignedMycologist] = useState<string | null>(null);
-  const [isRejected, setIsRejected] = useState(false);
 
   const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; priority: string; endDate: Date | null } | null>(null);
 
@@ -56,9 +54,14 @@ export default function Investigation({ src }: { src?: string }) {
           throw new Error('Failed to load case details');
         }
         const body = await res.json();
+
+        console.log("Fetched case data:", body.data);
+
         if (body.success && body.data) {
           setCaseData(body.data);
-          
+          console.log("Full case data:", body.data); // Log the entire case data
+          console.log("Priority from case data:", body.data.priority); // Log the priority specifically
+
           // If case has assigned mycologist, fetch the mold-case
           if (body.data.assigned_mycologist_id) {
             try {
@@ -69,7 +72,6 @@ export default function Investigation({ src }: { src?: string }) {
                   setMoldCase(moldCaseBody.data);
                 }
               }
-              // If 404, mold-case doesn't exist yet (State 2)
             } catch (err: any) {
               console.error('Failed to fetch mold-case:', err);
             }
@@ -89,6 +91,9 @@ export default function Investigation({ src }: { src?: string }) {
 
   // Called from AssignCaseModal -> opens confirmation modal
   const handleAssignClick = (mycologist: Mycologist, priority: string, endDate: Date | null) => {
+    console.log("🔍 Page - Received priority:", priority);
+    console.log("🔍 Page - Received mycologist:", mycologist);
+    console.log("🔍 Page - Received endDate:", endDate);
     setPendingAssign({ mycologist, priority, endDate });
     setConfirmAssignOpen(true);
   };
@@ -140,14 +145,12 @@ export default function Investigation({ src }: { src?: string }) {
         throw new Error('Failed to create mold case');
       }
 
-      // Success
-      setAssignedMycologist(pendingAssign.mycologist.name);
       console.log("Assignment complete:", pendingAssign.mycologist, pendingAssign.priority, pendingAssign.endDate);
       setPendingAssign(null);
       setConfirmAssignOpen(false);
       setAssignModalOpen(false);
 
-      // Optionally refresh case data
+      // Refresh case data to update UI
       const refreshRes = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
       if (refreshRes.ok) {
         const body = await refreshRes.json();
@@ -176,10 +179,9 @@ export default function Investigation({ src }: { src?: string }) {
       }
 
       console.log("Case rejected!");
-      setIsRejected(true);
       setRejectModalOpen(false);
 
-      // Optionally refresh case data
+      // Refresh case data to update UI
       const refreshRes = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
       if (refreshRes.ok) {
         const body = await refreshRes.json();
@@ -195,16 +197,16 @@ export default function Investigation({ src }: { src?: string }) {
 
   type UserRole = "Administrator" | "Mycologist";
 
-  const [userRole, setUserRole] = useState<UserRole>("Administrator");
+  const [userRole] = useState<UserRole>("Administrator");
   
-  // Use data from API or fallback to placeholder
+  // Use data from API
   const caseName = caseData?.case_name || "Loading...";
   const cropName = caseData?.host || "Loading...";
-  const location = caseData?.host || "Loading...";
+  const location = caseData?.location || "Loading...";
   const dateObserved = caseData?.date_observed 
     ? new Date(caseData.date_observed).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : "Loading...";
-  const status = caseData?.status.charAt(0).toUpperCase() + caseData?.status.slice(1) || "Pending";
+  const status = caseData?.status ? caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1) : "Pending";
   const priority = caseData?.priority || "------";
   
   // Reporter info
@@ -213,7 +215,12 @@ export default function Investigation({ src }: { src?: string }) {
   const reporterPhone = caseData?.reporter?.details.phone_number || "N/A";
   const imageUrl = caseData?.reporter?.details.photo_url || "/profile-placeholder.png";
 
-  // Normalize `case_details` from backend into the shape CaseDetailsTab expects
+  // IMPORTANT: Derive state from backend data, not local state
+  const isAssigned = !!caseData?.assigned_mycologist_id;
+  const isRejected = caseData?.status === 'closed';
+  const assignedMycologistName = caseData?.assigned_mycologist?.details?.displayName || null;
+
+  // Normalize case_details
   const caseDetailsEntries = (caseData?.case_details ?? []).map((d: any) => {
     const createdSec = d?.metadata?.created_at?._seconds;
     const date = createdSec
@@ -227,9 +234,9 @@ export default function Investigation({ src }: { src?: string }) {
     };
   });
 
-  // Determine in vitro state and entries
+  // In vitro content
   const getInVitroContent = () => {
-    if (!caseData || !caseData.assigned_mycologist_id) {
+    if (!isAssigned) {
       return (
         <InVitroTab
           dateTime=""
@@ -272,9 +279,9 @@ export default function Investigation({ src }: { src?: string }) {
     );
   };
 
-  // Determine in vivo state and entries
+  // In vivo content
   const getInVivoContent = () => {
-    if (!caseData || !caseData.assigned_mycologist_id) {
+    if (!isAssigned) {
       return (
         <InVivoTab
           dateTime=""
@@ -366,20 +373,18 @@ export default function Investigation({ src }: { src?: string }) {
       {!loading && !error && caseData && (
       <div className="flex flex-col lg:flex-row flex-1 mt-2 gap-6">
 
-        <aside className="lg:sticky lg:top-10 lg:self-start w-full lg:w-1/3 bg-transparent rounded-xl overflow-y-auto">
-          {userRole !== "Mycologist" && !assignedMycologist && (
+        <aside className="lg:sticky lg:top-10 lg:self-start w-full lg:w-1/3 bg-transparent rounded-xl">
+          {/* Show dropdown only if not assigned and not rejected */}
+          {userRole !== "Mycologist" && !isAssigned && !isRejected && (
             <select
               aria-label="action-options"
               id="action"
-              className={`bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold p-4 rounded-lg cursor-pointer focus:outline-none w-full
-              ${isRejected ? "opacity-50 cursor-not-allowed" : ""}`}
+              className="bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold p-4 rounded-lg cursor-pointer focus:outline-none w-full"
               defaultValue=""
               onChange={(e) => {
-                if (isRejected) return;
                 if (e.target.value === "assign") setAssignModalOpen(true);
                 if (e.target.value === "reject") setRejectModalOpen(true);
               }}
-              disabled={isRejected}
             >
               <option value="" disabled>Choose Action</option>
               <option value="assign">Assign Case</option>
@@ -387,9 +392,17 @@ export default function Investigation({ src }: { src?: string }) {
             </select>
           )}
 
-          {assignedMycologist && (
-            <p className="mt-4 p-4 rounded-lg bg-[var(--taupe)] font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] text-sm font-semibold">
-              Assigned to: {assignedMycologist}
+          {/* Show assigned message if assigned */}
+          {isAssigned && assignedMycologistName && (
+            <p className="p-4 rounded-lg bg-[var(--taupe)] font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] text-sm font-semibold">
+              Assigned to: {assignedMycologistName}
+            </p>
+          )}
+
+          {/* Show rejected message if rejected */}
+          {isRejected && (
+            <p className="p-4 rounded-lg bg-red-100 border border-red-400 font-[family-name:var(--font-bricolage-grotesque)] text-red-700 text-sm font-semibold">
+              This case has been rejected
             </p>
           )}
 
@@ -399,8 +412,16 @@ export default function Investigation({ src }: { src?: string }) {
               Farmer Information
             </p>
             <div className="mt-4 flex flex-col items-center">
-              <div className="w-50 h-50 rounded-full overflow-hidden shadow-sm">
-                <Image src={imageUrl} alt={`${reporterName}'s profile picture`} width={50} height={50} className="object-cover w-full h-full"  onError={() => setImgSrc("/assets/default-fallback.png")}/>
+              <div className="relative w-50 h-50 rounded-full overflow-hidden shadow-sm">
+                <Image
+                  key={imgSrc}
+                  src={imgSrc}
+                  alt="Profile Picture"
+                  fill
+                  className="object-cover rounded-full"
+                  onError={() => setImgSrc("/assets/default-fallback.png")}
+                  priority
+                />
               </div>
               <div className="flex flex-col mt-4 items-center justify-center">
                 <h1 className="font-[family-name:var(--font-montserrat)] text-lg font-black text-[var(--primary-color)]">{reporterName}</h1>

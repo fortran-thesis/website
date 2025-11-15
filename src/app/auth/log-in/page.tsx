@@ -8,7 +8,6 @@ import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { setUserData } from '@/utils/auth';
 
 {/* IMAGES */}
-const GoogleIcon = '/assets/Google_Icon.svg';
 const LogInImage = '/assets/LogIn_Image.svg';
 const MoldifyLogov2 = '/assets/moldify-logo-v3.svg';
 

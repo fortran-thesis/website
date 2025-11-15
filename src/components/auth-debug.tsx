@@ -67,7 +67,7 @@ export default function AuthDebug() {
         </div>
       </div>
       <div className="mt-2 pt-2 border-t border-white/20 text-gray-400 text-xs">
-        <div className="text-yellow-400">Should see "authToken=..." in cookies above</div>
+        <div className="text-yellow-400">Should see &quot;authToken=...&quot; in cookies above</div>
       </div>
     </div>
   );

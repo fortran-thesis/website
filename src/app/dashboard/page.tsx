@@ -1,7 +1,7 @@
 "use client";
 import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBarsProgress, faBell, faCalendar, faCheck, faCheckDouble, faCircle, faCircleCheck, faCircleXmark, faClipboard, faClock } from '@fortawesome/free-solid-svg-icons';
+import { faBell, faClipboard, faTriangleExclamation, faUsers } from '@fortawesome/free-solid-svg-icons';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import MonthlyCasesChart from '@/components/charts/monthly-chart';
@@ -111,14 +111,14 @@ export default function Home() {
 
                     {/* Profile Info */}
                     <div className="flex gap-x-2 items-center">
-                        <img
-                            src={user?.profileImageUrl || "/assets/FallBack_Image.png"}
-                            alt="Profile picture"
+                        <Image
+                            src={user?.profileImageUrl || "/assets/default-fallback.png"}
+                            alt="pfp"
                             width={40}
                             height={40}
                             className="rounded-full shadow-md"
                             onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).src = "/assets/FallBack_Image.png";
+                                (e.currentTarget as HTMLImageElement).src = "/assets/default-fallback.png";
                             }}
                         />
                         <div className="hidden lg:flex flex-col">
@@ -135,12 +135,10 @@ export default function Home() {
             {/* End Header Section */}
 
             {/* Statistics Tiles */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-5 gap-3 mt-6">
-                <StatisticsTile icon={faClock} iconColor="var(--accent-color)" title="Pending Cases" statNum={0} />
-                <StatisticsTile icon={faBarsProgress} iconColor="var(--moldify-blue)" title="In Progress Cases" statNum={0} />
-                <StatisticsTile icon={faCircleCheck} iconColor="var(--primary-color)" title="Resolved Cases" statNum={0} />
-                <StatisticsTile icon={faCheckDouble} iconColor="var(--moldify-grey)" title="Closed Cases" statNum={0} />
-                <StatisticsTile icon={faCircleXmark} iconColor="var(--moldify-red)" title="Rejected Cases" statNum={0} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-6">
+                <StatisticsTile icon={faUsers} iconColor="var(--accent-color)" title="Total Users" statNum={0} />
+                <StatisticsTile icon={faClipboard} iconColor="var(--primary-color)" title="Total Cases" statNum={0} />
+                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--moldify-red)" title="Total Reports" statNum={0} />
             </div>
             
             {/* Line Chart & Priority Level Breakdown */}
@@ -162,7 +160,7 @@ export default function Home() {
                     cases={cases} 
                     showPriority={false} 
                     showStatus={false} 
-                    onEdit={(c) => {
+                    onEdit={(c: any) => {
                       window.location.href = '/investigation/view-case';
                   }}
                 />

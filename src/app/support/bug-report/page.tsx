@@ -9,7 +9,6 @@ export default function SendFeedback (){
     const { 
         bugReport, 
         setBugReport,
-        handleBugReportChange,
         handleBugReportSubmit,
         handleCancel } = useBugReportUtils();
     return (

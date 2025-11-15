@@ -1,5 +1,4 @@
 "use client";
-import { useState, useRef } from 'react';
 import Link from 'next/link';
 import StepIndicator from "@/components/step_indicator";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -42,7 +41,7 @@ export default function Page() {
                 <div className="w-full xl:w-1/2 p-5 flex flex-col mt-0 xl:mt-2 max-h-auto xl:max-h-150 overflow-y-auto">
                     {/* SIGN UP HEADER*/}
                     <StepIndicator length={2} currentStep={2} />
-                    <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-2">LET'S SET UP YOUR
+                    <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] mt-2">LET&apos;S SET UP YOUR
                         <span className="inline xl:block text-[var(--accent-color)]"> ACCOUNT</span>
                     </h1>
 

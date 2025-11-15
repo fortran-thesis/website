@@ -1,7 +1,6 @@
 "use client";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
-import IdentificationHistoryTable from "@/components/tables/identification_history_table";
 import TreatmentHistoryTable from "@/components/tables/treatment_history_table";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

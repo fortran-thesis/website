@@ -3,7 +3,7 @@
 import React from "react";
 import StatusBox from "@/components/tiles/status_tile";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen } from "@fortawesome/free-solid-svg-icons";
+import { faEye } from "@fortawesome/free-solid-svg-icons";
 
 export interface User {
   id: string
@@ -89,7 +89,7 @@ export default function UserTable({ data, onEdit }: UserTableProps) {
                                         className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
                                         aria-label="Edit"
                                     >
-                                        <FontAwesomeIcon icon={faPen} style={{ width: "12px", height: "12px" }} />
+                                        <FontAwesomeIcon icon={faEye} style={{ width: "12px", height: "12px" }} />
                                     </button>
                                 </td>
                             </tr>

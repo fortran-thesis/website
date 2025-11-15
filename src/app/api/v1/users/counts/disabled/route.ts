@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { envOptions } from '@/configs/envOptions';
-import { endpoints } from '@/services/endpoints';
 
 // Proxy for /api/v1/users/counts/disabled
 export async function GET(req: NextRequest) {

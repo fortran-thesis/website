@@ -1,13 +1,10 @@
 "use client";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faSearch,
   faClipboard,
   faTriangleExclamation,
   faImage,
-  faCheckCircle,
 } from "@fortawesome/free-solid-svg-icons";
-import StatisticsTile from "@/components/tiles/statistics_tile";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import { useState } from "react";
 import BackButton from "@/components/buttons/back_button";

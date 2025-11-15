@@ -1,9 +1,8 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faClipboard, faTriangleExclamation} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faTriangleExclamation} from '@fortawesome/free-solid-svg-icons';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
-import {useState, useEffect} from 'react'
 import ReportsTable, { Report } from '@/components/tables/report_table';
 
 export default function Reports() {
@@ -81,7 +80,7 @@ export default function Reports() {
                             className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
                             defaultValue=""
                         >
-                            <option value="" className="bg-[var(--taupe)]" disabled>
+                            <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold" disabled>
                             Filter By Status
                             </option>
                             <option value="all" className="bg-[var(--taupe)]">All</option>
@@ -95,7 +94,7 @@ export default function Reports() {
             {/* Submitted Cases Table */}
             <div className="mt-6 w-full">
               <ReportsTable data={mockReports} 
-                onEdit={(c: any) => {
+                onEdit={(c: Report) => {
                         window.location.href = `/reports/view-report?id=${c.id}`;
                     }}
                 />

@@ -1,8 +1,7 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faClipboard, faUsers, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faUsers, faPlus } from '@fortawesome/free-solid-svg-icons';
 import StatisticsTile from '@/components/tiles/statistics_tile';
-import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import DonutChart from '@/components/charts/donut-chart';
 import UserTable from '@/components/tables/user_table';
@@ -23,6 +22,11 @@ export default function Users() {
     const [nextPageToken, setNextPageToken] = useState<string | null>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
+    // Search and filter state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [roleFilter, setRoleFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+
     // Stats from API endpoints
     const [roleCounts, setRoleCounts] = useState({ farmer: 0, mycologist: 0, admin: 0 });
     const [disabledCounts, setDisabledCounts] = useState({ active: 0, inactive: 0 });
@@ -38,6 +42,23 @@ export default function Users() {
         { name: "Inactive", value: inactiveCount, color: "var(--moldify-red)" },
         { name: "Active", value: activeCount, color: "var(--primary-color)" },
     ];
+
+    // Build search URL with active filters
+    const buildSearchUrl = (token?: string | null) => {
+        const params = new URLSearchParams();
+        if (searchQuery) params.set('search', searchQuery);
+        if (roleFilter && roleFilter !== 'all') params.set('role', roleFilter);
+        if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+        params.set('limit', '10');
+        if (token) params.set('pageToken', token);
+
+        const queryString = params.toString();
+        // If no filters, use regular /users endpoint; otherwise use /users/search
+        if (!searchQuery && !roleFilter && !statusFilter) {
+            return `/api/v1/users?${queryString}`;
+        }
+        return `/api/v1/users/search?${queryString}`;
+    };
 
     // Fetch initial users page (no pagination for now)
     useEffect(() => {
@@ -66,7 +87,8 @@ export default function Users() {
             setLoading(true);
             setError(null);
             try {
-                const res = await fetch('/api/v1/users?limit=10', { cache: 'no-store' });
+                const url = buildSearchUrl();
+                const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) {
                     const body = await res.json().catch(() => ({}));
                     throw new Error(body?.error || 'Failed to load users');
@@ -87,7 +109,7 @@ export default function Users() {
         };
         fetchUsers();
         return () => { mounted = false; };
-    }, []);
+    }, [searchQuery, roleFilter, statusFilter]);
 
     const handleMycoSubmit = async (data: MycoFormData) => {
         console.log('Form submitted:', data);
@@ -108,7 +130,8 @@ export default function Users() {
             }
 
             // Refresh users list and reset pagination
-            const usersRes = await fetch('/api/v1/users?limit=10', { cache: 'no-store' });
+            const url = buildSearchUrl();
+            const usersRes = await fetch(url, { cache: 'no-store' });
             if (usersRes.ok) {
                 const usersBody = await usersRes.json();
                 const usersData = Array.isArray(usersBody.data?.snapshot) ? usersBody.data.snapshot : [];
@@ -130,7 +153,8 @@ export default function Users() {
         const handleLoadMore = async () => {
             setIsLoadingMore(true);
             try {
-                const res = await fetch(`/api/v1/users?limit=10&pageToken=${nextPageToken}`, { cache: 'no-store' });
+                const url = buildSearchUrl(nextPageToken);
+                const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) {
                     const body = await res.json().catch(() => ({}));
                     throw new Error(body?.error || 'Failed to load more users');
@@ -184,7 +208,7 @@ export default function Users() {
                 <div className="flex flex-col">
                     <Breadcrumbs role={userRole} />
                     <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-                        INVESTIGATION OVERSIGHT
+                        USER MANAGEMENT
                     </h1>
                 </div>
 
@@ -227,47 +251,59 @@ export default function Users() {
             <div className="flex flex-col mt-5 md:flex-row md:ml-auto gap-x-2 gap-y-3 w-full">
                 {/* Search Bar */}
                 <div className="relative flex items-center w-full">
-                    <label htmlFor="search" className="sr-only">Search Cases</label>
+                    <label htmlFor="search" className="sr-only">Search Users</label>
                     <input
                         id="search"
-                        placeholder="Search Cases"
+                        placeholder="Search Users"
+                        value={searchQuery}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setNextPageToken(null); // Reset pagination
+                        }}
                         className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--background-color)] py-2 px-4 rounded-full border-2 border-[var(--primary-color)] focus:outline-none w-full pr-10"
-                        required
                     />
                     <FontAwesomeIcon icon={faSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary-color)]" />
                 </div>
 
                 {/* Filter Dropdowns */}
                 <div className="flex gap-2 w-full md:w-auto">
-                    {/* Filter by Priority */}
-                    <label htmlFor="priority" className="sr-only">Filter by Priority</label>
+                    {/* Filter by Role */}
+                    <label htmlFor="role" className="sr-only">Filter by Role</label>
                     <select
-                        id="priority"
+                        id="role"
+                        value={roleFilter}
+                        onChange={(e) => {
+                            setRoleFilter(e.target.value);
+                            setNextPageToken(null); // Reset pagination
+                        }}
                         className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
-                        defaultValue=""
                     >
-                        <option value="" className="bg-[var(--taupe)]" disabled>
-                            Filter By Priority
+                        <option value="" className="bg-[var(--taupe)] font-bold text-[var(--primary-color)]">
+                            Filter By Role
                         </option>
-                        <option value="low" className="bg-[var(--taupe)]">Low Priority</option>
-                        <option value="medium" className="bg-[var(--taupe)]">Medium Priority</option>
-                        <option value="high" className="bg-[var(--taupe)]">High Priority</option>
+                        <option value="all" className="bg-[var(--taupe)]">All</option>
+                        <option value="farmer" className="bg-[var(--taupe)]">Farmer</option>
+                        <option value="mycologist" className="bg-[var(--taupe)]">Mycologist</option>
+                        <option value="admin" className="bg-[var(--taupe)]">Admin</option>
                     </select>
 
                     {/* Filter by Status */}
                     <label htmlFor="status" className="sr-only">Filter by Status</label>
                     <select
                         id="status"
+                        value={statusFilter}
+                        onChange={(e) => {
+                            setStatusFilter(e.target.value);
+                            setNextPageToken(null); // Reset pagination
+                        }}
                         className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
-                        defaultValue=""
                     >
-                        <option value="" className="bg-[var(--taupe)]" disabled>
+                        <option value="" className="bg-[var(--taupe)] font-bold text-[var(--primary-color)]">
                             Filter By Status
                         </option>
-                        <option value="in-progress" className="bg-[var(--taupe)]">In Progress</option>
-                        <option value="resolved" className="bg-[var(--taupe)]">Resolved</option>
-                        <option value="closed" className="bg-[var(--taupe)]">Closed</option>
-                        <option value="pending" className="bg-[var(--taupe)]">Pending</option>
+                        <option value="all" className="bg-[var(--taupe)]">All</option>
+                        <option value="active" className="bg-[var(--taupe)]">Active</option>
+                        <option value="disabled" className="bg-[var(--taupe)]">Disabled</option>
                     </select>
                 </div>
             </div>
@@ -277,7 +313,10 @@ export default function Users() {
             <div className="mt-6 w-full">
                 {loading && <p>Loading users...</p>}
                 {error && <p className="text-red-600">{error}</p>}
-                {!loading && !error && <UserTable data={users} />}
+                {!loading && !error && <UserTable data={users} 
+                    onEdit={(c: any) => {
+                      window.location.href = `/user/view-user?id=${c.id}`;
+                  }}/>}
 
                 {/* Infinite scroll trigger */}
                 <div ref={loadMoreRef} className="py-4 text-center">
