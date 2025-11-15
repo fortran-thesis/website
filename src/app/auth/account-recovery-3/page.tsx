@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { useRouter } from 'next/navigation';
 import { useAccountRecoveryUtils3 } from './accountRecoveryUtils3';
+import { useEffect } from 'react';
 
 const PasswordImage = '/assets/password-recover-image.svg';
 
