@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
@@ -23,7 +23,7 @@ type Mycologist = {
   id?: string;
 };
 
-export default function ViewCase({ src }: { src?: string }) {
+function ViewCaseContent() {
   const searchParams = useSearchParams();
   const caseId = searchParams.get('id');
   
@@ -344,7 +344,7 @@ export default function ViewCase({ src }: { src?: string }) {
     },
   ];
   
-  const [imgSrc, setImgSrc] = useState(src || imageUrl);
+  const [imgSrc, setImgSrc] = useState(imageUrl);
 
   return (
     <div className="flex flex-col min-h-screen xl:py-2 py-10">
@@ -521,5 +521,13 @@ export default function ViewCase({ src }: { src?: string }) {
         onClose={() => setAddTreatmentOpen(false)}
       />
     </div>
+  );
+}
+
+export default function ViewCase() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ViewCaseContent />
+    </Suspense>
   );
 }

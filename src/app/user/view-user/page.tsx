@@ -11,7 +11,7 @@ type UserRole = "Farmer" | "Administrator" | "Mycologist";
 const userRole: UserRole = "Farmer"; 
 
 
-export default function ViewUser({ src }: { src?: string }) {
+export default function ViewUser() {
   const [isEditMycoModal, setShowEditMycoModal] = useState(false);
 
   const handleMycoSubmit = (data: any) => {
@@ -37,7 +37,7 @@ export default function ViewUser({ src }: { src?: string }) {
     { date: "Oct 31, 2025", time: "05:10 PM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
   ];
 
-  const [imgSrc, setImgSrc] = useState(src || userProfileImage);
+  const [imgSrc, setImgSrc] = useState(userProfileImage);
 
   const hidePersonalInfo =
     userRole === "Administrator" || userRole === "Mycologist";
