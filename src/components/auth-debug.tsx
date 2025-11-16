@@ -7,6 +7,10 @@ import { getAuthToken, getUserData } from '@/utils/auth';
  * Debug component to check authentication status
  */
 export default function AuthDebug() {
+  // Allow enabling auth debug info via environment variable
+  // Set NEXT_PUBLIC_SHOW_AUTH_DEBUG=true to display the panel
+  const enabled = (process.env.NEXT_PUBLIC_SHOW_AUTH_DEBUG === 'true') || (process.env.NEXT_PUBLIC_SHOW_AUTH_DEBUG === '1');
+  if (!enabled) return null;
   const [authInfo, setAuthInfo] = useState({
     cookies: '',
     userData: null as any,

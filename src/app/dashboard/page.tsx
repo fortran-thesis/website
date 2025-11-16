@@ -84,8 +84,8 @@ export default function Home() {
 
     return (
         <main className="relative flex flex-col xl:py-2 py-10">
-            {/* Debug Component - Remove this in production */}
-            <AuthDebug />
+            {/* Debug Component - controlled by NEXT_PUBLIC_SHOW_AUTH_DEBUG env var */}
+            {process.env.NEXT_PUBLIC_SHOW_AUTH_DEBUG === 'true' && <AuthDebug />}
             
             {/* Header Section */}
             <div className="flex flex-row justify-between">
