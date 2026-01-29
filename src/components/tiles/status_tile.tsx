@@ -31,7 +31,7 @@ export default function StatusBox({ status, fontSize = "0.75rem" }: StatusBoxPro
   };
 
   const textColor =
-    ["pending", "low", "medium", "high"].includes(
+    ["pending", "low", "medium", "high", "unassigned"].includes(
       status.toLowerCase()
     )
       ? "var(--moldify-black)"
