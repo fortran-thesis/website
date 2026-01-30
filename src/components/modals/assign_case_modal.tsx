@@ -114,7 +114,7 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 overflow-hidden">
       <form
         method="post"
         action="/api/assign-case" 
@@ -135,7 +135,7 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
             <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-5 right-3 text-[var(--moldify-red)] hover:text-red-600 cursor-pointer font-black"
+                className="absolute top-5 right-3 text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
                 >
                 ✕
             </button>

@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import StatusBox from "@/components/tiles/status_tile";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faPen, faBacterium } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faBacterium } from "@fortawesome/free-solid-svg-icons";
 import EmptyState from "@/components/empty_state";
 
 export interface MoldGenus {

@@ -33,7 +33,7 @@ export default function RequestRevisionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-hidden">
       <div className="bg-[var(--background-color)] rounded-2xl shadow-xl w-full max-w-xl p-8 relative">
         {/* Header */}
         <div className="flex justify-center items-center mb-4">
@@ -51,7 +51,7 @@ export default function RequestRevisionModal({
           </div>
           <button
             onClick={onClose}
-            className="absolute top-5 right-5 text-[var(--moldify-red)] hover:text-red-600 font-black text-lg cursor-pointer"
+            className="absolute top-5 right-5 text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
           >
             ✕
           </button>

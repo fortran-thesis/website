@@ -9,9 +9,10 @@ import MoldGenusTable, { type MoldGenus } from "@/components/tables/mold_genus_t
 interface MoldInfoProps {
   moldData: MoldGenus[];
   setMoldData: (data: MoldGenus[]) => void;
+  onEditMold?: (mold: MoldGenus) => void;
 }
 
-export default function MoldInfo({ moldData, setMoldData }: MoldInfoProps) {
+export default function MoldInfo({ moldData, setMoldData, onEditMold }: MoldInfoProps) {
   const [search, setSearch] = useState("");
 
   return (
@@ -66,10 +67,7 @@ export default function MoldInfo({ moldData, setMoldData }: MoldInfoProps) {
       <div className="mt-6 w-full">
         <MoldGenusTable
           data={moldData}
-          onEdit={(mold) => {
-            console.log("Edit mold:", mold);
-            // Handle edit logic here
-          }}
+          onEdit={onEditMold}
         />
       </div>
     </>

@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import TabBar from '@/components/tab_bar';
 import MoldInfo from './tab-content/mold-info/page';
@@ -72,15 +73,20 @@ const DUMMY_WIKIMOLD_DATA: WikiMold[] = [
 ];
 
 export default function ContentManagement() {
+    const router = useRouter();
     const userRole = "Mycologist";
     const [moldData, setMoldData] = useState<MoldGenus[]>(DUMMY_MOLD_DATA);
     const [wikimoldData, setWikiMoldData] = useState<WikiMold[]>(DUMMY_WIKIMOLD_DATA);
+    
+    const handleEditMold = (mold: MoldGenus) => {
+      router.push(`/content-management/tab-content/mold-info/view-mold-info?id=${mold.id}`);
+    };
     
     const tabs = useMemo(() => [
         {
             label: "Mold Information",
             icon: faBacterium,
-            content: <MoldInfo moldData={moldData} setMoldData={setMoldData} />,
+            content: <MoldInfo moldData={moldData} setMoldData={setMoldData} onEditMold={handleEditMold} />,
         },
          {
             label: "WikiMold",
