@@ -6,7 +6,7 @@ import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPencil } from "@fortawesome/free-solid-svg-icons";
+import { faPen } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 
 // Dynamically import ReactQuill with no SSR to avoid hydration issues
@@ -101,7 +101,7 @@ export default function ViewWikiMold() {
       </div>
 
       {/* Main Content */}
-      <div className="mt-8 max-w-4xl mx-auto w-full">
+      <form className="mt-8 w-full">
         {/* Cover Image Section */}
         <div className="mb-8">
           <label className="block font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-sm mb-3">
@@ -123,7 +123,7 @@ export default function ViewWikiMold() {
 
             {/* Pencil Icon Overlay */}
             <label className="absolute bottom-4 right-4 flex items-center justify-center w-12 h-12 rounded-full bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] transition cursor-pointer shadow-lg hover:scale-110">
-              <FontAwesomeIcon icon={faPencil} className="text-[var(--background-color)]" style={{ width: "16px", height: "16px" }} />
+              <FontAwesomeIcon icon={faPen} className="text-[var(--background-color)]" style={{ width: "16px", height: "16px" }} />
               <input
                 type="file"
                 accept="image/*"
@@ -145,12 +145,7 @@ export default function ViewWikiMold() {
             value={wikiMoldInfo.title}
             onChange={(e) => setWikiMoldInfo({ ...wikiMoldInfo, title: e.target.value })}
             placeholder="Enter article title"
-            className="font-[family-name:var(--font-bricolage-grotesque)]
-              text-[var(--moldify-black)] text-sm
-              bg-[var(--taupe)]
-              py-3 px-4 rounded-lg
-              border-2 border-[var(--primary-color)]
-              focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] w-full"
+            className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
           />
         </div>
 
@@ -183,14 +178,18 @@ export default function ViewWikiMold() {
         {/* Publish Button */}
         <div className="flex gap-4 justify-end">
           <button
-            onClick={handlePublish}
+            type="submit"
+            onClick={(e) => {
+              e.preventDefault();
+              handlePublish();
+            }}
             disabled={isPublishing || !wikiMoldInfo.title.trim()}
             className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPublishing ? "Publishing..." : "Publish Article"}
           </button>
         </div>
-      </div>
+      </form>
     </main>
   );
 }
