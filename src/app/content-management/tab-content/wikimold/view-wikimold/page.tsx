@@ -6,7 +6,7 @@ import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUpload } from "@fortawesome/free-solid-svg-icons";
+import { faPencil } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 
 // Dynamically import ReactQuill with no SSR to avoid hydration issues
@@ -88,16 +88,16 @@ export default function ViewWikiMold() {
   return (
     <main className="relative flex flex-col xl:py-2 py-10 w-full">
       {/* Header Section */}
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-row items-start justify-between">
-          <div className="flex flex-col gap-2">
-            <BackButton />
-            <Breadcrumbs role={userRole} skipSegments={["tab-content", "wikimold"]} />
-            <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl mt-2">
-              Edit WikiMold Article
-            </h1>
-          </div>
-        </div>
+      <div className="flex flex-col gap-2">
+        <Breadcrumbs role={userRole} skipSegments={["tab-content", "wikimold"]} />
+        <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
+          CONTENT MANAGEMENT
+        </h1>
+      </div>
+
+      {/* Back Button */}
+      <div className="mt-6 mb-8">
+        <BackButton />
       </div>
 
       {/* Main Content */}
@@ -107,27 +107,23 @@ export default function ViewWikiMold() {
           <label className="block font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-sm mb-3">
             Cover Photo
           </label>
-          <div className="flex flex-col gap-4">
-            {/* Image Preview */}
-            <div className="relative w-full h-64 rounded-xl overflow-hidden border-2 border-[var(--primary-color)] bg-[var(--taupe)]/20">
-              {coverImagePreview && (
-                <Image
-                  src={coverImagePreview}
-                  alt="Cover"
-                  fill
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = fallbackImage;
-                  }}
-                />
-              )}
-            </div>
+          <div className="relative w-full h-64 rounded-xl overflow-hidden border-2 border-[var(--primary-color)] bg-[var(--taupe)]/20 group">
+            {coverImagePreview && (
+              <Image
+                src={coverImagePreview}
+                alt="Cover"
+                fill
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = fallbackImage;
+                }}
+              />
+            )}
 
-            {/* Upload Button */}
-            <label className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm">
-              <FontAwesomeIcon icon={faUpload} />
-              <span>Upload Cover Photo</span>
+            {/* Pencil Icon Overlay */}
+            <label className="absolute bottom-4 right-4 flex items-center justify-center w-12 h-12 rounded-full bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] transition cursor-pointer shadow-lg hover:scale-110">
+              <FontAwesomeIcon icon={faPencil} className="text-[var(--background-color)]" style={{ width: "16px", height: "16px" }} />
               <input
                 type="file"
                 accept="image/*"
@@ -151,7 +147,7 @@ export default function ViewWikiMold() {
             placeholder="Enter article title"
             className="font-[family-name:var(--font-bricolage-grotesque)]
               text-[var(--moldify-black)] text-sm
-              bg-[var(--taupe)]/30
+              bg-[var(--taupe)]
               py-3 px-4 rounded-lg
               border-2 border-[var(--primary-color)]
               focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] w-full"
