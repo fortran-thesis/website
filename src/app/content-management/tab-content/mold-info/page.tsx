@@ -62,7 +62,7 @@ export default function MoldInfo({ moldData, setMoldData }: MoldInfoProps) {
         </div>
       </div>
 
-      {/* Table Placeholder */}
+      {/* Mold Genus Table */}
       <div className="mt-6 w-full">
         <MoldGenusTable
           data={moldData}

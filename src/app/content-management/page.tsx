@@ -5,8 +5,10 @@ import TabBar from '@/components/tab_bar';
 import MoldInfo from './tab-content/mold-info/page';
 import { faBacterium, faBook } from '@fortawesome/free-solid-svg-icons';
 import { type MoldGenus } from '@/components/tables/mold_genus_table';
+import { type WikiMold } from '@/components/tables/wikimold_table';
+import WikiMoldManagement from './tab-content/wikimold/page';
 
-// Dummy data for all content management
+// Dummy data for mold genus
 const DUMMY_MOLD_DATA: MoldGenus[] = [
   {
     id: "MG-001",
@@ -41,9 +43,38 @@ const DUMMY_MOLD_DATA: MoldGenus[] = [
   
 ];
 
+// Dummy data for WikiMold
+const DUMMY_WIKIMOLD_DATA: WikiMold[] = [
+  {
+    id: "WM-001",
+    title: "Aspergillus: A Comprehensive Guide to Fungal Identification",
+    coverImage: "/assets/mold1.jpg",
+    datePublished: "2024-01-15",
+  },
+  {
+    id: "WM-002",
+    title: "Penicillium Species and Their Agricultural Impact",
+    coverImage: "",
+    datePublished: "2024-01-10",
+  },
+  {
+    id: "WM-003",
+    title: "Fusarium Contamination in Crops",
+    coverImage: "/assets/mold2.jpg",
+    datePublished: "2024-01-20",
+  },
+  {
+    id: "WM-004",
+    title: "Trichoderma: Beneficial Molds in Agriculture",
+    coverImage: "",
+    datePublished: "2024-01-18",
+  },
+];
+
 export default function ContentManagement() {
     const userRole = "Mycologist";
     const [moldData, setMoldData] = useState<MoldGenus[]>(DUMMY_MOLD_DATA);
+    const [wikimoldData, setWikiMoldData] = useState<WikiMold[]>(DUMMY_WIKIMOLD_DATA);
     
     const tabs = useMemo(() => [
         {
@@ -54,9 +85,9 @@ export default function ContentManagement() {
          {
             label: "WikiMold",
             icon: faBook,
-            content: <MoldInfo moldData={moldData} setMoldData={setMoldData} />,
+            content: <WikiMoldManagement wikimoldData={wikimoldData} setWikiMoldData={setWikiMoldData} />,
         },
-    ], [moldData, setMoldData]);
+    ], [moldData, setMoldData, wikimoldData, setWikiMoldData]);
 
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">

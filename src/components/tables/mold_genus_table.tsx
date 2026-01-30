@@ -22,20 +22,6 @@ interface MoldGenusCTableProps {
 export default function MoldGenusTable({ data, onEdit, isLoading = false }: MoldGenusCTableProps) {
   const [moldData, setMoldData] = useState<MoldGenus[]>(data);
 
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Active":
-        return "text-[var(--moldify-green)]";
-      case "Pending":
-        return "text-[var(--moldify-orange)]";
-      case "Inactive":
-        return "text-[var(--moldify-red)]";
-      default:
-        return "text-[var(--primary-color)]";
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow p-6">
