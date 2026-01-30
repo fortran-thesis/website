@@ -2,8 +2,9 @@
 
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen } from "@fortawesome/free-solid-svg-icons";
-import StatusBox from "@/components/tiles/status_tile"; 
+import { faPen, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import StatusBox from "@/components/tiles/status_tile";
+import EmptyState from "../empty_state"; 
 
 export interface Report {
   id: string;
@@ -24,6 +25,15 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
   return (
     <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
       <div className="h-[600px] overflow-y-auto">
+        {data.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <EmptyState
+              icon={faTriangleExclamation}
+              title="No Reports Found"
+              message="No reports have been submitted yet."
+            />
+          </div>
+        ) : (
         <table className="min-w-full text-sm text-left font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)]">
           {/* --- Table Header --- */}
           <thead className="sticky top-0 z-10 bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center">
@@ -39,8 +49,7 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
 
           {/* --- Table Body --- */}
           <tbody>
-            {data.length > 0 ? (
-              data.map((report, index) => (
+            {data.map((report, index) => (
                 <tr
                   key={report.id || index}
                   className="border-b border-[var(--taupe)] last:border-none hover:bg-[var(--accent-color)]/10 transition-colors text-center"
@@ -71,19 +80,11 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
                     </button>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="py-6 text-center text-gray-500 italic"
-                >
-                  No reports found.
-                </td>
-              </tr>
-            )}
+              ))}
           </tbody>
         </table>
+        )}
+
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 "use client";
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faSeedling } from "@fortawesome/free-solid-svg-icons";
 import StatusBox from "../tiles/status_tile";
+import EmptyState from "../empty_state";
 
 interface CaseData {
   caseName: string;
@@ -32,6 +33,15 @@ export default function CaseTable({
   return (
     <div className="min-w-full overflow-x-auto mt-4 rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
       <div className="h-[600px] overflow-y-auto">
+        {cases.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <EmptyState
+              icon={faSeedling}
+              title="No Cases Found"
+              message="No mold cases available. Submit a new case to get started."
+            />
+          </div>
+        ) : (
         <table className="min-w-full table-fixed text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)]">
           <thead className="sticky top-0 z-10 bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center">
             <tr>
@@ -86,6 +96,7 @@ export default function CaseTable({
             ))}
           </tbody>
         </table>
+        )}
       </div>
     </div>
   );

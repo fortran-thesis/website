@@ -3,7 +3,8 @@
 import React from "react";
 import StatusBox from "@/components/tiles/status_tile";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye } from "@fortawesome/free-solid-svg-icons";
+import { faEye, faUsers } from "@fortawesome/free-solid-svg-icons";
+import EmptyState from "../empty_state";
 
 export interface User {
   id: string
@@ -43,6 +44,15 @@ export default function UserTable({ data, onEdit }: UserTableProps) {
     return (
         <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
             <div className="h-[600px] overflow-y-auto">
+                {data.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <EmptyState
+                      icon={faUsers}
+                      title="No Users Found"
+                      message="No user accounts available yet."
+                    />
+                  </div>
+                ) : (
                 <table className="min-w-full text-sm text-left font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)]">
                     <thead className="sticky top-0 z-10 bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center">
                         <tr>
@@ -96,6 +106,7 @@ export default function UserTable({ data, onEdit }: UserTableProps) {
                         ))}
                     </tbody>
                 </table>
+                )}
             </div>
         </div>
     );

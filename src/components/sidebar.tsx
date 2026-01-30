@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHouseChimney, faClipboard, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faHouseChimney, faClipboard, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers, faBookOpen, faSeedling } from '@fortawesome/free-solid-svg-icons';
 import { usePathname } from 'next/navigation';
 import { useLogout } from '@/hooks/useLogout';
 
@@ -13,10 +13,17 @@ const MoldifyLogo = '/assets/Moldify_Logo.png';
 // sections of the application.
 // It is responsive and can be toggled on smaller screens.
 
-export default function Sidebar() {
+interface SidebarProps {
+    userRole?: string;
+}
+
+export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const [navOpen, setNavOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const logout = useLogout();
+
+    const isAdministrator = userRole === "Administrator";
+    const isMycologist = userRole === "Mycologist";
 
     //Detect scroll
     useEffect(() => {
@@ -75,15 +82,28 @@ export default function Sidebar() {
                         <SidebarLink icon={faHouseChimney} 
                             text="Dashboard" 
                             href="/dashboard" />
-                        <SidebarLink icon={faUsers} 
-                            text="User Management" 
-                            href="/user" />
-                        <SidebarLink icon={faClipboard} 
-                            text="Investigation Oversight" 
+                        
+                        {isAdministrator && (
+                            <SidebarLink icon={faUsers} 
+                                text="User Management" 
+                                href="/user" />
+                        )}
+                        
+                        <SidebarLink icon={faSeedling} 
+                            text="Case Management"
                             href="/investigation" />
+                        
+                        {isMycologist && (
+                            <SidebarLink icon={faBookOpen} 
+                                text="Content Management" 
+                                href="/content-management" />
+                        )}
+                        
+                        {isAdministrator && (
                             <SidebarLink icon={faTriangleExclamation} 
-                            text="Report Management" 
-                            href="/reports" />
+                                text="Report Management" 
+                                href="/reports" />
+                        )}
                     </div>
 
                     {/* Bottom Links */}

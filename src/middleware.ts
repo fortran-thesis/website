@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { envOptions } from '@/configs/envOptions';
 
 const protectedRoutes = ['/dashboard', '/investigation', '/user', '/support', '/api/v1'];
 const publicRoutes = ['/auth/log-in', '/auth/sign-up', '/auth', '/auth/account-recovery'];
@@ -28,6 +29,11 @@ export function middleware(request: NextRequest) {
     hasAuth: !!authToken,
   });
   console.log('Session cookie value:', authToken ? '***EXISTS***' : 'MISSING');
+
+  if (envOptions.disableAuth) {
+    console.log('⚠️ AUTH BYPASS ENABLED - allowing all requests');
+    return NextResponse.next();
+  }
 
   // Redirect unauthenticated users away from protected routes
   if (!authToken && isProtected) {

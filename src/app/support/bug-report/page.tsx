@@ -51,7 +51,7 @@ export default function SendFeedback (){
                                 {/* Cancel Button */}
                                 <button
                                 type="button"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-lg border-3 border-[var(--primary-color)] hover:bg-black/10 transition"
+                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-full border-3 border-[var(--primary-color)] hover:bg-black/10 transition"
                                 onClick={handleCancel}
                                 >
                                 Cancel
@@ -61,7 +61,7 @@ export default function SendFeedback (){
                                 {/* Send Code Button */}
                                 <button
                                 type="submit"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-lg hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition"
+                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-full hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                 Send Bug Report
                                 </button> 
@@ -69,12 +69,14 @@ export default function SendFeedback (){
                         </div>
                     </form>
                 </div>
-                <div className="hidden relative w-1/2 xl:flex">
-                    <Image
-                        src={BugReportImage}
-                        alt="Send Feedback Illustration"
-                        fill
-                        className="object-cover rounded-xl"
+                {/* GRASS IMAGE AT THE BOTTOM OF THE CONTAINER */}
+                <div className="absolute -bottom-10 md:-bottom-5 lg:-bottom-10 xl:-bottom-18 left-0 w-full leading-[0] pointer-events-none">
+                    <Image 
+                        src="/assets/grass.png" 
+                        alt="Grass decoration" 
+                        width={800} 
+                        height={100} 
+                        className="w-full h-auto object-cover opacity-90"
                     />
                 </div>
             </main>
