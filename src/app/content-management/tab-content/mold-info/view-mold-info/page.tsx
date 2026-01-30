@@ -47,8 +47,8 @@ export default function ViewMoldInfo() {
       moldName: '',
       description: '',
       taxonomy: {
-        kingdom: 'Fungi', // Prefilled for molds
-        phylum: 'Ascomycota', // Common for many molds, can be changed
+        kingdom: 'Fungi', 
+        phylum: 'Ascomycota', 
         class: '',
         order: '',
         family: '',

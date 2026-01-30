@@ -9,9 +9,11 @@ import WikiMoldTable, { type WikiMold } from "@/components/tables/wikimold_table
 interface WikiMoldManagementProps {
   wikimoldData: WikiMold[];
   setWikiMoldData: (data: WikiMold[]) => void;
+  onEditWikiMold?: (wikimold: WikiMold) => void;
+  onArchiveWikiMold?: (wikimold: WikiMold) => void;
 }
 
-export default function WikiMoldManagement({ wikimoldData, setWikiMoldData }: WikiMoldManagementProps) {
+export default function WikiMoldManagement({ wikimoldData, setWikiMoldData, onEditWikiMold, onArchiveWikiMold }: WikiMoldManagementProps) {
   const [search, setSearch] = useState("");
 
   return (
@@ -73,8 +75,8 @@ export default function WikiMoldManagement({ wikimoldData, setWikiMoldData }: Wi
       <div className="mt-6 w-full">
         <WikiMoldTable 
           data={wikimoldData}
-          onEdit={(wikimold) => {/* Handle edit action */}}
-          onArchive={(wikimold) => {/* Handle archive action */}}
+          onEdit={onEditWikiMold}
+          onArchive={onArchiveWikiMold}
         />
       </div>
     </>

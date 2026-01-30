@@ -8,6 +8,7 @@ import { faBacterium, faBook } from '@fortawesome/free-solid-svg-icons';
 import { type MoldGenus } from '@/components/tables/mold_genus_table';
 import { type WikiMold } from '@/components/tables/wikimold_table';
 import WikiMoldManagement from './tab-content/wikimold/page';
+import ConfirmModal from '@/components/modals/confirmation_modal';
 
 // Dummy data for mold genus
 const DUMMY_MOLD_DATA: MoldGenus[] = [
@@ -77,9 +78,28 @@ export default function ContentManagement() {
     const userRole = "Mycologist";
     const [moldData, setMoldData] = useState<MoldGenus[]>(DUMMY_MOLD_DATA);
     const [wikimoldData, setWikiMoldData] = useState<WikiMold[]>(DUMMY_WIKIMOLD_DATA);
+    const [showArchiveModal, setShowArchiveModal] = useState(false);
+    const [selectedWikiMold, setSelectedWikiMold] = useState<WikiMold | null>(null);
     
     const handleEditMold = (mold: MoldGenus) => {
       router.push(`/content-management/tab-content/mold-info/view-mold-info?id=${mold.id}`);
+    };
+    
+    const handleEditWikiMold = (wikimold: WikiMold) => {
+      router.push(`/content-management/tab-content/wikimold/view-wikimold?id=${wikimold.id}`);
+    };
+    
+    const handleArchiveWikiMold = (wikimold: WikiMold) => {
+      setSelectedWikiMold(wikimold);
+      setShowArchiveModal(true);
+    };
+    
+    const confirmArchiveWikiMold = () => {
+      if (selectedWikiMold) {
+        setWikiMoldData(wikimoldData.filter(w => w.id !== selectedWikiMold.id));
+      }
+      setShowArchiveModal(false);
+      setSelectedWikiMold(null);
     };
     
     const tabs = useMemo(() => [
@@ -91,7 +111,7 @@ export default function ContentManagement() {
          {
             label: "WikiMold",
             icon: faBook,
-            content: <WikiMoldManagement wikimoldData={wikimoldData} setWikiMoldData={setWikiMoldData} />,
+            content: <WikiMoldManagement wikimoldData={wikimoldData} setWikiMoldData={setWikiMoldData} onEditWikiMold={handleEditWikiMold} onArchiveWikiMold={handleArchiveWikiMold} />,
         },
     ], [moldData, setMoldData, wikimoldData, setWikiMoldData]);
 
@@ -113,7 +133,19 @@ export default function ContentManagement() {
                 <TabBar tabs={tabs} initialIndex={0} />
             </div>
             
-            
+            {/* Archive WikiMold Confirmation Modal */}
+            <ConfirmModal
+              isOpen={showArchiveModal}
+              title="Archive WikiMold"
+              subtitle={`Are you sure you want to archive "${selectedWikiMold?.title}"?`}
+              cancelText="Cancel"
+              confirmText="Archive"
+              onCancel={() => {
+                setShowArchiveModal(false);
+                setSelectedWikiMold(null);
+              }}
+              onConfirm={confirmArchiveWikiMold}
+            />
         </main>
     );
 }

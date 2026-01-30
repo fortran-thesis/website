@@ -1,0 +1,200 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import Image from "next/image";
+import BackButton from "@/components/buttons/back_button";
+import Breadcrumbs from "@/components/breadcrumbs_nav";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUpload } from "@fortawesome/free-solid-svg-icons";
+import dynamic from "next/dynamic";
+
+// Dynamically import ReactQuill with no SSR to avoid hydration issues
+const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+import "react-quill-new/dist/quill.snow.css";
+
+interface WikiMoldDetail {
+  id: string;
+  title: string;
+  coverImage: string;
+  content: string;
+  datePublished: string;
+}
+
+// Dummy data for prefilling
+const DUMMY_WIKIMOLD_DETAILS: Record<string, WikiMoldDetail> = {
+  "WM-001": {
+    id: "WM-001",
+    title: "Aspergillus: A Comprehensive Guide to Fungal Identification",
+    coverImage: "/assets/mold1.jpg",
+    content: "<h2>Introduction to Aspergillus</h2><p>Aspergillus is one of the most important genera of fungi, known for its widespread occurrence in nature and significant impact on human health and industry.</p>",
+    datePublished: "2024-01-15",
+  },
+  "WM-002": {
+    id: "WM-002",
+    title: "Penicillium Species and Their Agricultural Impact",
+    coverImage: "",
+    content: "<h2>Penicillium in Agriculture</h2><p>Penicillium species play a crucial role in agricultural contexts, both beneficial and detrimental.</p>",
+    datePublished: "2024-01-10",
+  },
+};
+
+export default function ViewWikiMold() {
+  const searchParams = useSearchParams();
+  const wikimoldId = searchParams.get("id") || "WM-001";
+  const userRole = "Mycologist";
+
+  const [wikiMoldInfo, setWikiMoldInfo] = useState<WikiMoldDetail>(
+    DUMMY_WIKIMOLD_DETAILS[wikimoldId] || {
+      id: "",
+      title: "",
+      coverImage: "",
+      content: "",
+      datePublished: new Date().toISOString().split("T")[0],
+    }
+  );
+
+  const [coverImagePreview, setCoverImagePreview] = useState(wikiMoldInfo.coverImage);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const fallbackImage = "/assets/wikimold-fallback.png";
+
+  useEffect(() => {
+    if (DUMMY_WIKIMOLD_DETAILS[wikimoldId]) {
+      setWikiMoldInfo(DUMMY_WIKIMOLD_DETAILS[wikimoldId]);
+      setCoverImagePreview(DUMMY_WIKIMOLD_DETAILS[wikimoldId].coverImage);
+    }
+  }, [wikimoldId]);
+
+  const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImagePreview(reader.result as string);
+        setWikiMoldInfo({ ...wikiMoldInfo, coverImage: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePublish = async () => {
+    setIsPublishing(true);
+    // Simulate publishing
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setIsPublishing(false);
+    alert("WikiMold article published successfully!");
+  };
+
+  return (
+    <main className="relative flex flex-col xl:py-2 py-10 w-full">
+      {/* Header Section */}
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-row items-start justify-between">
+          <div className="flex flex-col gap-2">
+            <BackButton />
+            <Breadcrumbs role={userRole} skipSegments={["tab-content", "wikimold"]} />
+            <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl mt-2">
+              Edit WikiMold Article
+            </h1>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="mt-8 max-w-4xl mx-auto w-full">
+        {/* Cover Image Section */}
+        <div className="mb-8">
+          <label className="block font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-sm mb-3">
+            Cover Photo
+          </label>
+          <div className="flex flex-col gap-4">
+            {/* Image Preview */}
+            <div className="relative w-full h-64 rounded-xl overflow-hidden border-2 border-[var(--primary-color)] bg-[var(--taupe)]/20">
+              {coverImagePreview && (
+                <Image
+                  src={coverImagePreview}
+                  alt="Cover"
+                  fill
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = fallbackImage;
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Upload Button */}
+            <label className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm">
+              <FontAwesomeIcon icon={faUpload} />
+              <span>Upload Cover Photo</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleCoverImageChange}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Title Section */}
+        <div className="mb-8">
+          <label htmlFor="title" className="block font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-sm mb-3">
+            Article Title
+          </label>
+          <input
+            id="title"
+            type="text"
+            value={wikiMoldInfo.title}
+            onChange={(e) => setWikiMoldInfo({ ...wikiMoldInfo, title: e.target.value })}
+            placeholder="Enter article title"
+            className="font-[family-name:var(--font-bricolage-grotesque)]
+              text-[var(--moldify-black)] text-sm
+              bg-[var(--taupe)]/30
+              py-3 px-4 rounded-lg
+              border-2 border-[var(--primary-color)]
+              focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] w-full"
+          />
+        </div>
+
+        {/* Content Section with Rich Text Editor */}
+        <div className="mb-8">
+          <label className="block font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-sm mb-3">
+            Article Content
+          </label>
+          <div className="rounded-lg border-2 border-[var(--primary-color)] overflow-hidden">
+            <ReactQuill
+              value={wikiMoldInfo.content}
+              onChange={(content) => setWikiMoldInfo({ ...wikiMoldInfo, content })}
+              theme="snow"
+              modules={{
+                toolbar: [
+                  ["bold", "italic", "underline", "strike"],
+                  ["blockquote", "code-block"],
+                  [{ header: 1 }, { header: 2 }],
+                  [{ list: "ordered" }, { list: "bullet" }],
+                  ["link", "image"],
+                  ["clean"],
+                ],
+              }}
+              placeholder="Write your article content here..."
+              className="text-[var(--moldify-black)]"
+            />
+          </div>
+        </div>
+
+        {/* Publish Button */}
+        <div className="flex gap-4 justify-end">
+          <button
+            onClick={handlePublish}
+            disabled={isPublishing || !wikiMoldInfo.title.trim()}
+            className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isPublishing ? "Publishing..." : "Publish Article"}
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}

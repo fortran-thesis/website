@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen, faBoxArchive, faBook } from "@fortawesome/free-solid-svg-icons";
@@ -21,7 +21,6 @@ interface WikiMoldTableProps {
 }
 
 export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = false }: WikiMoldTableProps) {
-  const [wikimoldData, setWikiMoldData] = useState<WikiMold[]>(data);
   const fallbackImage = "/assets/wikimold-fallback.png";
 
   if (isLoading) {
@@ -35,7 +34,7 @@ export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = fal
   return (
     <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
       <div className="h-[600px] overflow-y-auto">
-        {wikimoldData.length === 0 ? (
+        {data.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <EmptyState
               icon={faBook}
@@ -55,7 +54,7 @@ export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = fal
               </tr>
             </thead>
             <tbody>
-              {wikimoldData.map((wikimold, index) => (
+              {data.map((wikimold, index) => (
                 <tr
                   key={wikimold.id || index}
                   className="border-b border-[var(--taupe)] last:border-none hover:bg-[var(--accent-color)]/10 transition-colors"
