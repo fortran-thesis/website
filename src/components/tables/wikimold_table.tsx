@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen, faBoxArchive, faBook } from "@fortawesome/free-solid-svg-icons";
@@ -23,6 +23,12 @@ interface WikiMoldTableProps {
 
 export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = false, hideEdit = false }: WikiMoldTableProps) {
   const fallbackImage = "/assets/wikimold-fallback.png";
+  const [navigatingId, setNavigatingId] = useState<string | null>(null);
+
+  const handleEditClick = (wikimold: WikiMold) => {
+    setNavigatingId(wikimold.id);
+    onEdit?.(wikimold);
+  };
 
   if (isLoading) {
     return (
@@ -33,8 +39,19 @@ export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = fal
   }
 
   return (
-    <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
-      <div className="h-[600px] overflow-y-auto">
+    <>
+      {/* Top Loading Bar */}
+      {navigatingId && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
+      <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
+        <div className="h-[600px] overflow-y-auto">
         {data.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <EmptyState
@@ -92,12 +109,19 @@ export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = fal
                     <div className="flex items-center justify-center gap-2">
                       {!hideEdit && (
                         <button
-                          onClick={() => onEdit?.(wikimold)}
-                          className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
+                          onClick={() => handleEditClick(wikimold)}
+                          disabled={navigatingId === wikimold.id}
+                          className={`text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)] ${
+                            navigatingId === wikimold.id ? 'opacity-60 cursor-wait' : ''
+                          }`}
                           aria-label="Edit"
                           title="Edit WikiMold"
                         >
-                          <FontAwesomeIcon icon={faPen} style={{ width: "12px", height: "12px" }} />
+                          <FontAwesomeIcon 
+                            icon={faPen} 
+                            className={navigatingId === wikimold.id ? 'animate-pulse' : ''}
+                            style={{ width: "12px", height: "12px" }} 
+                          />
                         </button>
                       )}
                       <button
@@ -117,5 +141,6 @@ export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = fal
         )}
       </div>
     </div>
+    </>
   );
 }

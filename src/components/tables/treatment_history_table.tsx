@@ -40,22 +40,20 @@ export default function TreatmentHistoryTable({
           </thead>
 
           <tbody className="bg-[var(--background-color)] divide-y divide-[var(--taupe)]">
-            {treatmentHistory.length > 0 ? (
-              treatmentHistory.map((item, index) => (
-                <tr
-                  key={index}
-                  className="hover:bg-[var(--accent-color)]/10 transition-colors text-center"
-                >
-                  <td className="lg:whitespace-nowrap py-3 px-4 font-medium">
-                    {item.treatmentID}
-                  </td>
-                  <td className="lg:whitespace-nowrap py-3 px-4">
-                    {item.recommendedFungicides}
-                  </td>
-                  <td className="py-3 px-4">{item.additionalNotes}</td>
-                  <td className="lg:whitespace-nowrap py-3 px-4">{item.date}</td>
-                </tr>
-              ))
+            {treatmentHistory.map((item, index) => (
+              <tr
+                key={index}
+                className="hover:bg-[var(--accent-color)]/10 transition-colors text-center"
+              >
+                <td className="lg:whitespace-nowrap py-3 px-4 font-medium">
+                  {item.treatmentID}
+                </td>
+                <td className="lg:whitespace-nowrap py-3 px-4">
+                  {item.recommendedFungicides}
+                </td>
+                <td className="py-3 px-4">{item.additionalNotes}</td>
+                <td className="lg:whitespace-nowrap py-3 px-4">{item.date}</td>
+              </tr>
             ))}
           </tbody>
         </table>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import StatusBox from "@/components/tiles/status_tile";
@@ -22,9 +22,27 @@ interface ReportsTableProps {
 
 // Reports Table ---
 export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
+  const [navigatingId, setNavigatingId] = useState<string | null>(null);
+
+  const handleEditClick = (report: Report) => {
+    setNavigatingId(report.id);
+    onEdit?.(report);
+  };
+
   return (
-    <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
-      <div className="h-[600px] overflow-y-auto">
+    <>
+      {/* Top Loading Bar */}
+      {navigatingId && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
+      <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
+        <div className="h-[600px] overflow-y-auto">
         {data.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <EmptyState
@@ -69,12 +87,16 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
                   </td>
                   <td className="py-3 px-6 text-center">
                     <button
-                      onClick={() => onEdit?.(report)}
-                      className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
+                      onClick={() => handleEditClick(report)}
+                      disabled={navigatingId === report.id}
+                      className={`text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)] ${
+                        navigatingId === report.id ? 'opacity-60 cursor-wait' : ''
+                      }`}
                       aria-label="Edit Report"
                     >
                       <FontAwesomeIcon
                         icon={faPen}
+                        className={navigatingId === report.id ? 'animate-pulse' : ''}
                         style={{ width: "12px", height: "12px" }}
                       />
                     </button>
@@ -87,5 +109,6 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
 
       </div>
     </div>
+    </>
   );
 }

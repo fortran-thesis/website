@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen, faSeedling, faEye } from "@fortawesome/free-solid-svg-icons";
 import StatusBox from "../tiles/status_tile";
@@ -32,9 +32,27 @@ export default function CaseTable({
   showAction = true,
   useViewIcon = false,
 }: CaseTableProps) {
+  const [navigatingId, setNavigatingId] = useState<string | null>(null);
+
+  const handleEditClick = (caseItem: CaseData) => {
+    setNavigatingId(caseItem.caseName);
+    onEdit?.(caseItem);
+  };
+
   return (
-    <div className="min-w-full overflow-x-auto mt-4 rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
-      <div className="h-[600px] overflow-y-auto">
+    <>
+      {/* Top Loading Bar */}
+      {navigatingId && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
+      <div className="min-w-full overflow-x-auto mt-4 rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
+        <div className="h-[600px] overflow-y-auto">
         {cases.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <EmptyState
@@ -86,12 +104,19 @@ export default function CaseTable({
                 {showAction && (
                   <td className="py-3 px-4 text-center">
                     <button
-                      onClick={() => onEdit?.(item)}
-                      className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
+                      onClick={() => handleEditClick(item)}
+                      disabled={navigatingId === item.caseName}
+                      className={`text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)] ${
+                        navigatingId === item.caseName ? 'opacity-60 cursor-wait' : ''
+                      }`}
                       aria-label={useViewIcon ? "View" : "Edit"}
                       title={useViewIcon ? "View Case" : "Edit Case"}
                     >
-                      <FontAwesomeIcon icon={useViewIcon ? faEye : faPen} style={{ width: "12px", height: "12px" }} />
+                      <FontAwesomeIcon 
+                        icon={useViewIcon ? faEye : faPen} 
+                        className={navigatingId === item.caseName ? 'animate-pulse' : ''}
+                        style={{ width: "12px", height: "12px" }} 
+                      />
                     </button>
                   </td>
                 )}
@@ -102,5 +127,6 @@ export default function CaseTable({
         )}
       </div>
     </div>
+    </>
   );
 }
