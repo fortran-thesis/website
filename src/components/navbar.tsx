@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation'; // Added this
+import { usePathname, useRouter } from 'next/navigation';
 
 const MoldifyLogo = '/assets/moldify-logo-v5.svg'; 
 
@@ -16,8 +16,10 @@ const SCROLL_THRESHOLD = 50;
 
 export function Navbar() {
   const pathname = usePathname(); // Get the current path automatically
+  const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null); 
 
   useEffect(() => {
     const handleScroll = () => {
@@ -27,8 +29,22 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    setNavigatingTo(null);
+  }, [pathname]);
+
   // --- Logic Helpers ---
   const isActive = (href: string) => pathname === href;
+  const isNavigating = (href: string) => navigatingTo === href;
+
+  const handleNavClick = (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+    if (pathname !== href && !navigatingTo) {
+      setNavigatingTo(href);
+      setIsMenuOpen(false);
+      router.push(href);
+    }
+  };
 
   const baseClasses = `
     fixed top-0 left-0 w-full z-50 transition-all duration-500
@@ -36,7 +52,7 @@ export function Navbar() {
   `;
 
   const navItemClasses = (href: string) => `
-    relative text-md font-semibold transition-colors duration-300
+    relative text-md font-semibold transition-all duration-300
     text-[var(--background-color)] 
     font-[family-name:var(--font-bricolage-grotesque)]
     after:content-[''] after:absolute after:bottom-[-4px] after:left-0 
@@ -44,6 +60,7 @@ export function Navbar() {
     after:transition-transform after:duration-300 after:origin-left
     hover:after:scale-x-100
     ${isActive(href) ? 'font-semibold after:scale-x-100' : ''}
+    ${isNavigating(href) ? 'opacity-60' : ''}
   `;
 
   const logoClasses = `
@@ -56,37 +73,47 @@ export function Navbar() {
   const hamburgerColorClass = 'bg-[var(--background-color)]';
     
   return (
-    <nav className={baseClasses}>
-      <div className="w-full px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-        
-        {/* Logo and App Name */}
-        <Link 
-          href="/" 
-          className="flex items-center space-x-6 cursor-pointer"
-          aria-label="Moldify Home"
-        >
-          <Image
-            src={MoldifyLogo}
-            alt=""
-            width={32} 
-            height={32}
-            className="w-12 h-12 object-contain transition-all duration-500" 
-          />
-          <span className={logoClasses}>MOLDIFY</span>
-        </Link>
+    <>
+      {/* Top Loading Bar */}
+      {navigatingTo && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+               style={{ width: '30%' }} />
+        </div>
+      )}
+      
+      <nav className={baseClasses}>
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          
+          {/* Logo and App Name */}
+          <Link 
+            href="/" 
+            className="flex items-center space-x-6 cursor-pointer"
+            aria-label="Moldify Home"
+          >
+            <Image
+              src={MoldifyLogo}
+              alt=""
+              width={32} 
+              height={32}
+              className="w-12 h-12 object-contain transition-all duration-500" 
+            />
+            <span className={logoClasses}>MOLDIFY</span>
+          </Link>
 
-        {/* Desktop Nav */}
-        <div className="hidden md:flex items-center space-x-8">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={navItemClasses(item.href)}
-              aria-current={isActive(item.href) ? 'page' : undefined}
-            >
-              {item.name}
-            </Link>
-          ))}
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center space-x-8">
+            {navItems.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={(e) => handleNavClick(e, item.href)}
+                className={navItemClasses(item.href)}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+              >
+                {item.name}
+              </Link>
+            ))}
           
           <button
             className="bg-[var(--background-color)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]
@@ -117,8 +144,8 @@ export function Navbar() {
             <Link
               key={item.name}
               href={item.href}
-              onClick={() => setIsMenuOpen(false)}
-              className={`text-lg font-semibold font-[family-name:var(--font-bricolage-grotesque)] block py-2 px-3 rounded-md transition-colors text-[var(--primary-color)] ${isActive(item.href) ? 'font-bold bg-[var(--primary-color)]/5' : ''}`}
+              onClick={(e) => handleNavClick(e, item.href)}
+              className={`text-lg font-semibold font-[family-name:var(--font-bricolage-grotesque)] block py-2 px-3 rounded-md transition-all text-[var(--primary-color)] ${isActive(item.href) ? 'font-bold bg-[var(--primary-color)]/5' : ''} ${isNavigating(item.href) ? 'opacity-60' : ''}`}
             >
               {item.name}
             </Link>
@@ -126,5 +153,6 @@ export function Navbar() {
         </div>
       </div>
     </nav>
+    </>
   );
 }

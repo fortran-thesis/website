@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHouseChimney, faClipboard, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers, faBookOpen, faSeedling } from '@fortawesome/free-solid-svg-icons';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useLogout } from '@/hooks/useLogout';
 
 const MoldifyLogo = '/assets/Moldify_Logo.png';
@@ -115,7 +115,7 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
                         <div className="h-px bg-[#576146] w-full" />
                         <button
                             onClick={logout}
-                            className="cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 text-left w-full"
+                            className="cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 text-left"
                         >
                             <FontAwesomeIcon
                                 icon={faRightFromBracket}
@@ -135,28 +135,43 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
 // helper component for cleaner code
 function SidebarLink({ icon, text, href }: { icon: any; text: string; href: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [active, setActive] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     if (pathname) {
       setActive(pathname === href || pathname.startsWith(href + "/"));
+      setIsNavigating(false);
     }
   }, [pathname, href]);
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (pathname !== href && !isNavigating) {
+      setIsNavigating(true);
+      router.push(href);
+    }
+  };
+
   return (
-    <div
-      className={`cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 ${
+    <Link
+      href={href}
+      onClick={handleClick}
+      className={`cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 transition-all ${
         active ? "bg-white/20" : ""
+      } ${
+        isNavigating ? "opacity-60" : ""
       }`}
     >
       <FontAwesomeIcon
         icon={icon}
-        className={"mt-1 text-[var(--background-color)]"}
+        className="mt-1 text-[var(--background-color)]"
         style={{ width: "1.5rem", height: "1.5rem" }}
       />
-      <Link href={href} className={`mt-1 text-sm ${active ? "font-bold" : ""}`}>
+      <span className={`mt-1 text-sm ${active ? "font-bold" : ""}`}>
         {text}
-      </Link>
-    </div>
+      </span>
+    </Link>
   );
 }

@@ -1,9 +1,43 @@
 "use client";
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter, usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 
 const MoldifyLogo = '/assets/Moldify_Logo.png';
 const grass = '/assets/grass.png';
+
+function FooterLink({ href, children, prefetch = true }: { href: string; children: React.ReactNode; prefetch?: boolean }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  useEffect(() => {
+    setIsNavigating(false);
+  }, [pathname]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (pathname !== href && !isNavigating) {
+      setIsNavigating(true);
+      router.push(href);
+    }
+  };
+
+  return (
+    <Link 
+      href={href} 
+      prefetch={prefetch}
+      onClick={handleClick}
+      className={`relative w-fit block group transition-all duration-300 ${
+        isNavigating ? 'opacity-60' : ''
+      }`}
+    >
+      {children}
+      <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[var(--background-color)] opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100" />
+    </Link>
+  );
+}
 
 export default function Footer() {
   return (
@@ -29,16 +63,14 @@ export default function Footer() {
             <h3 className="text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-bold text-2xl mb-4">About</h3>
             <ul className="text-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] text-md space-y-2">
               <li>
-                <Link href="/about/about-us" className="relative w-fit block group transition-all duration-300">
+                <FooterLink href="/about/about-us">
                   About Us
-                  <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[var(--background-color)] opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100" />
-                </Link>
+                </FooterLink>
               </li>
               <li>
-                <Link href="/about/contact-us" className="relative w-fit block group transition-all duration-300">
+                <FooterLink href="/about/contact-us">
                   Contact Us
-                  <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[var(--background-color)] opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100" />
-                </Link>
+                </FooterLink>
               </li>
             </ul>
           </div>
@@ -46,28 +78,24 @@ export default function Footer() {
             <h3 className="text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-bold text-2xl mb-4">Support</h3>
             <ul className="text-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] text-md space-y-2">
               <li>
-                <Link href="/terms-of-agreement" className="relative w-fit block group transition-all duration-300">
+                <FooterLink href="/terms-of-agreement">
                   Terms of Agreement
-                  <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[var(--background-color)] opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100" />
-                </Link>
+                </FooterLink>
               </li>
               <li>
-                <Link href="/privacy-policy" className="relative w-fit block group transition-all duration-300">
+                <FooterLink href="/privacy-policy">
                   Privacy Policy
-                  <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[var(--background-color)] opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100" />
-                </Link>
+                </FooterLink>
               </li>
               <li>
-                <Link href="/support/send-feedback" prefetch={false} className="relative w-fit block group transition-all duration-300">
+                <FooterLink href="/support/send-feedback" prefetch={false}>
                   Send Feedback
-                  <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[var(--background-color)] opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100" />
-                </Link>
+                </FooterLink>
               </li>
               <li>
-                <Link href="/support/bug-report" prefetch={false} className="relative w-fit block group transition-all duration-300">
+                <FooterLink href="/support/bug-report" prefetch={false}>
                   Bug Report
-                  <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[var(--background-color)] opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100" />
-                </Link>
+                </FooterLink>
               </li>
             </ul>
           </div>
