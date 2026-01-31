@@ -20,10 +20,16 @@ interface SidebarProps {
 export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const [navOpen, setNavOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const logout = useLogout();
 
     const isAdministrator = userRole === "Administrator";
     const isMycologist = userRole === "Mycologist";
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        await logout();
+    };
 
     //Detect scroll
     useEffect(() => {
@@ -113,13 +119,27 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
                             text="Settings" 
                             href="/settings" />
                         <div className="h-px bg-[#576146] w-full" />
+                        
+                        {/* Top Loading Bar */}
+                        {isLoggingOut && (
+                            <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+                                <div 
+                                    className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+                                    style={{ width: '30%' }}
+                                />
+                            </div>
+                        )}
+                        
                         <button
-                            onClick={logout}
-                            className="cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 text-left"
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                            className={`cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 text-left ${
+                                isLoggingOut ? 'opacity-60 cursor-wait' : ''
+                            }`}
                         >
                             <FontAwesomeIcon
                                 icon={faRightFromBracket}
-                                className="mt-1 text-[var(--background-color)]"
+                                className={`mt-1 text-[var(--background-color)] ${isLoggingOut ? 'animate-pulse' : ''}`}
                                 style={{ width: "1.5rem", height: "1.5rem" }}
                             />
                             <span className="mt-1 text-sm">Log Out</span>

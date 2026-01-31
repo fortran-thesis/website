@@ -127,6 +127,17 @@ export default function EditMycoModal({ isOpen, onClose, onSubmit }: EditMycoMod
   };
 
   return (
+    <>
+      {/* Top Loading Bar */}
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-hidden">
       <div className="bg-[var(--background-color)] rounded-2xl shadow-xl w-full max-w-lg p-8 relative max-h-[100vh] overflow-hidden">
          <div className="overflow-y-auto max-h-[90vh]">
@@ -261,14 +272,17 @@ export default function EditMycoModal({ isOpen, onClose, onSubmit }: EditMycoMod
             <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`w-full font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 ${
+                  isLoading ? 'cursor-wait' : 'cursor-pointer'
+                }`}
               > 
-                {isLoading ? "Saving..." : "Save Changes"}
+                Save Changes
             </button>
             </form>
             </div>
          </div>
      </div>
     </div>
+    </>
   );
 }

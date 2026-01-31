@@ -33,6 +33,17 @@ export default function RequestRevisionModal({
   };
 
   return (
+    <>
+      {/* Top Loading Bar */}
+      {isSubmitting && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-hidden">
       <div className="bg-[var(--background-color)] rounded-2xl shadow-xl w-full max-w-xl p-8 relative">
         {/* Header */}
@@ -107,13 +118,16 @@ export default function RequestRevisionModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="cursor-pointer bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-2 w-full rounded-lg hover:bg-[var(--hover-primary)] transition font-[family-name:var(--font-bricolage-grotesque)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-2 w-full rounded-lg hover:bg-[var(--hover-primary)] transition font-[family-name:var(--font-bricolage-grotesque)] ${
+                isSubmitting ? 'opacity-60 cursor-wait' : 'cursor-pointer'
+              }`}
             >
-              {isSubmitting ? "Sending..." : "Send Request"}
+              Send Request
             </button>
           </div>
         </form>
       </div>
     </div>
+    </>
   );
 }

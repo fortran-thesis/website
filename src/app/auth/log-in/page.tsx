@@ -84,6 +84,17 @@ export default function Auth() {
   };
 
   return (
+      <>
+      {/* Top Loading Bar */}
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
       <div className="relative min-h-screen w-full flex items-center justify-center lg:justify-start bg-[#fcfaf2] overflow-hidden">
       
       {/* 1. BACKGROUND IMAGE - Hidden on mobile, visible on Extra Large screens (xl) */}
@@ -187,14 +198,17 @@ export default function Auth() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full xl:w-auto bg-[var(--primary-color)] text-white font-bold py-3.5 px-20 rounded-full font-[family-name:var(--font-bricolage-grotesque)] text-md hover:brightness-110 transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                className={`w-full xl:w-auto bg-[var(--primary-color)] text-white font-bold py-3.5 px-20 rounded-full font-[family-name:var(--font-bricolage-grotesque)] text-md hover:brightness-110 transition-all shadow-md active:scale-95 ${
+                  isLoading ? 'opacity-60 cursor-wait' : 'cursor-pointer'
+                }`}
               >
-                {isLoading ? 'Logging In...' : 'Log In'}
+                Log In
               </button>
             </div>
           </form>
         </div>
       </div>
     </div>
+    </>
   );
 }

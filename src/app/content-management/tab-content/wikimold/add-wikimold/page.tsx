@@ -73,6 +73,17 @@ export default function AddWikiMold() {
   };
 
   return (
+    <>
+      {/* Top Loading Bar */}
+      {isSubmitting && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
     <main className="relative flex flex-col xl:py-2 py-10 w-full">
       {/* Header Section */}
       <div className="flex flex-col gap-2">
@@ -185,12 +196,16 @@ export default function AddWikiMold() {
           <button
             type="submit"
             disabled={isSubmitting || !wikiMoldData.title.trim() || !wikiMoldData.coverImage || !wikiMoldData.content.trim()}
-            className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors text-sm disabled:opacity-50 ${
+              isSubmitting ? 'cursor-wait' : 'cursor-pointer'
+            }`}
           >
-            {isSubmitting ? "Creating..." : "Create Article"}
+            Create Article
           </button>
         </div>
       </form>
     </main>
+    </>
   );
 }
+     
