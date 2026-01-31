@@ -89,6 +89,10 @@ export default function ContentManagement() {
       router.push(`/content-management/tab-content/wikimold/view-wikimold?id=${wikimold.id}`);
     };
     
+    const handleAddWikiMold = () => {
+      router.push('/content-management/tab-content/wikimold/add-wikimold');
+    };
+    
     const handleArchiveWikiMold = (wikimold: WikiMold) => {
       setSelectedWikiMold(wikimold);
       setShowArchiveModal(true);
@@ -106,12 +110,22 @@ export default function ContentManagement() {
         {
             label: "Mold Information",
             icon: faBacterium,
-            content: <MoldInfo moldData={moldData} setMoldData={setMoldData} onEditMold={handleEditMold} />,
+            content: <MoldInfo 
+            moldData={moldData} 
+            setMoldData={setMoldData} 
+            onEditMold={handleEditMold} 
+            />,
         },
          {
             label: "WikiMold",
             icon: faBook,
-            content: <WikiMoldManagement wikimoldData={wikimoldData} setWikiMoldData={setWikiMoldData} onEditWikiMold={handleEditWikiMold} onArchiveWikiMold={handleArchiveWikiMold} />,
+            content: <WikiMoldManagement 
+            wikimoldData={wikimoldData} 
+            setWikiMoldData={setWikiMoldData} 
+            onEditWikiMold={handleEditWikiMold} 
+            onArchiveWikiMold={handleArchiveWikiMold} 
+            onAddWikiMold={handleAddWikiMold} 
+            />,
         },
     ], [moldData, setMoldData, wikimoldData, setWikiMoldData]);
 

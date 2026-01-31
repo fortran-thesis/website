@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen, faSeedling } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faSeedling, faEye } from "@fortawesome/free-solid-svg-icons";
 import StatusBox from "../tiles/status_tile";
 import EmptyState from "../empty_state";
 
@@ -21,6 +21,7 @@ interface CaseTableProps {
   showPriority?: boolean;
   showStatus?: boolean;
   showAction?: boolean;
+  useViewIcon?: boolean;
 }
 
 export default function CaseTable({
@@ -29,6 +30,7 @@ export default function CaseTable({
   showPriority = true,
   showStatus = true,
   showAction = true,
+  useViewIcon = false,
 }: CaseTableProps) {
   return (
     <div className="min-w-full overflow-x-auto mt-4 rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
@@ -86,9 +88,10 @@ export default function CaseTable({
                     <button
                       onClick={() => onEdit?.(item)}
                       className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
-                      aria-label="Edit"
+                      aria-label={useViewIcon ? "View" : "Edit"}
+                      title={useViewIcon ? "View Case" : "Edit Case"}
                     >
-                      <FontAwesomeIcon icon={faPen} style={{ width: "12px", height: "12px" }} />
+                      <FontAwesomeIcon icon={useViewIcon ? faEye : faPen} style={{ width: "12px", height: "12px" }} />
                     </button>
                   </td>
                 )}

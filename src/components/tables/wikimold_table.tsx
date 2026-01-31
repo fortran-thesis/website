@@ -18,9 +18,10 @@ interface WikiMoldTableProps {
   onEdit?: (wikimold: WikiMold) => void;
   onArchive?: (wikimold: WikiMold) => void;
   isLoading?: boolean;
+  hideEdit?: boolean;
 }
 
-export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = false }: WikiMoldTableProps) {
+export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = false, hideEdit = false }: WikiMoldTableProps) {
   const fallbackImage = "/assets/wikimold-fallback.png";
 
   if (isLoading) {
@@ -89,14 +90,16 @@ export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = fal
                   
                   <td className="py-3 px-6 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => onEdit?.(wikimold)}
-                        className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
-                        aria-label="Edit"
-                        title="Edit WikiMold"
-                      >
-                        <FontAwesomeIcon icon={faPen} style={{ width: "12px", height: "12px" }} />
-                      </button>
+                      {!hideEdit && (
+                        <button
+                          onClick={() => onEdit?.(wikimold)}
+                          className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
+                          aria-label="Edit"
+                          title="Edit WikiMold"
+                        >
+                          <FontAwesomeIcon icon={faPen} style={{ width: "12px", height: "12px" }} />
+                        </button>
+                      )}
                       <button
                         onClick={() => onArchive?.(wikimold)}
                         className="text-[var(--background-color)] bg-[var(--moldify-blue)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--moldify-blue)]/80"
