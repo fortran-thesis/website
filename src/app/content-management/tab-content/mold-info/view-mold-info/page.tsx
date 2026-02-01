@@ -1,0 +1,426 @@
+"use client";
+import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Breadcrumbs from '@/components/breadcrumbs_nav';
+import BackButton from '@/components/buttons/back_button';
+import TabBar from '@/components/tab_bar';
+import ConfirmModal from '@/components/modals/confirmation_modal';
+import { faInfoCircle, faLeaf } from '@fortawesome/free-solid-svg-icons';
+
+// Dummy data - replace with actual API call
+const DUMMY_MOLD_DATA = [
+  { id: "MG-001", genusName: "Aspergillus" },
+  { id: "MG-002", genusName: "Penicillium" },
+  { id: "MG-003", genusName: "Fusarium" },
+  { id: "MG-004", genusName: "Alternaria" },
+  { id: "MG-005", genusName: "Cladosporium" },
+];
+
+interface MoldInfoFormData {
+  moldName: string;
+  description: string;
+  taxonomy: {
+    kingdom: string;
+    phylum: string;
+    class: string;
+    order: string;
+    family: string;
+    genus: string;
+  };
+}
+
+interface MoldManagementFormData {
+  physicalControl: string;
+  mechanicalControl: string;
+  culturalControl: string;
+  biologicalControl: string;
+  chemicalControl: string;
+}
+
+export default function ViewMoldInfo() {
+    const userRole = "Mycologist";
+    const searchParams = useSearchParams();
+    const moldId = searchParams.get('id');
+
+    // Form state for General Information tab
+    const [moldInfo, setMoldInfo] = useState<MoldInfoFormData>({
+      moldName: '',
+      description: '',
+      taxonomy: {
+        kingdom: 'Fungi', 
+        phylum: 'Ascomycota', 
+        class: '',
+        order: '',
+        family: '',
+        genus: '',
+      }
+    });
+
+    // Form state for Mold Management tab
+    const [moldManagement, setMoldManagement] = useState<MoldManagementFormData>({
+      physicalControl: '',
+      mechanicalControl: '',
+      culturalControl: '',
+      biologicalControl: '',
+      chemicalControl: '',
+    });
+
+    // Confirmation modal state
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+    // Fetch mold data based on ID
+    useEffect(() => {
+      if (moldId) {
+        // TODO: Replace with actual API call
+        // const fetchMoldData = async () => {
+        //   const response = await fetch(`/api/v1/mold-genus/${moldId}`);
+        //   const data = await response.json();
+        //   setMoldInfo(data);
+        // };
+        // fetchMoldData();
+        
+        // For now, use dummy data
+        const mold = DUMMY_MOLD_DATA.find(m => m.id === moldId);
+        if (mold) {
+          setMoldInfo(prev => ({
+            ...prev,
+            moldName: mold.genusName,
+            taxonomy: {
+              ...prev.taxonomy,
+              genus: mold.genusName
+            }
+          }));
+        }
+      }
+    }, [moldId]);
+
+    // Update taxonomy field
+    const handleTaxonomyChange = (field: keyof MoldInfoFormData['taxonomy'], value: string) => {
+      setMoldInfo(prev => ({
+        ...prev,
+        taxonomy: {
+          ...prev.taxonomy,
+          [field]: value
+        }
+      }));
+    };
+
+    // Update mold management field
+    const handleManagementChange = (field: keyof MoldManagementFormData, value: string) => {
+      setMoldManagement(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    };
+
+    // Handle form submission
+    const handleSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      setShowConfirmModal(true);
+    };
+
+    // Handle confirmed publish
+    const handleConfirmPublish = async () => {
+      setShowConfirmModal(false);
+      
+      // Prepare data for API
+      const formData = {
+        id: moldId,
+        ...moldInfo,
+        management: moldManagement
+      };
+
+      // TODO: Replace with actual API call
+      console.log('Publishing mold information:', formData);
+      
+      // Example API call structure:
+      // try {
+      //   const response = await fetch('/api/v1/mold-genus', {
+      //     method: moldId ? 'PUT' : 'POST',
+      //     headers: { 'Content-Type': 'application/json' },
+      //     body: JSON.stringify(formData)
+      //   });
+      //   if (response.ok) {
+      //     // Handle success - maybe redirect or show success message
+      //   }
+      // } catch (error) {
+      //   console.error('Error submitting:', error);
+      // }
+    };
+
+    // Tab content rendered directly without wrapper functions
+    const generalInfoContent = (
+      <div className="space-y-6">
+        {/* Mold Description */}
+        <div>
+          <label htmlFor="description" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-semibold mb-2">
+            Mold Description
+          </label>
+          <textarea
+            id="description"
+            value={moldInfo.description}
+            onChange={(e) => setMoldInfo({ ...moldInfo, description: e.target.value })}
+            rows={5}
+            className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+            placeholder="Enter detailed description of the mold genus..."
+          />
+        </div>
+
+        {/* Taxonomy Section */}
+        <div>
+          <h3 className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-bold text-lg mb-4">
+            Taxonomy
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Kingdom - Prefilled */}
+            <div>
+              <label htmlFor="kingdom" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Kingdom
+              </label>
+              <input
+                id="kingdom"
+                type="text"
+                value={moldInfo.taxonomy.kingdom}
+                onChange={(e) => handleTaxonomyChange('kingdom', e.target.value)}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Kingdom"
+              />
+            </div>
+
+            {/* Phylum - Prefilled */}
+            <div>
+              <label htmlFor="phylum" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Phylum
+              </label>
+              <input
+                id="phylum"
+                type="text"
+                value={moldInfo.taxonomy.phylum}
+                onChange={(e) => handleTaxonomyChange('phylum', e.target.value)}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Phylum"
+              />
+            </div>
+
+            {/* Class */}
+            <div>
+              <label htmlFor="class" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Class
+              </label>
+              <input
+                id="class"
+                type="text"
+                value={moldInfo.taxonomy.class}
+                onChange={(e) => handleTaxonomyChange('class', e.target.value)}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Class"
+              />
+            </div>
+
+            {/* Order */}
+            <div>
+              <label htmlFor="order" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Order
+              </label>
+              <input
+                id="order"
+                type="text"
+                value={moldInfo.taxonomy.order}
+                onChange={(e) => handleTaxonomyChange('order', e.target.value)}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Order"
+              />
+            </div>
+
+            {/* Family */}
+            <div>
+              <label htmlFor="family" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Family
+              </label>
+              <input
+                id="family"
+                type="text"
+                value={moldInfo.taxonomy.family}
+                onChange={(e) => handleTaxonomyChange('family', e.target.value)}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Family"
+              />
+            </div>
+
+            {/* Genus */}
+            <div>
+              <label htmlFor="genus" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Genus
+              </label>
+              <input
+                id="genus"
+                type="text"
+                value={moldInfo.taxonomy.genus}
+                onChange={(e) => handleTaxonomyChange('genus', e.target.value)}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Genus"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+
+    const moldManagementContent = (
+      <div className="space-y-6">
+        {/* Physical Control */}
+        <div>
+          <label htmlFor="physicalControl" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+            Physical Control
+          </label>
+          <textarea
+            id="physicalControl"
+            value={moldManagement.physicalControl}
+            onChange={(e) => handleManagementChange('physicalControl', e.target.value)}
+            rows={4}
+            className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+            placeholder="Describe physical control methods..."
+          />
+        </div>
+
+        {/* Mechanical Control */}
+        <div>
+          <label htmlFor="mechanicalControl" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+            Mechanical Control
+          </label>
+          <textarea
+            id="mechanicalControl"
+            value={moldManagement.mechanicalControl}
+            onChange={(e) => handleManagementChange('mechanicalControl', e.target.value)}
+            rows={4}
+            className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+            placeholder="Describe mechanical control methods..."
+          />
+        </div>
+
+        {/* Cultural Control */}
+        <div>
+          <label htmlFor="culturalControl" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+            Cultural Control
+          </label>
+          <textarea
+            id="culturalControl"
+            value={moldManagement.culturalControl}
+            onChange={(e) => handleManagementChange('culturalControl', e.target.value)}
+            rows={4}
+            className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+            placeholder="Describe cultural control methods..."
+          />
+        </div>
+
+        {/* Biological Control */}
+        <div>
+          <label htmlFor="biologicalControl" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+            Biological Control
+          </label>
+          <textarea
+            id="biologicalControl"
+            value={moldManagement.biologicalControl}
+            onChange={(e) => handleManagementChange('biologicalControl', e.target.value)}
+            rows={4}
+            className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+            placeholder="Describe biological control methods..."
+          />
+        </div>
+
+        {/* Chemical Control */}
+        <div>
+          <label htmlFor="chemicalControl" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+            Chemical Control
+          </label>
+          <textarea
+            id="chemicalControl"
+            value={moldManagement.chemicalControl}
+            onChange={(e) => handleManagementChange('chemicalControl', e.target.value)}
+            rows={4}
+            className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+            placeholder="Describe chemical control methods..."
+          />
+        </div>
+      </div>
+    );
+
+    const tabs = [
+      {
+        label: "General Information",
+        icon: faInfoCircle,
+        content: generalInfoContent,
+      },
+      {
+        label: "Mold Management",
+        icon: faLeaf,
+        content: moldManagementContent,
+      },
+    ];
+
+    return (
+        <main className="relative flex flex-col xl:py-2 py-10 w-full">
+            {/* Header Section */}
+            <div className="flex flex-row justify-between items-start">
+                <div className="flex flex-col">
+                    <Breadcrumbs role={userRole} skipSegments={['tab-content', 'mold-info']} />
+                    <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
+                        CONTENT MANAGEMENT
+                    </h1>
+                    <div className="flex items-center gap-3 mt-4">
+                      <BackButton />
+                      <span className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-2xl">
+                        {moldInfo.moldName || moldInfo.taxonomy.genus || 'Mold Information'}
+                      </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="mt-8">
+              {/* Mold Name Input */}
+              <div className="mb-6">
+                <label htmlFor="moldName" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] text-sm font-semibold mb-2">
+                  Mold Name
+                </label>
+                <input
+                  id="moldName"
+                  type="text"
+                  value={moldInfo.moldName}
+                  onChange={(e) => setMoldInfo({ ...moldInfo, moldName: e.target.value })}
+                  className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                  placeholder="Enter mold common name"
+                  required
+                />
+              </div>
+
+              {/* Tabs */}
+              <div className="mb-6">
+                <TabBar tabs={tabs} initialIndex={0} />
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm shadow-md"
+                >
+                  Publish Information
+                </button>
+              </div>
+            </form>
+
+            {/* Confirmation Modal */}
+            <ConfirmModal
+              isOpen={showConfirmModal}
+              title="Publish Mold Information"
+              subtitle="Are you sure you want to publish this mold information? This will make it available to all users."
+              cancelText="Cancel"
+              confirmText="Publish"
+              onCancel={() => setShowConfirmModal(false)}
+              onConfirm={handleConfirmPublish}
+            />
+        </main>
+    );
+}

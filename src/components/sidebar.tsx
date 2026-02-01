@@ -3,8 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHouseChimney, faClipboard, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers } from '@fortawesome/free-solid-svg-icons';
-import { usePathname } from 'next/navigation';
+import { faHouseChimney, faClipboard, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers, faBookOpen, faSeedling } from '@fortawesome/free-solid-svg-icons';
+import { usePathname, useRouter } from 'next/navigation';
 import { useLogout } from '@/hooks/useLogout';
 
 const MoldifyLogo = '/assets/Moldify_Logo.png';
@@ -13,10 +13,23 @@ const MoldifyLogo = '/assets/Moldify_Logo.png';
 // sections of the application.
 // It is responsive and can be toggled on smaller screens.
 
-export default function Sidebar() {
+interface SidebarProps {
+    userRole?: string;
+}
+
+export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const [navOpen, setNavOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
     const logout = useLogout();
+
+    const isAdministrator = userRole === "Administrator";
+    const isMycologist = userRole === "Mycologist";
+
+    const handleLogout = async () => {
+        setIsLoggingOut(true);
+        await logout();
+    };
 
     //Detect scroll
     useEffect(() => {
@@ -74,20 +87,29 @@ export default function Sidebar() {
                     <div className = "flex flex-col gap-y-4">
                         <SidebarLink icon={faHouseChimney} 
                             text="Dashboard" 
-                            href="/dashboard"
-                            onNavigate={() => setNavOpen(false)} />
-                        <SidebarLink icon={faUsers} 
-                            text="User Management" 
-                            href="/user"
-                            onNavigate={() => setNavOpen(false)} />
-                        <SidebarLink icon={faClipboard} 
-                            text="Investigation Oversight" 
-                            href="/investigation"
-                            onNavigate={() => setNavOpen(false)} />
+                            href="/dashboard" />
+                        
+                        {isAdministrator && (
+                            <SidebarLink icon={faUsers} 
+                                text="User Management" 
+                                href="/user" />
+                        )}
+                        
+                        <SidebarLink icon={faSeedling} 
+                            text="Case Management"
+                            href="/investigation" />
+                        
+                        {isMycologist && (
+                            <SidebarLink icon={faBookOpen} 
+                                text="Content Management" 
+                                href="/content-management" />
+                        )}
+                        
+                        {isAdministrator && (
                             <SidebarLink icon={faTriangleExclamation} 
-                            text="Report Management" 
-                            href="/reports"
-                            onNavigate={() => setNavOpen(false)} />
+                                text="Report Management" 
+                                href="/reports" />
+                        )}
                     </div>
 
                     {/* Bottom Links */}
@@ -98,13 +120,27 @@ export default function Sidebar() {
                             href="/settings"
                             onNavigate={() => setNavOpen(false)} />
                         <div className="h-px bg-[#576146] w-full" />
+                        
+                        {/* Top Loading Bar */}
+                        {isLoggingOut && (
+                            <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+                                <div 
+                                    className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+                                    style={{ width: '30%' }}
+                                />
+                            </div>
+                        )}
+                        
                         <button
-                            onClick={logout}
-                            className="cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 text-left w-full"
+                            onClick={handleLogout}
+                            disabled={isLoggingOut}
+                            className={`cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 text-left ${
+                                isLoggingOut ? 'opacity-60 cursor-wait' : ''
+                            }`}
                         >
                             <FontAwesomeIcon
                                 icon={faRightFromBracket}
-                                className="mt-1 text-[var(--background-color)]"
+                                className={`mt-1 text-[var(--background-color)] ${isLoggingOut ? 'animate-pulse' : ''}`}
                                 style={{ width: "1.5rem", height: "1.5rem" }}
                             />
                             <span className="mt-1 text-sm">Log Out</span>
@@ -120,30 +156,43 @@ export default function Sidebar() {
 // helper component for cleaner code
 function SidebarLink({ icon, text, href, onNavigate }: { icon: any; text: string; href: string; onNavigate?: () => void }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [active, setActive] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
     if (pathname) {
       setActive(pathname === href || pathname.startsWith(href + "/"));
+      setIsNavigating(false);
     }
   }, [pathname, href]);
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (pathname !== href && !isNavigating) {
+      setIsNavigating(true);
+      router.push(href);
+    }
+  };
+
   return (
-    <Link href={href} className="no-underline" onClick={onNavigate}>
-      <div
-        className={`cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 ${
-          active ? "bg-white/20" : ""
-        }`}
-      >
-        <FontAwesomeIcon
-          icon={icon}
-          className={"mt-1 text-[var(--background-color)]"}
-          style={{ width: "1.5rem", height: "1.5rem" }}
-        />
-        <span className={`mt-1 text-sm ${active ? "font-bold" : ""}`}>
-          {text}
-        </span>
-      </div>
+    <Link
+      href={href}
+      onClick={handleClick}
+      className={`cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 transition-all ${
+        active ? "bg-white/20" : ""
+      } ${
+        isNavigating ? "opacity-60" : ""
+      }`}
+    >
+      <FontAwesomeIcon
+        icon={icon}
+        className="mt-1 text-[var(--background-color)]"
+        style={{ width: "1.5rem", height: "1.5rem" }}
+      />
+      <span className={`mt-1 text-sm ${active ? "font-bold" : ""}`}>
+        {text}
+      </span>
     </Link>
   );
 }

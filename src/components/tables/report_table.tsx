@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen } from "@fortawesome/free-solid-svg-icons";
-import StatusBox from "@/components/tiles/status_tile"; 
+import { faPen, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import StatusBox from "@/components/tiles/status_tile";
+import EmptyState from "../empty_state"; 
 
 export interface Report {
   id: string;
@@ -21,9 +22,36 @@ interface ReportsTableProps {
 
 // Reports Table ---
 export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
+  const [navigatingId, setNavigatingId] = useState<string | null>(null);
+
+  const handleEditClick = (report: Report) => {
+    setNavigatingId(report.id);
+    onEdit?.(report);
+  };
+
   return (
-    <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
-      <div className="h-[600px] overflow-y-auto">
+    <>
+      {/* Top Loading Bar */}
+      {navigatingId && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
+      <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
+        <div className="h-[600px] overflow-y-auto">
+        {data.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <EmptyState
+              icon={faTriangleExclamation}
+              title="No Reports Found"
+              message="No reports have been submitted yet."
+            />
+          </div>
+        ) : (
         <table className="min-w-full text-sm text-left font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)]">
           {/* --- Table Header --- */}
           <thead className="sticky top-0 z-10 bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center">
@@ -39,8 +67,7 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
 
           {/* --- Table Body --- */}
           <tbody>
-            {data.length > 0 ? (
-              data.map((report, index) => (
+            {data.map((report, index) => (
                 <tr
                   key={report.id || index}
                   className="border-b border-[var(--taupe)] last:border-none hover:bg-[var(--accent-color)]/10 transition-colors text-center"
@@ -60,31 +87,28 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
                   </td>
                   <td className="py-3 px-6 text-center">
                     <button
-                      onClick={() => onEdit?.(report)}
-                      className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
+                      onClick={() => handleEditClick(report)}
+                      disabled={navigatingId === report.id}
+                      className={`text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)] ${
+                        navigatingId === report.id ? 'opacity-60 cursor-wait' : ''
+                      }`}
                       aria-label="Edit Report"
                     >
                       <FontAwesomeIcon
                         icon={faPen}
+                        className={navigatingId === report.id ? 'animate-pulse' : ''}
                         style={{ width: "12px", height: "12px" }}
                       />
                     </button>
                   </td>
                 </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="py-6 text-center text-gray-500 italic"
-                >
-                  No reports found.
-                </td>
-              </tr>
-            )}
+              ))}
           </tbody>
         </table>
+        )}
+
       </div>
     </div>
+    </>
   );
 }

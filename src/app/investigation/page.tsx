@@ -1,10 +1,11 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faClipboard} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSeedling, faClockRotateLeft, faHourglassHalf, faCircleCheck} from '@fortawesome/free-solid-svg-icons';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import {useState, useEffect, useRef} from 'react'
+import { faHourglass } from '@fortawesome/free-solid-svg-icons/faHourglass';
 
 export default function Investigation() {
         const [caseStats, setCaseStats] = useState({ total: 0, pending: 0, in_progress: 0, resolved: 0, closed: 0 });
@@ -20,7 +21,7 @@ export default function Investigation() {
         const [priorityFilter, setPriorityFilter] = useState('');
         const [statusFilter, setStatusFilter] = useState('');
         
-        const userRole = "Administrator";
+        const userRole = "Mycologist";
 
     // Build search URL with active filters
     const buildSearchUrl = (token?: string | null) => {
@@ -170,7 +171,7 @@ export default function Investigation() {
                 <div className="flex flex-col">
                     <Breadcrumbs role={userRole} />
                     <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-                        INVESTIGATION OVERSIGHT
+                        CASE MANAGEMENT
                     </h1>
                 </div>
 
@@ -179,10 +180,10 @@ export default function Investigation() {
             
             {/* Statistics Tiles */}
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3 mt-6">
-                <StatisticsTile icon={faClipboard} iconColor="var(--moldify-black)" title="Total Cases" statNum={caseStats.total} />
-                <StatisticsTile icon={faClipboard} iconColor="var(--accent-color)" title="Pending Mold Cases" statNum={caseStats.pending} />
-                <StatisticsTile icon={faClipboard} iconColor="var(--moldify-blue)" title="In Progress Mold Cases" statNum={caseStats.in_progress} />
-                <StatisticsTile icon={faClipboard} iconColor="var(--primary-color)" title="Resolved Mold Cases" statNum={caseStats.resolved} />
+                <StatisticsTile icon={faSeedling} iconColor="var(--moldify-black)" title="Total Cases" statNum={caseStats.total} />
+                <StatisticsTile icon={faClockRotateLeft} iconColor="var(--accent-color)" title="Pending Mold Cases" statNum={caseStats.pending} />
+                <StatisticsTile icon={faHourglassHalf} iconColor="var(--moldify-blue)" title="In Progress Mold Cases" statNum={caseStats.in_progress} />
+                <StatisticsTile icon={faCircleCheck} iconColor="var(--primary-color)" title="Resolved Mold Cases" statNum={caseStats.resolved} />
             </div>
             
             {/* Submitted Cases Section */}

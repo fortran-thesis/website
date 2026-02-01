@@ -26,6 +26,7 @@ export default function TabBar({ tabs, initialIndex = 0 }: TabBar) {
           return (
             <button
               key={index}
+              type="button"
               onClick={() => setActiveIndex(index)}
               className={`font-[family-name:var(--font-bricolage-grotesque)] flex items-center gap-2 px-6 py-3 font-medium text-base transition-colors duration-200 cursor-pointer
                 ${

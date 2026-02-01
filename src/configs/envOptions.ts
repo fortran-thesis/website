@@ -6,6 +6,9 @@
 export const envOptions = {
   // API Configuration
   apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
+
+  // Temporary auth bypass (set NEXT_PUBLIC_DISABLE_AUTH=true to skip auth checks)
+  disableAuth: process.env.NEXT_PUBLIC_DISABLE_AUTH === 'true',
   
   // Add other environment variables here as needed
   isDevelopment: process.env.NODE_ENV === 'development',

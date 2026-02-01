@@ -1,5 +1,7 @@
 "use client";
 import React from "react";
+import { faHistory } from "@fortawesome/free-solid-svg-icons";
+import EmptyState from "../empty_state";
 
 interface IdentificationHistoryTableData {
   genusID: string;
@@ -18,6 +20,15 @@ export default function IdentificationHistoryTable({
     <div className="mt-4 rounded-xl border border-[var(--primary-color)] w-full bg-[var(--background-color)] shadow">
       {/* Scrollable container with fixed height */}
       <div className="h-[600px] overflow-y-auto rounded-xl">
+        {identHistory.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <EmptyState
+              icon={faHistory}
+              title="No Identification History"
+              message="No mold identifications recorded yet."
+            />
+          </div>
+        ) : (
         <table className="min-w-[800px] w-full text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)]">
           <thead className="bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center sticky top-0 z-10">
             <tr>
@@ -49,18 +60,11 @@ export default function IdentificationHistoryTable({
                   </td>
                 </tr>
               ))
-            ) : (
-              <tr>
-                <td
-                  colSpan={3}
-                  className="py-8 text-center text-[var(--moldify-grey)] italic"
-                >
-                  No identification history available.
-                </td>
-              </tr>
-            )}
+            ))}
           </tbody>
         </table>
+        )}
+
       </div>
     </div>
   );

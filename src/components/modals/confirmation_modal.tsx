@@ -28,7 +28,7 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 bg-opacity-50 overflow-hidden">
       <div className="bg-[var(--background-color)] rounded-2xl p-6 w-full max-w-lg shadow-lg relative">
         {/* Close button */}
         <div className ="flex justify-center items-center mb-4">
@@ -45,7 +45,7 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
             <button
                 type="button"
                 onClick={onCancel}
-                className="absolute top-5 right-3 text-[var(--moldify-red)] hover:text-red-600 cursor-pointer font-black"
+                className="absolute top-5 right-3 text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
                 >
                 ✕
             </button>

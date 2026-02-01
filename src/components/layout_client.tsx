@@ -2,10 +2,12 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/sidebar";
 import Footer from "@/components/footer";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support") || pathname == "/";
+  const { user } = useAuth();
+  const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support") || pathname.startsWith("/wikimold") || pathname.startsWith("/faq") || pathname.startsWith("/terms-of-agreement") || pathname.startsWith("/privacy-policy") || pathname.startsWith("/about") || pathname == "/";
 
   return hideLayout ? (
     <main>{children}</main>
@@ -13,14 +15,14 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
     <>
         <div className="flex min-h-screen">
             {/* Sidebar */}
-            <Sidebar />
+            <Sidebar userRole={"Mycologist"} />
 
             {/* Main content */}
             <div className="flex flex-col flex-grow min-w-0">
                 <main className="flex-grow px-4 sm:px-6 py-4 overflow-x-auto">{children}</main>
                 <Footer />
             </div>
-        </div>
+        </div> 
     </>
   );
 }

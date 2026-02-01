@@ -3,15 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export default function Breadcrumb({ role }: { role: string }) {
+export default function Breadcrumb({ role, skipSegments = [] }: { role: string; skipSegments?: string[] }) {
   const pathname = usePathname();
 
   // Split the URL and remove empty parts
   const pathSegments = pathname.split("/").filter(Boolean);
 
+  // Filter out skipped segments
+  const filteredSegments = pathSegments.filter(segment => !skipSegments.includes(segment));
+
   // Generate clickable breadcrumbs for each segment
-  const breadcrumbs = pathSegments.map((segment, index) => {
-    const href = "/" + pathSegments.slice(0, index + 1).join("/");
+  const breadcrumbs = filteredSegments.map((segment, index) => {
+    // Build href using original path up to this filtered segment
+    const originalIndex = pathSegments.indexOf(segment);
+    const href = "/" + pathSegments.slice(0, originalIndex + 1).join("/");
     const label =
       segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
     return { href, label };
