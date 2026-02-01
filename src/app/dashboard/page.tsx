@@ -1,6 +1,7 @@
 "use client";
 import { useState } from 'react';
 import Image from 'next/image';
+import { useAuth } from '@/hooks/useAuth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBacterium, faBell, faBookOpen, faHourglassHalf, faSeedling, faTriangleExclamation, faUsers } from '@fortawesome/free-solid-svg-icons';
 import StatisticsTile from '@/components/tiles/statistics_tile';
@@ -168,10 +169,10 @@ export default function Home() {
                         />
                         <div className="hidden lg:flex flex-col">
                             <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm">
-                                {user?.name || "Unknown User"}
+                                {profileName || "Unknown User"}
                             </p>
                             <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)] text-xs">
-                                {user?.role || "Unknown Role"}
+                                {role || "Unknown Role"}
                             </p>
                         </div>
                     </div>

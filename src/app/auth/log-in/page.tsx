@@ -66,8 +66,34 @@ export default function Auth() {
       console.log('🔍 Login proxy response:', proxyRes.status, data);
 
       if (proxyRes.ok && (data.success || proxyRes.status === 200)) {
-        // Proxy should set a same-origin HttpOnly cookie (session) when login succeeds
-        if (data?.user) setUserData(data.user);
+        console.log('🟢 Login successful');
+        // Store user data if provided in response
+        if (data?.user) {
+          console.log('📦 User in response, storing');
+          setUserData(data.user);
+        } else {
+          console.log('⚠️ No user in response, fetching profile');
+          // If backend didn't return user in JSON, fetch current user via session cookie
+          try {
+            console.log('🔄 Fetching /api/v1/user/profile...');
+            const profileRes = await fetch('/api/v1/user/profile', { 
+              credentials: 'include',
+              cache: 'no-store'
+            });
+            console.log('📍 Profile status:', profileRes.status);
+            if (profileRes.ok) {
+              const profileData = await profileRes.json();
+              console.log('📥 Profile data:', profileData);
+              const user = profileData?.data || profileData?.user || profileData;
+              if (user) {
+                setUserData(user);
+                console.log('✅ Stored user');
+              }
+            }
+          } catch (err) {
+            console.error('❌ Profile fetch failed:', err);
+          }
+        }
 
         // Small delay to let browser persist cookie
         await new Promise(resolve => setTimeout(resolve, 100));

@@ -117,7 +117,8 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
                         <div className="h-px bg-[#576146] w-full" />
                         <SidebarLink icon={faGear} 
                             text="Settings" 
-                            href="/settings" />
+                            href="/settings"
+                            onNavigate={() => setNavOpen(false)} />
                         <div className="h-px bg-[#576146] w-full" />
                         
                         {/* Top Loading Bar */}
@@ -153,7 +154,7 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
 }
 
 // helper component for cleaner code
-function SidebarLink({ icon, text, href }: { icon: any; text: string; href: string }) {
+function SidebarLink({ icon, text, href, onNavigate }: { icon: any; text: string; href: string; onNavigate?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const [active, setActive] = useState(false);

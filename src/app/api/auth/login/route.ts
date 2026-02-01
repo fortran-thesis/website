@@ -12,23 +12,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    if (envOptions.disableAuth) {
-      const maxAge = 60 * 60 * 24 * 7; // 7 days
-      const cookieString = `session=dev-session; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
-      const res = NextResponse.json(
-        {
-          success: true,
-          user: { username: body?.username || 'dev-user', role: 'developer' },
-          session: 'dev-session',
-          bypassed: true,
-        },
-        { status: 200 }
-      );
-      res.headers.set('Set-Cookie', cookieString);
-      return res;
-    }
-
-    const upstream = `${envOptions.apiUrl}${endpoints.auth.login}`;
+    const upstream = `${envOptions.apiUrl}${endpoints.auth.login}?device=website`;
 
     const fbRes = await fetch(upstream, {
       method: 'POST',

@@ -30,6 +30,12 @@ export default function ProfileCard({
     data.profilePicture || "/assets/default-fallback.png"
   );
 
+  // Sync userData whenever parent data changes
+  useEffect(() => {
+    console.log('📍 ProfileCard data prop changed:', data);
+    setUserData(data);
+  }, [data]);
+
   // Keep image in sync if parent updates it
   useEffect(() => {
     if (data.profilePicture) {
