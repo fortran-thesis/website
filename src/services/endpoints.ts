@@ -12,6 +12,7 @@ export const endpoints = {
     recoverAccount: '/auth/recover',
     resetPassword: '/auth/reset-password',
     verifyEmail: '/auth/verify-email',
+    changePassword: '/auth/change-password',
   },
 
   // User Management

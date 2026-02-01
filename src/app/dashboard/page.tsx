@@ -1,5 +1,6 @@
 "use client";
 import Image from 'next/image';
+import { useAuth } from '@/hooks/useAuth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell, faClipboard, faTriangleExclamation, faUsers } from '@fortawesome/free-solid-svg-icons';
 import StatisticsTile from '@/components/tiles/statistics_tile';
@@ -72,12 +73,26 @@ const cases = [
   ];
 
 export default function Home() {
-    // Dummy user object for demonstration; replace with actual user data as needed
-    const user = {
-        profileImageUrl: "/assets/Wrong_Image1.png",
-        name: "Karl Manuel Diata",
-        role: "Administrator"
-    };
+    const { user } = useAuth();
+    
+    // Backend returns nested structure: {user: {...}, details: {...}}
+    const userObj = user?.user || user || {};
+    const details = user?.details || {};
+    
+    // Try to extract first and last name from user object (backend uses snake_case)
+    let firstName = userObj?.first_name || userObj?.firstName || '';
+    let lastName = userObj?.last_name || userObj?.lastName || '';
+    
+    // If we have displayName but no firstName, try to parse it
+    if (!firstName && details?.displayName) {
+      const parts = details.displayName.split(' ');
+      firstName = parts[0] || '';
+      lastName = parts.slice(1).join(' ') || '';
+    }
+    
+    const profileName = `${firstName} ${lastName}`.trim() || details?.displayName || userObj?.name || 'Unknown User';
+    const role = userObj?.role || 'Administrator';
+    const profileImageUrl = details?.photo_url || details?.profilePicture || userObj?.profileImageUrl || '/assets/default-fallback.png';
     const notification = 2; // Example notification count
 
 
@@ -112,7 +127,7 @@ export default function Home() {
                     {/* Profile Info */}
                     <div className="flex gap-x-2 items-center">
                         <Image
-                            src={user?.profileImageUrl || "/assets/default-fallback.png"}
+                            src={profileImageUrl || "/assets/default-fallback.png"}
                             alt="pfp"
                             width={40}
                             height={40}
@@ -123,10 +138,10 @@ export default function Home() {
                         />
                         <div className="hidden lg:flex flex-col">
                             <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm">
-                                {user?.name || "Unknown User"}
+                                {profileName || "Unknown User"}
                             </p>
                             <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)] text-xs">
-                                {user?.role || "Unknown Role"}
+                                {role || "Unknown Role"}
                             </p>
                         </div>
                     </div>

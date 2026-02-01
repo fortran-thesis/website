@@ -74,16 +74,20 @@ export default function Sidebar() {
                     <div className = "flex flex-col gap-y-4">
                         <SidebarLink icon={faHouseChimney} 
                             text="Dashboard" 
-                            href="/dashboard" />
+                            href="/dashboard"
+                            onNavigate={() => setNavOpen(false)} />
                         <SidebarLink icon={faUsers} 
                             text="User Management" 
-                            href="/user" />
+                            href="/user"
+                            onNavigate={() => setNavOpen(false)} />
                         <SidebarLink icon={faClipboard} 
                             text="Investigation Oversight" 
-                            href="/investigation" />
+                            href="/investigation"
+                            onNavigate={() => setNavOpen(false)} />
                             <SidebarLink icon={faTriangleExclamation} 
                             text="Report Management" 
-                            href="/reports" />
+                            href="/reports"
+                            onNavigate={() => setNavOpen(false)} />
                     </div>
 
                     {/* Bottom Links */}
@@ -91,7 +95,8 @@ export default function Sidebar() {
                         <div className="h-px bg-[#576146] w-full" />
                         <SidebarLink icon={faGear} 
                             text="Settings" 
-                            href="/settings" />
+                            href="/settings"
+                            onNavigate={() => setNavOpen(false)} />
                         <div className="h-px bg-[#576146] w-full" />
                         <button
                             onClick={logout}
@@ -113,7 +118,7 @@ export default function Sidebar() {
 }
 
 // helper component for cleaner code
-function SidebarLink({ icon, text, href }: { icon: any; text: string; href: string }) {
+function SidebarLink({ icon, text, href, onNavigate }: { icon: any; text: string; href: string; onNavigate?: () => void }) {
   const pathname = usePathname();
   const [active, setActive] = useState(false);
 
@@ -124,19 +129,21 @@ function SidebarLink({ icon, text, href }: { icon: any; text: string; href: stri
   }, [pathname, href]);
 
   return (
-    <div
-      className={`cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 ${
-        active ? "bg-white/20" : ""
-      }`}
-    >
-      <FontAwesomeIcon
-        icon={icon}
-        className={"mt-1 text-[var(--background-color)]"}
-        style={{ width: "1.5rem", height: "1.5rem" }}
-      />
-      <Link href={href} className={`mt-1 text-sm ${active ? "font-bold" : ""}`}>
-        {text}
-      </Link>
-    </div>
+    <Link href={href} className="no-underline" onClick={onNavigate}>
+      <div
+        className={`cursor-pointer flex gap-x-6 hover:bg-white/20 p-2 rounded-xl items-center mx-4 mb-2 ${
+          active ? "bg-white/20" : ""
+        }`}
+      >
+        <FontAwesomeIcon
+          icon={icon}
+          className={"mt-1 text-[var(--background-color)]"}
+          style={{ width: "1.5rem", height: "1.5rem" }}
+        />
+        <span className={`mt-1 text-sm ${active ? "font-bold" : ""}`}>
+          {text}
+        </span>
+      </div>
+    </Link>
   );
 }

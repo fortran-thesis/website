@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    const upstream = `${envOptions.apiUrl}${endpoints.auth.login}`;
+    const upstream = `${envOptions.apiUrl}${endpoints.auth.login}?device=website`;
 
     const fbRes = await fetch(upstream, {
       method: 'POST',
