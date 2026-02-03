@@ -6,6 +6,7 @@ import Footer from '@/components/footer';
 import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDownLong } from '@fortawesome/free-solid-svg-icons';
+import { envOptions } from '@/configs/envOptions';
 
 /// Pictures Used
 const caseSub = '/assets/agr.png'; 
@@ -52,13 +53,11 @@ export default function Home() {
   const [index, setIndex] = useState(0);
   const [totalCasesResolved, setTotalCasesResolved] = useState(0);
 
-  // Fetch total cases resolved from public endpoint
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Call your backend's public endpoint directly
-        const backendUrl = 'https://api-2p4weeh6lq-as.a.run.app';
-        const response = await fetch(`${backendUrl}/api/v1/mold-report/public/resolved-count`, { 
+        const baseUrl = envOptions.apiUrl.replace('/api/v1', '');
+        const response = await fetch(`${baseUrl}/api/v1/mold-report/public/resolved-count`, { 
           cache: 'no-store',
           headers: { 'Content-Type': 'application/json' }
         });

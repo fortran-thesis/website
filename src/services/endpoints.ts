@@ -65,4 +65,15 @@ export const endpoints = {
     timeline: '/dashboard/timeline',
     statusOverview: '/dashboard/status-overview',
   },
+
+  // WikiMold/Moldipedia
+  moldipedia: {
+    list: '/moldipedia',
+    getById: (id: string) => `/moldipedia/${id}`,
+  },
+
+  // FAQ
+  faq: {
+    list: '/faq',
+  },
 } as const;

@@ -7,6 +7,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faInbox, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import FAQTile from '@/components/tiles/faq_tile';
 import EmptyState from '@/components/empty_state';
+import { envOptions } from '@/configs/envOptions';
+import { endpoints } from '@/services/endpoints';
 
 const mockFaqs = [
   { id: 1, q: "What is Moldify?", a: "Moldify is an AI-powered investigation system designed for early detection and analysis of agricultural mold to protect crops." },
@@ -50,9 +52,9 @@ export default function FAQ() {
     const fetchFaqs = async () => {
       try {
         setLoading(true);
-        const backendUrl = 'https://api-2p4weeh6lq-as.a.run.app';
+        console.log('🔍 Fetching FAQs from:', envOptions.apiUrl + endpoints.faq.list);
         
-        const response = await fetch(`${backendUrl}/api/v1/faq?pageSize=100`, { 
+        const response = await fetch(`${envOptions.apiUrl}${endpoints.faq.list}`, { 
           cache: 'no-store' 
         });
         
@@ -70,18 +72,18 @@ export default function FAQ() {
           setFaqs(Array.isArray(faqsData) ? faqsData : []);
           setNextPageToken(data.data.nextPageToken || null);
         } else if (data.success && Array.isArray(data.data)) {
-          console.log('✅ FAQs loaded:', data.data.length);
+          console.log('FAQs loaded:', data.data.length);
           setFaqs(data.data);
         } else {
-          console.warn('⚠️ No FAQ data found, using mock data');
+          console.warn('No FAQ data found, using mock data');
           setFaqs(mockFaqs);
         }
         setError(null);
       } catch (err) {
-        console.error('❌ Failed to fetch FAQs:', err);
-        console.log('📋 Using mock data as fallback');
+        console.error('Failed to fetch FAQs:', err);
+        console.log('Using mock data as fallback');
         setFaqs(mockFaqs);
-        setError(null); // Don't show error, just use mock data
+        setError(null); 
       } finally {
         setLoading(false);
       }

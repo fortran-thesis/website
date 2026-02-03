@@ -7,6 +7,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faInbox, faPlusCircle } from '@fortawesome/free-solid-svg-icons';
 import WikimoldTile from '@/components/tiles/wikimold_tile';
 import EmptyState from '@/components/empty_state';
+import { envOptions } from '@/configs/envOptions';
+import { endpoints } from '@/services/endpoints';
 
 const mockArticles = [
   { id: 1, title: "The Rise of Molds: Dive into the Fungal Kingdom", author: "Dr. Aris Mendoza", image: "/assets/mold.jpg" },
@@ -61,7 +63,7 @@ export default function WikiMold() {
         if (!pageToken) setLoading(true);
         else setIsLoadingMore(true);
         
-        let url = 'https://api-2p4weeh6lq-as.a.run.app/api/v1/moldipedia?limit=50';
+        let url = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
         if (pageToken) {
           url += `&pageToken=${encodeURIComponent(pageToken)}`;
         }
@@ -125,7 +127,7 @@ export default function WikiMold() {
           
           const fetchMoreArticles = async () => {
             try {
-              let url = 'https://api-2p4weeh6lq-as.a.run.app/api/v1/moldipedia?limit=50';
+              let url = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
               url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
               
               const response = await fetch(url, { cache: 'no-store' });

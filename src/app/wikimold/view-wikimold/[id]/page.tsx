@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Navbar } from '@/components/navbar';
 import Footer from '@/components/footer';
+import { envOptions } from '@/configs/envOptions';
+import { endpoints } from '@/services/endpoints';
 
 // --- Default Placeholders ---
 const DEFAULT_BANNER = "/assets/mold.jpg";
@@ -26,10 +28,9 @@ export default function ViewWikiMold() {
     const fetchArticle = async () => {
       try {
         setLoading(true);
-        const backendUrl = 'https://api-2p4weeh6lq-as.a.run.app';
-        console.log('Fetching article with id:', id);
+        console.log('🔍 Fetching article with id:', id);
         
-        const response = await fetch(`${backendUrl}/api/v1/moldipedia/${id}`, { 
+        const response = await fetch(`${envOptions.apiUrl}${endpoints.moldipedia.getById(id as string)}`, { 
           cache: 'no-store' 
         });
         
