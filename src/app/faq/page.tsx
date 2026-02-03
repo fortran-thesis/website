@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import Footer from '@/components/footer';
 import { Navbar } from '@/components/navbar';
@@ -40,19 +40,68 @@ const itemVariants: Variants = {
 
 export default function FAQ() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [faqs, setFaqs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+
+  // Fetch FAQs from API
+  useEffect(() => {
+    const fetchFaqs = async () => {
+      try {
+        setLoading(true);
+        const backendUrl = 'https://api-2p4weeh6lq-as.a.run.app';
+        
+        const response = await fetch(`${backendUrl}/api/v1/faq?pageSize=100`, { 
+          cache: 'no-store' 
+        });
+        
+        console.log('📡 Response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch FAQs (Status: ${response.status})`);
+        }
+        
+        const data = await response.json();
+        console.log('Full API response:', data);
+        
+        if (data.success && data.data) {
+          const faqsData = data.data.data || data.data;
+          setFaqs(Array.isArray(faqsData) ? faqsData : []);
+          setNextPageToken(data.data.nextPageToken || null);
+        } else if (data.success && Array.isArray(data.data)) {
+          console.log('✅ FAQs loaded:', data.data.length);
+          setFaqs(data.data);
+        } else {
+          console.warn('⚠️ No FAQ data found, using mock data');
+          setFaqs(mockFaqs);
+        }
+        setError(null);
+      } catch (err) {
+        console.error('❌ Failed to fetch FAQs:', err);
+        console.log('📋 Using mock data as fallback');
+        setFaqs(mockFaqs);
+        setError(null); // Don't show error, just use mock data
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFaqs();
+  }, []);
 
   const filteredFaqs = useMemo(() => {
     const cleanQuery = searchQuery.toLowerCase().trim();
-    if (!cleanQuery) return mockFaqs;
+    if (!cleanQuery) return faqs;
 
-    return mockFaqs.filter(faq => 
-      faq.q.toLowerCase().includes(cleanQuery) || 
-      faq.a.toLowerCase().includes(cleanQuery)
+    return faqs.filter(faq => 
+      (faq.q || faq.question || '').toLowerCase().includes(cleanQuery) || 
+      (faq.a || faq.answer || '').toLowerCase().includes(cleanQuery)
     );
-  }, [searchQuery]);
+  }, [searchQuery, faqs]);
 
   // Logic for different empty states
-  const hasNoFaqsAtAll = mockFaqs.length === 0;
+  const hasNoFaqsAtAll = faqs.length === 0 && !loading;
   const hasNoSearchResults = filteredFaqs.length === 0 && searchQuery.length > 0;
 
   return (
@@ -62,6 +111,16 @@ export default function FAQ() {
       variants={containerVariants}
       className="relative w-full bg-[var(--background-color)]"
     >
+      {/* Top Loading Bar */}
+      {loading && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+      
       <Navbar />
 
       <header className="relative h-[60vh] min-h-[500px] w-full flex items-center justify-center overflow-hidden">
@@ -99,44 +158,52 @@ export default function FAQ() {
 
       <section className="bg-[var(--background-color)] py-20 px-4 min-h-[60vh]">
         <div className="max-w-5xl mx-auto">
-          <AnimatePresence mode="wait">
-            {/* SCENARIO 1: TOTAL EMPTY DATABASE */}
-            {hasNoFaqsAtAll ? (
-              <motion.div key="no-faqs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <EmptyState 
-                  icon={faQuestionCircle} 
-                  title="No Questions Yet" 
-                  message="The FAQ section is currently being updated. Please check back soon for more information." 
-                />
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }}>
+                <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">Loading FAQs...</p>
               </motion.div>
-            ) : 
-            /* SCENARIO 2: NO SEARCH RESULTS */
-            hasNoSearchResults ? (
-              <motion.div key="no-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <EmptyState 
-                  icon={faInbox} 
-                  title="No Matches Found" 
-                  message={`We couldn't find any FAQs matching "${searchQuery}".`} 
-                />
-              </motion.div>
-            ) : (
-              /* SCENARIO 3: SHOW FAQS */
-              <motion.div 
-                key={searchQuery === "" ? "full-list" : "filtered-list"}
-                className="space-y-4"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                exit={{ opacity: 0 }}
-              >
-                {filteredFaqs.map((faq) => (
-                  <motion.div key={faq.id} variants={itemVariants} layout>
-                    <FAQTile question={faq.q} answer={faq.a} />
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+            </div>
+          ) : (
+            <AnimatePresence mode="wait">
+              {/* SCENARIO 1: TOTAL EMPTY DATABASE */}
+              {hasNoFaqsAtAll ? (
+                <motion.div key="no-faqs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <EmptyState 
+                    icon={faQuestionCircle} 
+                    title="No Questions Yet" 
+                    message="The FAQ section is currently being updated. Please check back soon for more information." 
+                  />
+                </motion.div>
+              ) : 
+              /* SCENARIO 2: NO SEARCH RESULTS */
+              hasNoSearchResults ? (
+                <motion.div key="no-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <EmptyState 
+                    icon={faInbox} 
+                    title="No Matches Found" 
+                    message={`We couldn't find any FAQs matching "${searchQuery}".`} 
+                  />
+                </motion.div>
+              ) : (
+                /* SCENARIO 3: SHOW FAQS */
+                <motion.div 
+                  key={searchQuery === "" ? "full-list" : "filtered-list"}
+                  className="space-y-4"
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit={{ opacity: 0 }}
+                >
+                  {filteredFaqs.map((faq) => (
+                    <motion.div key={faq.id} variants={itemVariants} layout>
+                      <FAQTile question={faq.q || faq.question} answer={faq.a || faq.answer} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
         </div>
       </section>
 
