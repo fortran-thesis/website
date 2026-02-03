@@ -6,7 +6,8 @@ import {
   faImage,
 } from "@fortawesome/free-solid-svg-icons";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import BackButton from "@/components/buttons/back_button";
 import Image from "next/image";
 import StatusBox from "@/components/tiles/status_tile";
@@ -14,26 +15,141 @@ import ConfirmModal from "@/components/modals/confirmation_modal";
 import RequestRevisionModal from "@/components/modals/request_revision_modal";
 
 export default function ViewReport() {
-  const userName = "Faith Gabrielle Gamboa";
-  const username = "lauren123";
-  const userEmail = "lauren@gmail.com";
+  const searchParams = useSearchParams();
+  const reportId = searchParams.get("id");
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Report data
+  const [reportData, setReportData] = useState<any>(null);
+  const [userName, setUserName] = useState("");
+  const [username, setUsername] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userIssue, setUserIssue] = useState("Inappropriate Content Posted");
+  const [reasonDescription, setReasonDescription] = useState(
+    "The user has posted content that violates the community guidelines by sharing offensive images and language."
+  );
+  const [additionalInfo, setAdditionalInfo] = useState(
+    "The user has posted content that violates the community guidelines by sharing offensive images and language. This behavior has been reported multiple times by other users, and it is affecting the overall experience of the platform. Immediate action is required to address this issue and ensure a safe environment for all users."
+  );
+
   const userProfileImage = "/assets/sdssdsd.jpg";
-  const userIssue = "Inappropriate Content Posted";
-  const reasonDescription =
-    "The user has posted content that violates the community guidelines by sharing offensive images and language.";
-  const additionalInfo =
-    "The user has posted content that violates the community guidelines by sharing offensive images and language. This behavior has been reported multiple times by other users, and it is affecting the overall experience of the platform. Immediate action is required to address this issue and ensure a safe environment for all users.";
   const title =
     "The Rise of Molds: Dive into the Microscopic Landscape of Growing Fungi";
   const content =
     "Molds are a fascinating group of fungi that thrive in diverse environments, from damp basements to decaying organic matter. These microscopic organisms play a crucial role in ecosystems by breaking down complex organic materials, recycling nutrients, and contributing to soil health...";
   const userRole = "Administrator";
 
+  // Fetch report data
+  useEffect(() => {
+    if (!reportId) {
+      console.log('📋 No report ID available yet');
+      return;
+    }
+
+    console.log('📋 Starting to fetch report with ID:', reportId);
+
+    const fetchReport = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/v1/reports/${reportId}`, { cache: 'no-store' });
+        console.log('📋 Report fetch status:', res.status);
+        
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          console.error('📋 Report error response:', body);
+          throw new Error(body?.error || `Failed to load report (Status: ${res.status})`);
+        }
+
+        const body = await res.json();
+        console.log('📋 Report data received:', body.data);
+
+        if (body.success && body.data) {
+          setReportData(body.data);
+          setUserIssue(body.data.reason || body.data.title || 'Unknown Issue');
+          setAdditionalInfo(body.data.details || body.data.description || 'No additional details provided');
+          
+          // Fetch reported user details - try different field names
+          const reportedUserId = body.data.reported_user_id || body.data.reporter_id;
+          console.log('📋 Reported user ID (trying reported_user_id or reporter_id):', reportedUserId);
+          
+          if (reportedUserId && reportedUserId.length === 28) {
+            try {
+              const userRes = await fetch(`/api/v1/user/${reportedUserId}`, { cache: 'no-store' });
+              console.log('📋 User fetch status:', userRes.status);
+              
+              if (userRes.ok) {
+                const userData = await userRes.json();
+                console.log('📋 Full user response:', userData);
+                console.log('📋 User data object:', userData.data);
+                
+                if (userData.success && userData.data) {
+                  // Try different data structure paths
+                  const userInfo = userData.data.user || userData.data;
+                  const userDetails = userData.data.details || userData.data;
+                  
+                  console.log('📋 Extracted userInfo:', userInfo);
+                  console.log('📋 Extracted userDetails:', userDetails);
+                  
+                  // Build full name
+                  const firstName = userDetails.first_name || userInfo.first_name || userInfo.firstName || '';
+                  const lastName = userDetails.last_name || userInfo.last_name || userInfo.lastName || '';
+                  const fullName = `${firstName} ${lastName}`.trim();
+                  
+                  console.log('📋 Setting user info - Name:', fullName, 'Username:', userInfo.username, 'Email:', userInfo.email);
+                  
+                  setUserName(fullName || 'Unknown User');
+                  setUsername(userInfo.username || 'N/A');
+                  setUserEmail(userInfo.email || 'N/A');
+                  
+                  console.log('📋 User state updated successfully');
+                } else {
+                  console.error('📋 User response not successful or missing data');
+                }
+              } else {
+                console.error('📋 Failed to fetch user - Status:', userRes.status);
+                try {
+                  const errorText = await userRes.clone().text();
+                  console.error('📋 User error response text:', errorText);
+                  
+                  let errorBody;
+                  try {
+                    errorBody = JSON.parse(errorText);
+                  } catch {
+                    errorBody = errorText;
+                  }
+                  console.error('📋 User error response body:', errorBody);
+                } catch (readErr) {
+                  console.error('📋 Could not read error response:', readErr);
+                }
+              }
+            } catch (userErr) {
+              console.error('📋 Failed to fetch user details:', userErr);
+            }
+          } else {
+            console.warn('📋 Invalid reporter ID length. Expected 28 characters, got:', reportedUserId?.length, 'Value:', reportedUserId);
+          }
+        } else {
+          console.error('📋 Report response not successful');
+        }
+      } catch (err) {
+        console.error('📋 Failed to fetch report:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load report');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReport();
+  }, [reportId]);
+
   const [imgSrc, setImgSrc] = useState(userProfileImage);
   const [hasImage, setHasImage] = useState(true);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isReqRevisionsModalOpen, setIsReqRevisionsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [reportActionLoading, setReportActionLoading] = useState(false);
   const [reportStatus, setReportStatus] = useState("Unresolved");
   const [isResolved, setIsResolved] = useState(false); 
 
@@ -50,7 +166,7 @@ export default function ViewReport() {
 
   /** Handles requesting revision with additional details */
   const handleSubmit = async (details: string) => {
-    setLoading(true);
+    setReportActionLoading(true);
     try {
       setReportStatus("Revision Requested");
       setIsReqRevisionsModalOpen(false);
@@ -58,7 +174,7 @@ export default function ViewReport() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      setReportActionLoading(false);
     }
   };
 
@@ -75,6 +191,12 @@ export default function ViewReport() {
       </div>
 
       <BackButton />
+
+      {loading && <p className="text-center">Loading report...</p>}
+      {error && <p className="text-center text-red-600">{error}</p>}
+
+      {!loading && !error && (
+        <>
 
       {/* User Info */}
       <div className="flex flex-col md:flex-row w-full gap-x-4 items-center">
@@ -241,10 +363,12 @@ export default function ViewReport() {
         isOpen={isReqRevisionsModalOpen}
         onClose={() => setIsReqRevisionsModalOpen(false)}
         onSubmit={handleSubmit}
-        isSubmitting={loading}
+        isSubmitting={reportActionLoading}
         reasonTitle={userIssue}
         reasonDescription={reasonDescription}
       />
+        </>
+      )}
     </main>
   );
 }

@@ -21,6 +21,7 @@ export default function Users() {
     const [error, setError] = useState<string | null>(null);
     const [nextPageToken, setNextPageToken] = useState<string | null>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
+    const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
     // Search and filter state
     const [searchQuery, setSearchQuery] = useState('');
@@ -46,15 +47,19 @@ export default function Users() {
     // Build search URL with active filters
     const buildSearchUrl = (token?: string | null) => {
         const params = new URLSearchParams();
-        if (searchQuery) params.set('search', searchQuery);
-        if (roleFilter && roleFilter !== 'all') params.set('role', roleFilter);
-        if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
+        const hasSearch = !!searchQuery;
+        const hasRole = !!roleFilter && roleFilter !== 'all';
+        const hasStatus = !!statusFilter && statusFilter !== 'all';
+
+        if (hasSearch) params.set('search', searchQuery);
+        if (hasRole) params.set('role', roleFilter);
+        if (hasStatus) params.set('status', statusFilter);
         params.set('limit', '10');
         if (token) params.set('pageToken', token);
 
         const queryString = params.toString();
         // If no filters, use regular /users endpoint; otherwise use /users/search
-        if (!searchQuery && !roleFilter && !statusFilter) {
+        if (!hasSearch && !hasRole && !hasStatus) {
             return `/api/v1/users?${queryString}`;
         }
         return `/api/v1/users/search?${queryString}`;
@@ -62,44 +67,60 @@ export default function Users() {
 
     // Fetch initial users page (no pagination for now)
     useEffect(() => {
-        // Fetch role and disabled counts
-        const fetchCounts = async () => {
-            try {
-                const [rolesRes, disabledRes] = await Promise.all([
-                    fetch('/api/v1/users/counts/roles', { cache: 'no-store' }),
-                    fetch('/api/v1/users/counts/disabled', { cache: 'no-store' })
-                ]);
-                if (rolesRes.ok) {
-                    const rolesBody = await rolesRes.json();
-                    if (rolesBody.success && rolesBody.data) setRoleCounts(rolesBody.data);
+        // Clear any pending debounce
+        if (debounceTimeout.current) {
+            clearTimeout(debounceTimeout.current);
+        }
+
+        // Debounce filter changes to prevent rapid API calls
+        debounceTimeout.current = setTimeout(async () => {
+            let mounted = true;
+            
+            // Fetch role and disabled counts
+            const fetchCounts = async () => {
+                try {
+                    const [rolesRes, disabledRes] = await Promise.all([
+                        fetch('/api/v1/users/counts/roles', { cache: 'no-store' }),
+                        fetch('/api/v1/users/counts/disabled', { cache: 'no-store' })
+                    ]);
+                    if (rolesRes.ok) {
+                        const rolesBody = await rolesRes.json();
+                        if (rolesBody.success && rolesBody.data) setRoleCounts(rolesBody.data);
+                    }
+                    if (disabledRes.ok) {
+                        const disabledBody = await disabledRes.json();
+                        if (disabledBody.success && disabledBody.data) setDisabledCounts(disabledBody.data);
+                    }
+                } catch (err) {
+                    // Optionally handle error
                 }
-                if (disabledRes.ok) {
-                    const disabledBody = await disabledRes.json();
-                    if (disabledBody.success && disabledBody.data) setDisabledCounts(disabledBody.data);
-                }
-            } catch (err) {
-                // Optionally handle error
-            }
-        };
-        fetchCounts();
-        let mounted = true;
-        const fetchUsers = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const url = buildSearchUrl();
-                const res = await fetch(url, { cache: 'no-store' });
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    throw new Error(body?.error || 'Failed to load users');
-                }
-                const body = await res.json();
-                console.log(body);
-                const data = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
+            };
+            
+            await fetchCounts();
+            
+            // Add small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            const fetchUsers = async () => {
+                setLoading(true);
+                setError(null);
+                // Reset pagination when filters change
                 if (mounted) {
-                    setUsers(data);
-                    setNextPageToken(body.data?.nextPageToken || null);
+                    setNextPageToken(null);
                 }
+                try {
+                    const url = buildSearchUrl();
+                    const res = await fetch(url, { cache: 'no-store' });
+                    if (!res.ok) {
+                        const body = await res.json().catch(() => ({}));
+                        throw new Error(body?.error || 'Failed to load users');
+                    }
+                    const body = await res.json();
+                    const data = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
+                    if (mounted) {
+                        setUsers(data);
+                        setNextPageToken(body.data?.nextPageToken || null);
+                    }
             } catch (e: any) {
                 console.error('Failed to load users', e);
                 if (mounted) setError(e?.message || 'Failed to load users');
@@ -107,13 +128,17 @@ export default function Users() {
                 if (mounted) setLoading(false);
             }
         };
-        fetchUsers();
-        return () => { mounted = false; };
+        await fetchUsers();
+        }, 500); // 500ms debounce delay
+
+        return () => {
+            if (debounceTimeout.current) {
+                clearTimeout(debounceTimeout.current);
+            }
+        };
     }, [searchQuery, roleFilter, statusFilter]);
 
     const handleMycoSubmit = async (data: MycoFormData) => {
-        console.log('Form submitted:', data);
-
         // Refresh users list and counts (reset pagination)
         try {
             const [rolesRes, disabledRes] = await Promise.all([
@@ -135,7 +160,6 @@ export default function Users() {
             if (usersRes.ok) {
                 const usersBody = await usersRes.json();
                 const usersData = Array.isArray(usersBody.data?.snapshot) ? usersBody.data.snapshot : [];
-                console.log('Updated users list:', usersData);
                 setUsers(usersData);
                 setNextPageToken(usersBody.data?.nextPageToken || null);
             } else {
@@ -162,9 +186,17 @@ export default function Users() {
                 const body = await res.json();
                 const newData = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
 
-                // Safety check: if token didn't change and we got data, stop loading
+                // Stop pagination if no new data
+                if (newData.length === 0) {
+                    console.warn('⚠️ No more users returned - stopping pagination');
+                    setNextPageToken(null);
+                    setIsLoadingMore(false);
+                    return;
+                }
+
+                // Safety check: if token didn't change, stop loading
                 const newToken = body.data?.nextPageToken || null;
-                if (newToken === nextPageToken && newData.length > 0) {
+                if (!newToken || newToken === nextPageToken) {
                     console.warn('⚠️ Backend returned same token - stopping pagination');
                     setNextPageToken(null); // Stop pagination
                     setIsLoadingMore(false);

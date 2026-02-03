@@ -170,7 +170,7 @@ export default function ProfileCard({
           </div>
         </div>
 
-        <div className="mt-6">
+        {/* <div className="mt-6">
           <label
             htmlFor="email"
             className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-2"
@@ -184,14 +184,14 @@ export default function ProfileCard({
             onChange={(e) => handleInputChange("email", e.target.value)}
             className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 mb-1 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           />
-        </div>
+        </div> */}
       </div>
 
       {/* Save Button */}
       <div>
         <button
           type="submit"
-          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] text-[var(--background-color)] px-10 py-3 rounded-lg font-semibold transition w-full md:w-auto cursor-pointer"
+          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] font-[family-name:var(--font-bricolage-grotesque)] text-md text-[var(--background-color)] px-10 py-3 rounded-lg font-semibold transition w-full md:w-auto cursor-pointer"
         >
           Save Changes
         </button>

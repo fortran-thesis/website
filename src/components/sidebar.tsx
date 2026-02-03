@@ -23,8 +23,16 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const [isLoggingOut, setIsLoggingOut] = useState(false);
     const logout = useLogout();
 
-    const isAdministrator = userRole === "Administrator";
-    const isMycologist = userRole === "Mycologist";
+    // Normalize role comparison - handle both "Admin"/"Administrator" and "Mycologist"
+    const normalizeRole = (role: string): string => {
+        if (!role) return "Mycologist";
+        const lowerRole = role.toLowerCase();
+        return lowerRole === "admin" || lowerRole === "administrator" ? "Administrator" : "Mycologist";
+    };
+
+    const normalizedRole = normalizeRole(userRole);
+    const isAdministrator = normalizedRole === "Administrator";
+    const isMycologist = normalizedRole === "Mycologist";
 
     const handleLogout = async () => {
         setIsLoggingOut(true);

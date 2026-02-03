@@ -6,8 +6,11 @@ import { useAuth } from "@/hooks/useAuth";
 
 export default function LayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user: authUser } = useAuth();
   const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support") || pathname.startsWith("/wikimold") || pathname.startsWith("/faq") || pathname.startsWith("/terms-of-agreement") || pathname.startsWith("/privacy-policy") || pathname.startsWith("/about") || pathname == "/";
+
+  // Determine user role - backend returns lowercase 'admin' or 'mycologist'
+  const userRole = authUser?.user?.role ? authUser.user.role.charAt(0).toUpperCase() + authUser.user.role.slice(1).toLowerCase() : "Mycologist";
 
   return hideLayout ? (
     <main>{children}</main>
@@ -15,7 +18,7 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
     <>
         <div className="flex min-h-screen">
             {/* Sidebar */}
-            <Sidebar userRole={"Mycologist"} />
+            <Sidebar userRole={userRole} />
 
             {/* Main content */}
             <div className="flex flex-col flex-grow min-w-0">

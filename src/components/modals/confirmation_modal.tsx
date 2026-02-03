@@ -12,6 +12,8 @@ interface ConfirmModalProps {
   subtitle: string;
   cancelText?: string;
   confirmText?: string;
+  confirmDisabled?: boolean;
+  confirmLoadingText?: string;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -22,6 +24,8 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
   subtitle,
   cancelText = "Cancel",
   confirmText = "Yes",
+  confirmDisabled = false,
+  confirmLoadingText,
   onCancel,
   onConfirm,
 }) => {
@@ -65,9 +69,10 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
           </button>
           <button
             onClick={onConfirm}
-            className="px-12 rounded-lg bg-[var(--primary-color)] text-[var(--background-color)] font-semibold font-[family-name:var(--font-bricolage-grotesque)] hover:bg-[var(--hover-primary)] cursor-pointer transition-colors duration-200 ease-in-out"
+            disabled={confirmDisabled}
+            className="px-12 rounded-lg bg-[var(--primary-color)] text-[var(--background-color)] font-semibold font-[family-name:var(--font-bricolage-grotesque)] hover:bg-[var(--hover-primary)] cursor-pointer transition-colors duration-200 ease-in-out disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {confirmText}
+            {confirmDisabled && confirmLoadingText ? confirmLoadingText : confirmText}
           </button>
         </div>
       </div>

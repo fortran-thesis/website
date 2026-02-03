@@ -55,9 +55,13 @@ export default function WikiMold() {
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const hasFetchedRef = useRef(false);
 
   // Fetch articles from API
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     const fetchArticles = async (pageToken?: string) => {
       try {
         if (!pageToken) setLoading(true);
@@ -72,13 +76,31 @@ export default function WikiMold() {
         const response = await fetch(url, { cache: 'no-store' });
         console.log('📡 Response status:', response.status);
         
-        const data = await response.json();
-        console.log('ull API response:', data);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch articles (Status: ${response.status})`);
+        }
+        
+        let data: any;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          // Response is not JSON (e.g., plain text error message like 429)
+          console.error('Failed to parse response as JSON:', parseError);
+          console.error('ailed to fetch wikimold articles:', parseError);
+          setError('Failed to load articles');
+          if (!pageToken) setArticles([]);
+          return;
+        }
+        
+        console.log('Full API response:', data);
         
         // Handle different possible response structures
         let articlesData = null;
         if (data.success) {
-          if (data.data?.snapshot) {
+          if (data.data?.data) {
+            // Handle double-nested data.data structure
+            articlesData = data.data.data;
+          } else if (data.data?.snapshot) {
             articlesData = data.data.snapshot;
           } else if (data.data?.items) {
             articlesData = data.data.items;

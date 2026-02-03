@@ -101,13 +101,13 @@ export default function ChangePasswordForm({
                 }
                 disabled={isLoading}
                 required
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none w-full pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none w-full pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
               />
 
               <button
                 type="button"
                 onClick={() => togglePasswordVisibility(field as keyof PasswordData)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--primary-color)] p-2 rounded-full hover:bg-black/10 transition cursor-pointer"
+                className="absolute right-4 text-[var(--primary-color)] opacity-50 cursor-pointer hover:opacity-100 transition-all"
                 tabIndex={-1}
                 aria-label={
                   showPassword[field as keyof PasswordData]
@@ -119,7 +119,7 @@ export default function ChangePasswordForm({
                   icon={
                     showPassword[field as keyof PasswordData] ? faEye : faEyeSlash
                   }
-                  className="w-5 h-5"
+                  className="w-4 h-4"
                 />
               </button>
             </div>
@@ -132,7 +132,7 @@ export default function ChangePasswordForm({
         <button
           type="submit"
           disabled={isLoading}
-          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] text-[var(--background-color)] px-10 py-3 rounded-lg font-semibold transition w-full md:w-auto cursor-pointer disabled:opacity-60"
+          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] text-[var(--background-color)] px-10 py-3 rounded-lg font-[family-name:var(--font-bricolage-grotesque)] text-md font-semibold transition w-full md:w-auto cursor-pointer disabled:opacity-60"
         >
           {isLoading ? "Saving..." : "Save Changes"}
         </button>

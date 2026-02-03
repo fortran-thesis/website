@@ -28,7 +28,7 @@ export default function ViewWikiMold() {
     const fetchArticle = async () => {
       try {
         setLoading(true);
-        console.log('🔍 Fetching article with id:', id);
+        console.log('Fetching article with id:', id);
         
         const response = await fetch(`${envOptions.apiUrl}${endpoints.moldipedia.getById(id as string)}`, { 
           cache: 'no-store' 
@@ -36,11 +36,20 @@ export default function ViewWikiMold() {
         
         console.log('Response status:', response.status);
         
-        if (!response.ok) {
-          throw new Error(`Failed to fetch article (Status: ${response.status})`);
+        let data: any;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          // Response is not JSON (e.g., plain text error message like 429)
+          console.error('Failed to parse response as JSON:', parseError);
+          data = { success: false, error: await response.text() };
         }
         
-        const data = await response.json();
+        if (!response.ok) {
+          console.error(`API Error (Status: ${response.status}):`, data.error || data);
+          setLoading(false);
+          return;
+        }
         
         if (data.success && data.data) {
           const articleData = data.data;

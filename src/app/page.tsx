@@ -61,7 +61,21 @@ export default function Home() {
           cache: 'no-store',
           headers: { 'Content-Type': 'application/json' }
         });
-        const data = await response.json();
+        
+        let data: any;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          // Response is not JSON (e.g., plain text error message)
+          console.error('Failed to parse response as JSON:', parseError);
+          data = { success: false, error: await response.text() };
+        }
+        
+        if (!response.ok) {
+          console.error(`API Error (Status: ${response.status}):`, data.error || data);
+          return;
+        }
+        
         console.log('Resolved cases response:', data);
         
         // Extract the resolved count - handle different response formats

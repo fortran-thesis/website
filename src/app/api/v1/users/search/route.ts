@@ -28,9 +28,10 @@ export async function GET(req: NextRequest) {
     // Convert status string to boolean (undefined if not provided)
     let active: boolean | undefined;
     if (statusParam) {
-      if (statusParam.toLowerCase() === 'active') {
+      const normalizedStatus = statusParam.toLowerCase();
+      if (normalizedStatus === 'active') {
         active = true;
-      } else if (statusParam.toLowerCase() === 'disabled') {
+      } else if (normalizedStatus === 'disabled' || normalizedStatus === 'inactive') {
         active = false;
       }
     }

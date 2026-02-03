@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import Footer from '@/components/footer';
 import { Navbar } from '@/components/navbar';
@@ -46,13 +46,17 @@ export default function FAQ() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
 
   // Fetch FAQs from API
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     const fetchFaqs = async () => {
       try {
         setLoading(true);
-        console.log('🔍 Fetching FAQs from:', envOptions.apiUrl + endpoints.faq.list);
+        console.log('Fetching FAQs from:', envOptions.apiUrl + endpoints.faq.list);
         
         const response = await fetch(`${envOptions.apiUrl}${endpoints.faq.list}`, { 
           cache: 'no-store' 
@@ -64,7 +68,18 @@ export default function FAQ() {
           throw new Error(`Failed to fetch FAQs (Status: ${response.status})`);
         }
         
-        const data = await response.json();
+        let data: any;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          // Response is not JSON (e.g., plain text error message like 429)
+          console.error('Failed to parse response as JSON:', parseError);
+          console.log('Using mock data as fallback');
+          setFaqs(mockFaqs);
+          setError(null);
+          return;
+        }
+        
         console.log('Full API response:', data);
         
         if (data.success && data.data) {

@@ -296,12 +296,12 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     required
-                    className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 rounded-lg focus:outline-none appearance-none"
+                  className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-12 rounded-lg focus:outline-none appearance-none"
                 />
                 <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary-color)] hover:text-[var(--hover-primary)] transition cursor-pointer"
+                  className="absolute right-4 text-[var(--primary-color)] opacity-50 cursor-pointer hover:opacity-100 transition-all"
                     aria-label="Toggle password visibility"
                 >
                     <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} className="w-4 h-4" />
@@ -325,12 +325,12 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
                     value={formData.confirmPassword}
                     onChange={(e) => handleChange("confirmPassword", e.target.value)}
                     required
-                    className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 rounded-lg focus:outline-none appearance-none"
+                  className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-12 rounded-lg focus:outline-none appearance-none"
                 />
                 <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary-color)] hover:text-[var(--hover-primary)] transition cursor-pointer"
+                  className="absolute right-4 text-[var(--primary-color)] opacity-50 cursor-pointer hover:opacity-100 transition-all"
                     aria-label="Toggle confirm password visibility"
                 >
                     <FontAwesomeIcon icon={showConfirmPassword ? faEye : faEyeSlash} className="w-4 h-4" />

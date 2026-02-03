@@ -7,13 +7,13 @@ import ProfileCard from "./tab_contents/profile";
 import type { ProfileData } from "./tab_contents/profile";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import ChangePasswordForm, { PasswordData } from "./tab_contents/password";
-import { endpoints } from "@/services/endpoints";
-import { apiClient } from "@/services/apiClient";
+import { useAuth } from "@/hooks/useAuth";
 import Archive from "./tab_contents/archive";
 import CaseHistory from "./tab_contents/case-history";
 import FlagHistory from "./tab_contents/flag-history";
 
 export default function Settings() {
+  const { user, refreshUser } = useAuth();
   // State for tracking user role fetched from backend
   const [userRole, setUserRole] = useState<"Administrator" | "Mycologist" | null>(null);
   
@@ -25,6 +25,7 @@ export default function Settings() {
   const [isRemoveModalOpen, setRemoveModalOpen] = useState(false);
   const [isSaveModalOpen, setSaveModalOpen] = useState(false);
   const [isPasswordSaveModalOpen, setPasswordSaveModalOpen] = useState(false);
+  const [isPasswordSaving, setPasswordSaving] = useState(false);
   
   // Track if we've loaded user data from useAuth (not just browser load)
   const [userDataLoaded, setUserDataLoaded] = useState(false);
@@ -44,57 +45,12 @@ export default function Settings() {
   // Store pending password data before confirming
   const [pendingPasswordData, setPendingPasswordData] = useState<PasswordData | null>(null);
 
-  /**
-   * Fetch current user's role from backend API
-   * This determines which tab contents are displayed to the user
-   * Administrator users see: Profile, Password
-   * Mycologist users see: Profile, Password, Archive, Case History, Flag History
-   */
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+  const formatRole = (value: string) => {
+    const trimmed = value?.trim();
+    if (!trimmed) return "";
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+  };
 
-        // TODO: Uncomment this when backend server is ready
-        // Fetch user profile data from backend
-        // const response = await apiClient.get(endpoints.user.profile);
-
-        // if (response.success && response.data) {
-        //   // Extract role from response and validate
-        //   const fetchedRole = response.data.role as "Administrator" | "Mycologist";
-        //   
-        //   // Validate that role is one of the expected values
-        //   if (fetchedRole === "Administrator" || fetchedRole === "Mycologist") {
-        //     setUserRole(fetchedRole);
-        //     // Update profile with fetched data
-        //     setProfile((prev) => ({
-        //       ...prev,
-        //       ...response.data,
-        //     }));
-        //   } else {
-        //     throw new Error(`Unknown user role: ${fetchedRole}`);
-        //   }
-        // } else {
-        //   throw new Error(response.error || "Failed to fetch user profile");
-        // }
-
-        // TEMPORARY: Set default role to Administrator for development
-        // Users can manually change this using the role selector below
-        setUserRole("Administrator");
-      } catch (err) {
-        console.error("Error fetching user role:", err);
-        setError(err instanceof Error ? err.message : "Failed to load user settings");
-        // Default to Administrator role if fetch fails for safety
-        setUserRole("Administrator");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    // Fetch user role on component mount
-    fetchUserRole();
-  }, []);
 
   // Handles text field updates
   const handleProfileChange = (updatedData: ProfileData) => {
@@ -136,10 +92,17 @@ export default function Settings() {
     const profilePicture = details?.photo_url || details?.profilePicture || undefined;
     
     console.log('💾 Setting profile:', { firstName, lastName, email, role, profilePicture });
-    const profileData = { firstName, lastName, email, role, profilePicture };
+    const profileData = { firstName, lastName, email, role: formatRole(role), profilePicture };
     console.log('📤 Profile data being set:', profileData);
     setProfile(profileData);
+    const normalizedRole = (role || "").toString().toLowerCase();
+    if (normalizedRole === "mycologist") {
+      setUserRole("Mycologist");
+    } else {
+      setUserRole("Administrator");
+    }
     setUserDataLoaded(true);
+    setIsLoading(false);
     // Also clear any pending profile file
     setProfileFile(null);
   }, [user]);
@@ -234,11 +197,13 @@ export default function Settings() {
   // Actually saves the password after confirming
   const handleConfirmSavePassword = async () => {
     if (!pendingPasswordData) return setPasswordSaveModalOpen(false);
+    if (isPasswordSaving) return;
+    setPasswordSaving(true);
 
     try {
       const body = {
-        old_password: pendingPasswordData.oldPassword,
-        new_password: pendingPasswordData.newPassword,
+        oldPassword: pendingPasswordData.oldPassword,
+        newPassword: pendingPasswordData.newPassword,
       };
 
       const res = await fetch('/api/v1/auth/change-password', {
@@ -248,18 +213,20 @@ export default function Settings() {
         credentials: 'include',
       });
 
+      const text = await res.text();
+      let json;
+      try { json = text ? JSON.parse(text) : {}; } catch { json = { error: text }; }
+
       if (!res.ok) {
-        const text = await res.text();
-        let json;
-        try { json = JSON.parse(text); } catch { json = { error: text }; }
         alert(`Failed to change password: ${json?.message || json?.error || res.statusText}`);
       } else {
-        alert('Password updated successfully');
+        alert(json?.data || json?.message || 'Password updated successfully');
       }
     } catch (err) {
       console.error('Change password error', err);
       alert('Internal error while changing password.');
     } finally {
+      setPasswordSaving(false);
       setPasswordSaveModalOpen(false);
       setPendingPasswordData(null);
     }
@@ -289,7 +256,12 @@ export default function Settings() {
       {
         label: "Password",
         icon: faLock,
-        content: <ChangePasswordForm onSave={handleRequestSavePassword} />,
+        content: (
+          <ChangePasswordForm
+            onSave={handleRequestSavePassword}
+            isLoading={isPasswordSaving}
+          />
+        ),
       },
     ];
 
@@ -344,40 +316,6 @@ export default function Settings() {
         </div>
       )}
 
-      {/* DEVELOPMENT: Manual Role Selector - Remove when backend server is ready */}
-      {!isLoading && (
-        <div className="mt-6 p-4 bg-[var(--taupe)] rounded-lg border-2 border-[var(--primary-color)]">
-          <p className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-sm mb-3">
-            Development: Select User Role
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setUserRole("Administrator")}
-              className={`px-4 py-2 rounded-lg font-[family-name:var(--font-bricolage-grotesque)] text-sm transition ${
-                userRole === "Administrator"
-                  ? "bg-[var(--primary-color)] text-[var(--background-color)] font-semibold"
-                  : "bg-[var(--background-color)] text-[var(--primary-color)] border-2 border-[var(--primary-color)]"
-              }`}
-            >
-              Administrator
-            </button>
-            <button
-              onClick={() => setUserRole("Mycologist")}
-              className={`px-4 py-2 rounded-lg font-[family-name:var(--font-bricolage-grotesque)] text-sm transition ${
-                userRole === "Mycologist"
-                  ? "bg-[var(--primary-color)] text-[var(--background-color)] font-semibold"
-                  : "bg-[var(--background-color)] text-[var(--primary-color)] border-2 border-[var(--primary-color)]"
-              }`}
-            >
-              Mycologist
-            </button>
-          </div>
-          <p className="text-xs text-[var(--moldify-grey)] mt-2 font-[family-name:var(--font-bricolage-grotesque)]">
-            Current role: <span className="font-semibold">{userRole}</span>
-          </p>
-        </div>
-      )}
-
       {/* Loading State */}
       {isLoading ? (
         <div className="mt-10 p-6 text-center">
@@ -423,6 +361,8 @@ export default function Settings() {
         subtitle="Do you want to save your recent password changes?"
         cancelText="Cancel"
         confirmText="Save"
+        confirmLoadingText="Saving..."
+        confirmDisabled={isPasswordSaving}
         onCancel={() => setPasswordSaveModalOpen(false)}
         onConfirm={handleConfirmSavePassword}
       />

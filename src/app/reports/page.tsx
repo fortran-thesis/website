@@ -4,28 +4,172 @@ import { faSearch, faTriangleExclamation} from '@fortawesome/free-solid-svg-icon
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import ReportsTable, { Report } from '@/components/tables/report_table';
+import { useEffect, useState, useRef } from 'react';
 
 export default function Reports() {
        
     const userRole = "Administrator";
-    const mockReports: Report[] = [
-        {
-            id: "1",
-            issue: "Intellectual Property Violation",
-            reportedUser: "Karl Manuel Diata",
-            reportedBy: "PDIReCT6Jk2mHaldVfnN",
-            dateReported: "November 06, 2025",
-            status: "Resolved",
+
+    const [reports, setReports] = useState<Report[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    const [searchQuery, setSearchQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+
+    const [stats, setStats] = useState({
+      total: 0,
+      unresolved: 0,
+      resolved: 0,
+    });
+
+    // Build search with active filters
+    const buildSearchUrl = (token?: string | null) => {
+      const params = new URLSearchParams();
+      params.set('limit', '10');
+      if (token) params.set('pageToken', token);
+      return `/api/v1/reports?${params.toString()}`;
+    };
+
+    // Fetch reports
+    useEffect(() => {
+      let mounted = true;
+
+      const fetchReports = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const url = buildSearchUrl();
+          console.log('📊 Fetching reports from:', url);
+          const res = await fetch(url, { cache: 'no-store' });
+          console.log('📊 Reports response status:', res.status);
+          
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            console.error('📊 Reports error response:', body);
+            throw new Error(body?.error || `Failed to load reports (Status: ${res.status})`);
+          }
+
+          const body = await res.json();
+          console.log('📊 Reports body:', body);
+          console.log('📊 First report object:', body.data?.snapshot?.[0]); // Log first report to see structure
+          
+          if (body.success && body.data?.snapshot) {
+            const reportsData = body.data.snapshot.map((r: any) => {
+              // Try multiple possible status fields
+              const status = r.status || r.report_status || r.resolution_status || 'Unresolved';
+              console.log('📊 Report status mapping:', { id: r.id, original: r.status, mapped: status, allFields: Object.keys(r) });
+              
+              return {
+                id: r.id,
+                issue: r.reason || 'Unknown Issue',
+                reportedUser: r.reported_user_id || 'Unknown',
+                reportedBy: r.reporter_id || 'Unknown',
+                dateReported: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'N/A',
+                status: status,
+              };
+            });
+            if (mounted) {
+              setReports(reportsData);
+              setNextPageToken(body.data.nextPageToken || null);
+              
+              // Calculate stats based on actual data
+              const unresolvedData = reportsData.filter((r: Report) => r.status === 'Unresolved');
+              const resolvedData = reportsData.filter((r: Report) => r.status === 'Resolved');
+              
+              setStats({
+                total: reportsData.length,
+                unresolved: unresolvedData.length,
+                resolved: resolvedData.length,
+              });
+              console.log('📊 Reports loaded successfully:', reportsData.length, 'Unresolved:', unresolvedData.length, 'Resolved:', resolvedData.length);
+            }
+          } else {
+            console.log('📊 Unexpected response structure:', body);
+            if (mounted) {
+              setReports([]);
+              setStats({ total: 0, unresolved: 0, resolved: 0 });
+            }
+          }
+        } catch (err) {
+          console.error('📊 Failed to fetch reports:', err);
+          if (mounted) setError(err instanceof Error ? err.message : 'Failed to load reports');
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      };
+
+      fetchReports();
+      return () => { mounted = false; };
+    }, []);
+
+    // Infinite scroll
+    useEffect(() => {
+      if (!nextPageToken || isLoadingMore) return;
+
+      const handleLoadMore = async () => {
+        setIsLoadingMore(true);
+        try {
+          const url = buildSearchUrl(nextPageToken);
+          const res = await fetch(url, { cache: 'no-store' });
+          if (!res.ok) throw new Error('Failed to load more reports');
+
+          const body = await res.json();
+          if (body.success && body.data?.snapshot) {
+            const newReportsData = body.data.snapshot.map((r: any) => ({
+              id: r.id,
+              issue: r.reason || 'Unknown Issue',
+              reportedUser: r.reported_user_id || 'Unknown',
+              reportedBy: r.reporter_id || 'Unknown',
+              dateReported: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'N/A',
+              status: 'Unresolved',
+            }));
+
+            if (newReportsData.length === 0) {
+              setNextPageToken(null);
+              setIsLoadingMore(false);
+              return;
+            }
+
+            const newToken = body.data.nextPageToken || null;
+            if (!newToken || newToken === nextPageToken) {
+              setNextPageToken(null);
+              setIsLoadingMore(false);
+              return;
+            }
+
+            setReports(prev => [...prev, ...newReportsData]);
+            setNextPageToken(newToken);
+          }
+        } catch (err) {
+          console.error('Failed to load more reports:', err);
+        } finally {
+          setIsLoadingMore(false);
+        }
+      };
+
+      const observer = new IntersectionObserver(
+        entries => {
+          if (entries[0].isIntersecting) {
+            handleLoadMore();
+          }
         },
-        {
-            id: "2",
-            issue: "Fake Account",
-            reportedUser: "Karl Manuel Diata",
-            reportedBy: "PDIReCT6Jk2mHaldVfnN",
-            dateReported: "November 06, 2025",
-            status: "Unresolved",
-        },
-    ];
+        { threshold: 0.1 }
+      );
+
+      if (loadMoreRef.current) {
+        observer.observe(loadMoreRef.current);
+      }
+
+      return () => {
+        if (loadMoreRef.current) {
+          observer.unobserve(loadMoreRef.current);
+        }
+      };
+    }, [nextPageToken, isLoadingMore]);
     
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
@@ -44,9 +188,9 @@ export default function Reports() {
             
             {/* Statistics Tiles */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 mt-6">
-                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--accent-color)" title="Total Reports" statNum={12} />
-                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--moldify-red)" title="Total Unresolved Reports" statNum={5} />
-                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--primary-color)" title="Total Resolved Reports" statNum={3} />
+                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--accent-color)" title="Total Reports" statNum={stats.total} />
+                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--moldify-red)" title="Total Unresolved Reports" statNum={stats.unresolved} />
+                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--primary-color)" title="Total Resolved Reports" statNum={stats.resolved} />
             </div>
             
             {/* Submitted Cases Section */}
@@ -93,11 +237,18 @@ export default function Reports() {
 
             {/* Submitted Cases Table */}
             <div className="mt-6 w-full">
-              <ReportsTable data={mockReports} 
+              {loading && <p>Loading reports...</p>}
+              {error && <p className="text-red-600">{error}</p>}
+              {!loading && !error && <ReportsTable data={reports} 
                 onEdit={(c: Report) => {
                         window.location.href = `/reports/view-report?id=${c.id}`;
                     }}
-                />
+                />}
+
+              {/* Infinite scroll trigger */}
+              <div ref={loadMoreRef} className="py-4 text-center">
+                {isLoadingMore && <p className="text-sm text-[var(--moldify-grey)]">Loading more reports...</p>}
+              </div>
             </div>
             
         </main>
