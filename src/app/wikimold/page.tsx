@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import Footer from '@/components/footer';
 import { Navbar } from '@/components/navbar';
@@ -16,6 +16,17 @@ const mockArticles = [
   { id: 5, title: "Machine Learning for Crop Safety", author: "Moldify Team", image: "/assets/mold.jpg" },
   { id: 6, title: "Root Rot in Hydroponic Systems", author: "Ferdinand Silva", image: "/assets/farm.jpg" },
 ];
+
+interface Article {
+  id: string;
+  title: string;
+  body: string;
+  author_id: string;
+  cover_photo: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -36,18 +47,133 @@ const itemVariants: Variants = {
 
 export default function WikiMold() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [articles, setArticles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Fetch articles from API
+  useEffect(() => {
+    const fetchArticles = async (pageToken?: string) => {
+      try {
+        if (!pageToken) setLoading(true);
+        else setIsLoadingMore(true);
+        
+        let url = 'https://api-2p4weeh6lq-as.a.run.app/api/v1/moldipedia?limit=50';
+        if (pageToken) {
+          url += `&pageToken=${encodeURIComponent(pageToken)}`;
+        }
+        
+        console.log('🔍 Fetching from:', url);
+        const response = await fetch(url, { cache: 'no-store' });
+        console.log('📡 Response status:', response.status);
+        
+        const data = await response.json();
+        console.log('ull API response:', data);
+        
+        // Handle different possible response structures
+        let articlesData = null;
+        if (data.success) {
+          if (data.data?.snapshot) {
+            articlesData = data.data.snapshot;
+          } else if (data.data?.items) {
+            articlesData = data.data.items;
+          } else if (data.data?.records) {
+            articlesData = data.data.records;
+          } else if (data.data?.articles) {
+            articlesData = data.data.articles;
+          } else if (Array.isArray(data.data)) {
+            articlesData = data.data;
+          }
+        }
+        
+        if (articlesData && Array.isArray(articlesData)) {
+          console.log('Found articles:', articlesData.length);
+          if (pageToken) {
+            setArticles(prev => [...prev, ...articlesData]);
+          } else {
+            setArticles(articlesData);
+          }
+          setNextPageToken(data.data?.nextPageToken || null);
+        } else {
+          console.error('No articles data found in response');
+          if (!pageToken) setArticles([]);
+        }
+        setError(null);
+      } catch (err) {
+        console.error('ailed to fetch wikimold articles:', err);
+        setError('Failed to load articles');
+        if (!pageToken) setArticles([]);
+      } finally {
+        setLoading(false);
+        setIsLoadingMore(false);
+      }
+    };
+    
+    fetchArticles();
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        const lastEntry = entries[0];
+        if (lastEntry.isIntersecting && nextPageToken && !isLoadingMore && !searchQuery) {
+          console.log('📚 Scrolled to bottom, loading more articles...');
+          setIsLoadingMore(true);
+          
+          const fetchMoreArticles = async () => {
+            try {
+              let url = 'https://api-2p4weeh6lq-as.a.run.app/api/v1/moldipedia?limit=50';
+              url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
+              
+              const response = await fetch(url, { cache: 'no-store' });
+              const data = await response.json();
+              
+              if (data.success && data.data?.snapshot && data.data.snapshot.length > 0) {
+                setArticles(prev => [...prev, ...data.data.snapshot]);
+                setNextPageToken(data.data.nextPageToken || null);
+                console.log('✅ Loaded', data.data.snapshot.length, 'more articles');
+              } else {
+                setNextPageToken(null);
+              }
+            } catch (err) {
+              console.error('Failed to load more articles:', err);
+            } finally {
+              setIsLoadingMore(false);
+            }
+          };
+          
+          fetchMoreArticles();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [nextPageToken, isLoadingMore, searchQuery]);
 
   const filteredArticles = useMemo(() => {
     const cleanQuery = searchQuery.toLowerCase().trim();
-    if (!cleanQuery) return mockArticles;
+    if (!cleanQuery) return articles;
     
-    return mockArticles.filter(art => 
+    return articles.filter(art => 
       art.title.toLowerCase().includes(cleanQuery) || 
-      art.author.toLowerCase().includes(cleanQuery)
+      (art.author && art.author.toLowerCase().includes(cleanQuery)) ||
+      (art.author_id && art.author_id.toLowerCase().includes(cleanQuery))
     );
-  }, [searchQuery]);
+  }, [searchQuery, articles]);
 
-  const hasNoArticlesAtAll = mockArticles.length === 0;
+  const hasNoArticlesAtAll = articles.length === 0 && !loading;
   const hasNoSearchResults = filteredArticles.length === 0 && searchQuery.length > 0;
 
   return (
@@ -88,54 +214,86 @@ export default function WikiMold() {
 
       <main className="bg-[var(--background-color)] py-20 px-6 sm:px-10 min-h-[70vh]">
         <div className="max-w-7xl mx-auto">
-          <AnimatePresence mode="popLayout">
-            {hasNoArticlesAtAll ? (
-              <motion.div key="no-articles" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <EmptyState 
-                  icon={faPlusCircle} 
-                  title="The Library is Empty" 
-                  message="There are currently no articles uploaded in the WikiMold database." 
-                />
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }}>
+                <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">Loading articles...</p>
               </motion.div>
-            ) : hasNoSearchResults ? (
-              <motion.div key="no-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                <EmptyState 
-                  icon={faInbox} 
-                  title="No Matches Found" 
-                  message={`We couldn't find any articles matching "${searchQuery}". Try using different keywords.`} 
-                />
-              </motion.div>
-            ) : (
-              <motion.div 
-                key={searchQuery === "" ? "full-grid" : "filtered-grid"}
-                initial="hidden"
-                animate="visible"
-                exit={{ opacity: 0 }}
-                variants={containerVariants}
-                className="w-full"
-              >
-                {/* DYNAMIC LABEL: Only shows when there are articles */}
-                <motion.div variants={itemVariants} className="mb-8">
-                   <h2 className="text-[var(--primary-color)] font-black font-[family-name:var(--font-montserrat)] text-2xl uppercase tracking-tight flex items-center gap-3">
-                      Latest Articles
-                   </h2>
+            </div>
+          ) : error ? (
+            <EmptyState 
+              icon={faInbox} 
+              title="Error Loading Articles" 
+              message={error} 
+            />
+          ) : (
+            <AnimatePresence mode="popLayout">
+              {hasNoArticlesAtAll ? (
+                <motion.div key="no-articles" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <EmptyState 
+                    icon={faPlusCircle} 
+                    title="The Library is Empty" 
+                    message="There are currently no articles uploaded in the WikiMold database." 
+                  />
                 </motion.div>
+              ) : hasNoSearchResults ? (
+                <motion.div key="no-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                  <EmptyState 
+                    icon={faInbox} 
+                    title="No Matches Found" 
+                    message={`We couldn't find any articles matching "${searchQuery}". Try using different keywords.`} 
+                  />
+                </motion.div>
+              ) : (
+                <motion.div 
+                  key={searchQuery === "" ? "full-grid" : "filtered-grid"}
+                  initial="hidden"
+                  animate="visible"
+                  exit={{ opacity: 0 }}
+                  variants={containerVariants}
+                  className="w-full"
+                >
+                  <motion.div variants={itemVariants} className="mb-8">
+                     <h2 className="text-[var(--primary-color)] font-black font-[family-name:var(--font-montserrat)] text-2xl uppercase tracking-tight flex items-center gap-3">
+                        Latest Articles ({filteredArticles.length})
+                     </h2>
+                  </motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12">
-                  {filteredArticles.map((article) => (
-                    <motion.div key={article.id} variants={itemVariants} layout>
-                      <WikimoldTile 
-                        id={article.id} 
-                        title={article.title}
-                        author={article.author}
-                        image={article.image}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-12">
+                    {filteredArticles.map((article) => (
+                      <motion.div key={article.id} variants={itemVariants} layout>
+                        <WikimoldTile 
+                          id={article.id} 
+                          title={article.title}
+                          author={article.author || article.author_id || 'Unknown'}
+                          image={article.cover_photo || '/assets/mold.jpg'}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* Infinite scroll trigger - appears when user scrolls near bottom */}
+                  {!searchQuery && (
+                    <div 
+                      ref={loadMoreRef} 
+                      className="h-10 flex items-center justify-center mt-12"
+                    >
+                      {isLoadingMore && (
+                        <motion.div 
+                          initial={{ opacity: 0 }} 
+                          animate={{ opacity: 1 }} 
+                          className="text-gray-500 flex items-center gap-2"
+                        >
+                          <span className="animate-spin text-xl">⟳</span>
+                          <span>Loading more articles...</span>
+                        </motion.div>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          )}
         </div>
       </main>
 

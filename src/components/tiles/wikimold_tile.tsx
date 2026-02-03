@@ -38,7 +38,7 @@ export default function WikimoldTile({ id, image, title, author }: WikimoldTileP
         </div>
 
         <div className="px-4 py-3 flex flex-col justify-center">
-          <h3 className="text-[var(--primary-color)] font-black font-[family-name:var(--font-montserrat)] text-base md:text-md leading-tight line-clamp-1 tracking-tight">
+          <h3 className="capitalize text-[var(--primary-color)] font-black font-[family-name:var(--font-montserrat)] text-base md:text-md leading-tight line-clamp-1 tracking-tight">
             {title}
           </h3>
           <p className="text-[var(--moldify-black)] font-semibold font-[family-name:var(--font-bricolage-grotesque)] text-xs md:text-sm mt-0.5">

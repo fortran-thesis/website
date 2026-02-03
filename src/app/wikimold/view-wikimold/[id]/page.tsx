@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect } from 'react'; 
+import { useState, useEffect } from 'react'; 
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { motion, useScroll, useTransform } from 'framer-motion';
@@ -7,40 +7,145 @@ import { Navbar } from '@/components/navbar';
 import Footer from '@/components/footer';
 
 // --- Default Placeholders ---
-const DEFAULT_BANNER = "/assets/farm.jpg"; // Fallback para sa banner
-const DEFAULT_AUTHOR = "/assets/default-fallback.png"; // Fallback para sa profile pic
-
-const MOCK_ARTICLES = [
-  {
-    id: "1",
-    title: "The Rise of Molds: Dive into the Microscopic Landscape of Growing Fungi",
-    author: "Karl Manuel Diata",
-    date: "September 08, 2026",
-    bannerImage: "/assets/mold.jpg",
-    authorImage: "/assets/author-placeholder.jpg", 
-    content: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum eu. Curabitur pellentesque nibh nibh, at maximus ante fermentum sit amet. Pellentesque commodo lacus at sodales sodales. Quisque sagittis orci ut diam condimentum, vel euismod erat placerat. In iaculis arcu eros, eget tempus orci facilisis id.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. Maecenas vitae mattis tellus. Nullam quis imperdiet augue. Vestibulum auctor ornare leo, non suscipit magna interdum` 
-  }
-];
+const DEFAULT_BANNER = "/assets/mold.jpg";
+const DEFAULT_AUTHOR = "/assets/default-fallback.png";
 
 export default function ViewWikiMold() {
   const { id } = useParams();
   
-  const article = useMemo(() => {
-    return MOCK_ARTICLES.find(a => a.id === id) || MOCK_ARTICLES[0];
-  }, [id]);
+  const [article, setArticle] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // --- Image States ---
-  const [bannerSrc, setBannerSrc] = useState(article.bannerImage || DEFAULT_BANNER);
-  const [authorSrc, setAuthorSrc] = useState(article.authorImage || DEFAULT_AUTHOR);
+  const [bannerSrc, setBannerSrc] = useState(DEFAULT_BANNER);
+  const [authorSrc, setAuthorSrc] = useState(DEFAULT_AUTHOR);
 
+  // Fetch article data from API
   useEffect(() => {
-    setBannerSrc(article.bannerImage || DEFAULT_BANNER);
-    setAuthorSrc(article.authorImage || DEFAULT_AUTHOR);
+    const fetchArticle = async () => {
+      try {
+        setLoading(true);
+        const backendUrl = 'https://api-2p4weeh6lq-as.a.run.app';
+        console.log('Fetching article with id:', id);
+        
+        const response = await fetch(`${backendUrl}/api/v1/moldipedia/${id}`, { 
+          cache: 'no-store' 
+        });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch article (Status: ${response.status})`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          const articleData = data.data;
+          if (articleData.metadata) {
+            Object.entries(articleData.metadata).forEach(([key, value]) => {
+              console.log(`  ${key}:`, value, 'Type:', typeof value);
+            });
+          }
+          
+          // Parse date from metadata field
+          let formattedDate = 'Date not available';
+          if (articleData.metadata) {
+            const dateSource = articleData.metadata.created_at || articleData.metadata.timestamp || articleData.metadata.date;
+            console.log('📅 Date source from metadata:', dateSource);
+            if (dateSource) {
+              try {
+                let dateObj;
+                // Handle Firebase Timestamp object with _seconds property
+                if (dateSource && typeof dateSource === 'object' && '_seconds' in dateSource) {
+                  console.log('🔥 Firebase Timestamp detected, _seconds:', dateSource._seconds);
+                  dateObj = new Date(dateSource._seconds * 1000); // Convert seconds to milliseconds
+                } else {
+                  dateObj = new Date(dateSource);
+                }
+                if (!isNaN(dateObj.getTime())) {
+                  formattedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                }
+              } catch (err) {
+                console.warn('ailed to parse date:', dateSource, err);
+              } 
+            }
+          } else {
+            console.warn('No metadata field in response');
+          }
+          
+          const formattedArticle = {
+            id: articleData.id,
+            title: articleData.title || 'Untitled Article',
+            author: articleData.author || 'Unknown Author',
+            date: formattedDate,
+            bannerImage: articleData.cover_photo || DEFAULT_BANNER,
+            authorImage: articleData.author_photo || DEFAULT_AUTHOR,
+            content: articleData.body || articleData.description || articleData.content || 'No content available'
+          };
+          setArticle(formattedArticle);
+        } else {
+          throw new Error('Invalid response format from API');
+        }
+      } catch (err) {
+        console.error('Failed to fetch wikimold article:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load article');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchArticle();
+    }
+  }, [id]);
+
+  // Update image sources when article changes
+  useEffect(() => {
+    if (article) {
+      setBannerSrc(article.bannerImage || DEFAULT_BANNER);
+      setAuthorSrc(article.authorImage || DEFAULT_AUTHOR);
+    }
   }, [article]);
 
   // Scroll Animation Logic
   const { scrollY } = useScroll();
   const yBanner = useTransform(scrollY, [0, 500], [0, 200]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--background-color)] flex flex-col">
+        {/* Top Loading Bar */}
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center">
+          <p className="text-gray-500 text-center">Loading article...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !article) {
+    return (
+      <div className="min-h-screen bg-[var(--background-color)] flex flex-col">
+        <Navbar />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-500 text-lg font-semibold mb-2">❌ {error || 'Article not found'}</p>
+            <p className="text-gray-500">Please try going back to the WikiMold library.</p>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--background-color)] flex flex-col">
@@ -58,8 +163,9 @@ export default function ViewWikiMold() {
               alt="Article Banner" 
               fill 
               priority
+              sizes="100vw"
               className="object-cover"
-              onError={() => setBannerSrc(DEFAULT_BANNER)} // Fallback if link is broken
+              onError={() => setBannerSrc(DEFAULT_BANNER)}
             />
             <div className="absolute inset-0 bg-black/10" />
           </motion.div>
@@ -81,8 +187,9 @@ export default function ViewWikiMold() {
                 src={authorSrc} 
                 alt={article.author}
                 fill
+                sizes="(max-width: 768px) 128px, 160px"
                 className="object-cover"
-                onError={() => setAuthorSrc(DEFAULT_AUTHOR)} // Fallback if link is broken
+                onError={() => setAuthorSrc(DEFAULT_AUTHOR)}
               />
             </div>
           </motion.div>
@@ -102,7 +209,7 @@ export default function ViewWikiMold() {
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="mt-4 text-3xl md:text-4xl lg:text-5xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] leading-tight tracking-tighter"
+              className="capitalize mt-4 text-3xl md:text-4xl lg:text-5xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] leading-tight tracking-tighter"
             >
               {article.title}
             </motion.h1>
