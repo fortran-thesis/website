@@ -63,12 +63,12 @@ export default function WikiMoldManagement({ wikimoldData, setWikiMoldData, onEd
             />
           </div>
           <button
-                className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
-                onClick={onAddWikiMold}
-            >
-                <span>Add WikiMold</span>
-                <FontAwesomeIcon icon={faPlus} />
-            </button>
+              className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
+              onClick={onAddWikiMold}
+          >
+              <span>Add WikiMold</span>
+              <FontAwesomeIcon icon={faPlus} />
+          </button>
         </div>
       </div>
 

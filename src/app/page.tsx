@@ -35,12 +35,14 @@ const capabilities = [
 const Counter = ({ value }: { value: number }) => {
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => Math.round(latest));
+  
+  useEffect(() => {
+    // Animate whenever the value changes
+    animate(count, value, { duration: 2.5, ease: "easeOut" });
+  }, [value, count]);
+  
   return (
-    <motion.span
-      onViewportEnter={() => {
-        animate(count, value, { duration: 2.5, ease: "easeOut" });
-      }}
-    >
+    <motion.span>
       {rounded}
     </motion.span>
   );
@@ -48,6 +50,43 @@ const Counter = ({ value }: { value: number }) => {
 
 export default function Home() {
   const [index, setIndex] = useState(0);
+  const [totalCasesResolved, setTotalCasesResolved] = useState(0);
+
+  // Fetch total cases resolved from public endpoint
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Call your backend's public endpoint directly
+        const backendUrl = 'https://api-2p4weeh6lq-as.a.run.app';
+        const response = await fetch(`${backendUrl}/api/v1/mold-report/public/resolved-count`, { 
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        console.log('Resolved cases response:', data);
+        
+        // Extract the resolved count - handle different response formats
+        let count = 0;
+        if (typeof data === 'number') {
+          count = data;
+        } else if (data.success && data.data?.resolved_count !== undefined) {
+          count = data.data.resolved_count;
+        } else if (data.success && data.data?.resolvedCount !== undefined) {
+          count = data.data.resolvedCount;
+        } else if (data.data?.resolved_count !== undefined) {
+          count = data.data.resolved_count;
+        }
+        
+        if (count > 0) {
+          setTotalCasesResolved(count);
+          console.log('Set total resolved to:', count);
+        }
+      } catch (err) {
+        console.error('Failed to fetch case statistics:', err);
+      }
+    };
+    fetchStats();
+  }, []);
 
   // Auto-play logic
   useEffect(() => {
@@ -168,7 +207,7 @@ export default function Home() {
               
               <div className="flex flex-col">
                 <div className="text-7xl font-bold text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] tracking-tighter leading-none">
-                  <Counter value={159} />+
+                  <Counter value={totalCasesResolved} />
                 </div>
                 <p className="text-xl text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)]">
                   Total Cases Resolved
