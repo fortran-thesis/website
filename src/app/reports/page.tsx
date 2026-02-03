@@ -4,7 +4,7 @@ import { faSearch, faTriangleExclamation} from '@fortawesome/free-solid-svg-icon
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import ReportsTable, { Report } from '@/components/tables/report_table';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 
 export default function Reports() {
        
@@ -25,6 +25,13 @@ export default function Reports() {
       unresolved: 0,
       resolved: 0,
     });
+
+    const normalizeStatus = (rawStatus?: string) => {
+      const status = (rawStatus || '').toString().trim().toLowerCase();
+      if (status === 'resolved') return 'Resolved';
+      if (status === 'unresolved') return 'Unresolved';
+      return rawStatus ? rawStatus : 'Unresolved';
+    };
 
     // Build search with active filters
     const buildSearchUrl = (token?: string | null) => {
@@ -54,14 +61,22 @@ export default function Reports() {
           }
 
           const body = await res.json();
-          console.log('📊 Reports body:', body);
-          console.log('📊 First report object:', body.data?.snapshot?.[0]); // Log first report to see structure
+          console.log('Reports body:', body);
+          console.log('First report RAW data:', JSON.stringify(body.data?.snapshot?.[0], null, 2));
           
           if (body.success && body.data?.snapshot) {
             const reportsData = body.data.snapshot.map((r: any) => {
-              // Try multiple possible status fields
-              const status = r.status || r.report_status || r.resolution_status || 'Unresolved';
-              console.log('📊 Report status mapping:', { id: r.id, original: r.status, mapped: status, allFields: Object.keys(r) });
+              // Check for status in metadata or root level
+              const rawStatus = r.status || r.report_status || r.resolution_status || r.metadata?.status || r.metadata?.report_status;
+              const status = normalizeStatus(rawStatus);
+              console.log('📊 Report status mapping:', { 
+                id: r.id, 
+                rawStatus, 
+                normalized: status, 
+                hasMetadata: !!r.metadata,
+                allRootFields: Object.keys(r),
+                metadataFields: r.metadata ? Object.keys(r.metadata) : []
+              });
               
               return {
                 id: r.id,
@@ -75,17 +90,6 @@ export default function Reports() {
             if (mounted) {
               setReports(reportsData);
               setNextPageToken(body.data.nextPageToken || null);
-              
-              // Calculate stats based on actual data
-              const unresolvedData = reportsData.filter((r: Report) => r.status === 'Unresolved');
-              const resolvedData = reportsData.filter((r: Report) => r.status === 'Resolved');
-              
-              setStats({
-                total: reportsData.length,
-                unresolved: unresolvedData.length,
-                resolved: resolvedData.length,
-              });
-              console.log('📊 Reports loaded successfully:', reportsData.length, 'Unresolved:', unresolvedData.length, 'Resolved:', resolvedData.length);
             }
           } else {
             console.log('📊 Unexpected response structure:', body);
@@ -106,6 +110,20 @@ export default function Reports() {
       return () => { mounted = false; };
     }, []);
 
+    // Recalculate stats whenever reports array changes
+    useEffect(() => {
+      const unresolvedData = reports.filter((r: Report) => r.status === 'Unresolved');
+      const resolvedData = reports.filter((r: Report) => r.status === 'Resolved');
+      
+      setStats({
+        total: reports.length,
+        unresolved: unresolvedData.length,
+        resolved: resolvedData.length,
+      });
+      
+      console.log('📊 Stats updated:', { total: reports.length, unresolved: unresolvedData.length, resolved: resolvedData.length });
+    }, [reports]);
+
     // Infinite scroll
     useEffect(() => {
       if (!nextPageToken || isLoadingMore) return;
@@ -125,7 +143,7 @@ export default function Reports() {
               reportedUser: r.reported_user_id || 'Unknown',
               reportedBy: r.reporter_id || 'Unknown',
               dateReported: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'N/A',
-              status: 'Unresolved',
+              status: normalizeStatus(r.status || r.report_status || r.resolution_status),
             }));
 
             if (newReportsData.length === 0) {
@@ -170,6 +188,31 @@ export default function Reports() {
         }
       };
     }, [nextPageToken, isLoadingMore]);
+
+    const filteredReports = useMemo(() => {
+      const query = searchQuery.trim().toLowerCase();
+      const status = statusFilter.trim().toLowerCase();
+
+      return reports.filter((report) => {
+        const reportStatus = (report.status || '').toLowerCase();
+        const matchesStatus =
+          !status || status === 'all' || reportStatus === status;
+
+        if (!matchesStatus) return false;
+        if (!query) return true;
+
+        return [
+          report.issue,
+          report.reportedUser,
+          report.reportedBy,
+          report.status,
+          report.dateReported,
+          report.id,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query));
+      });
+    }, [reports, searchQuery, statusFilter]);
     
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
@@ -209,6 +252,8 @@ export default function Reports() {
                             id="search"
                             placeholder="Search Cases"
                             className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--background-color)] py-2 px-4 rounded-full border-2 border-[var(--primary-color)] focus:outline-none w-full pr-10"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
                             required
                         />
                         <FontAwesomeIcon icon={faSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary-color)]" />
@@ -222,7 +267,8 @@ export default function Reports() {
                         <select
                             id="status"
                             className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
-                            defaultValue=""
+                          value={statusFilter}
+                          onChange={(e) => setStatusFilter(e.target.value)}
                         >
                             <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold" disabled>
                             Filter By Status
@@ -239,7 +285,7 @@ export default function Reports() {
             <div className="mt-6 w-full">
               {loading && <p>Loading reports...</p>}
               {error && <p className="text-red-600">{error}</p>}
-              {!loading && !error && <ReportsTable data={reports} 
+              {!loading && !error && <ReportsTable data={filteredReports} 
                 onEdit={(c: Report) => {
                         window.location.href = `/reports/view-report?id=${c.id}`;
                     }}

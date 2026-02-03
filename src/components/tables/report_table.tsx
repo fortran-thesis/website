@@ -80,9 +80,7 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
                   <td className="py-3 px-6 whitespace-nowrap">{report.dateReported}</td>
                   <td className="py-3 px-6">
                     <StatusBox
-                      status={
-                        report.status === "Resolved" ? "Unresolved" : "Resolved"
-                      }
+                      status={report.status}
                     />
                   </td>
                   <td className="py-3 px-6 text-center">

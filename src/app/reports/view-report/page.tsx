@@ -23,9 +23,9 @@ export default function ViewReport() {
   
   // Report data
   const [reportData, setReportData] = useState<any>(null);
-  const [userName, setUserName] = useState("");
-  const [username, setUsername] = useState("");
-  const [userEmail, setUserEmail] = useState("");
+  const [reportedUserId, setReportedUserId] = useState("");
+  const [reporterId, setReporterId] = useState("");
+  const [dateReported, setDateReported] = useState("");
   const [userIssue, setUserIssue] = useState("Inappropriate Content Posted");
   const [reasonDescription, setReasonDescription] = useState(
     "The user has posted content that violates the community guidelines by sharing offensive images and language."
@@ -64,73 +64,34 @@ export default function ViewReport() {
         }
 
         const body = await res.json();
+        console.log('📋 Full API Response:', JSON.stringify(body, null, 2));
         console.log('📋 Report data received:', body.data);
+        console.log('📋 reported_user_id value:', body.data?.reported_user_id);
+        console.log('📋 reporter_id value:', body.data?.reporter_id);
+        console.log('📋 created_at value:', body.data?.created_at);
+        console.log('📋 All data keys:', body.data ? Object.keys(body.data) : 'No data');
 
         if (body.success && body.data) {
           setReportData(body.data);
-          setUserIssue(body.data.reason || body.data.title || 'Unknown Issue');
-          setAdditionalInfo(body.data.details || body.data.description || 'No additional details provided');
+          // Use title instead of reason, description instead of details
+          setUserIssue(body.data.title || body.data.reason || 'Unknown Issue');
+          setAdditionalInfo(body.data.description || body.data.details || 'No additional details provided');
           
-          // Fetch reported user details - try different field names
-          const reportedUserId = body.data.reported_user_id || body.data.reporter_id;
-          console.log('📋 Reported user ID (trying reported_user_id or reporter_id):', reportedUserId);
+          // Set report metadata - handle empty strings as well
+          const reportedUserIdValue = body.data.reported_user_id?.trim();
+          const reporterIdValue = body.data.reporter_id?.trim();
           
-          if (reportedUserId && reportedUserId.length === 28) {
-            try {
-              const userRes = await fetch(`/api/v1/user/${reportedUserId}`, { cache: 'no-store' });
-              console.log('📋 User fetch status:', userRes.status);
-              
-              if (userRes.ok) {
-                const userData = await userRes.json();
-                console.log('📋 Full user response:', userData);
-                console.log('📋 User data object:', userData.data);
-                
-                if (userData.success && userData.data) {
-                  // Try different data structure paths
-                  const userInfo = userData.data.user || userData.data;
-                  const userDetails = userData.data.details || userData.data;
-                  
-                  console.log('📋 Extracted userInfo:', userInfo);
-                  console.log('📋 Extracted userDetails:', userDetails);
-                  
-                  // Build full name
-                  const firstName = userDetails.first_name || userInfo.first_name || userInfo.firstName || '';
-                  const lastName = userDetails.last_name || userInfo.last_name || userInfo.lastName || '';
-                  const fullName = `${firstName} ${lastName}`.trim();
-                  
-                  console.log('📋 Setting user info - Name:', fullName, 'Username:', userInfo.username, 'Email:', userInfo.email);
-                  
-                  setUserName(fullName || 'Unknown User');
-                  setUsername(userInfo.username || 'N/A');
-                  setUserEmail(userInfo.email || 'N/A');
-                  
-                  console.log('📋 User state updated successfully');
-                } else {
-                  console.error('📋 User response not successful or missing data');
-                }
-              } else {
-                console.error('📋 Failed to fetch user - Status:', userRes.status);
-                try {
-                  const errorText = await userRes.clone().text();
-                  console.error('📋 User error response text:', errorText);
-                  
-                  let errorBody;
-                  try {
-                    errorBody = JSON.parse(errorText);
-                  } catch {
-                    errorBody = errorText;
-                  }
-                  console.error('📋 User error response body:', errorBody);
-                } catch (readErr) {
-                  console.error('📋 Could not read error response:', readErr);
-                }
-              }
-            } catch (userErr) {
-              console.error('📋 Failed to fetch user details:', userErr);
-            }
-          } else {
-            console.warn('📋 Invalid reporter ID length. Expected 28 characters, got:', reportedUserId?.length, 'Value:', reportedUserId);
-          }
+          console.log('📋 After trim - reportedUserId:', reportedUserIdValue, 'reporterId:', reporterIdValue);
+          
+          setReportedUserId(reportedUserIdValue || '(N/A)');
+          setReporterId(reporterIdValue || 'N/A');
+          setDateReported(
+            body.data.created_at 
+              ? new Date(body.data.created_at).toLocaleDateString() 
+              : body.data.metadata?.created_at
+              ? new Date(body.data.metadata.created_at.seconds * 1000).toLocaleDateString()
+              : 'N/A'
+          );
         } else {
           console.error('📋 Report response not successful');
         }
@@ -214,13 +175,17 @@ export default function ViewReport() {
 
         <div className="flex flex-col items-center md:items-start justify-center w-full">
           <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">
-            Reported User:
+            Reported User ID:
           </p>
 
-          {/* The name of the user that is reported */}
+          {/* The reported_user_id from the report */}
           <div className="flex flex-col md:flex-row items-center md:items-start mb-2">
             <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] mr-5">
-              {userName}
+              {reportedUserId === '(N/A)' ? (
+                <span className="text-[var(--moldify-red)] text-lg">{reportedUserId}</span>
+              ) : (
+                reportedUserId
+              )}
             </h1>
             {/*  Automatically shows “Resolved” once a decision is made */}
             <StatusBox status={isResolved ? "Resolved" : reportStatus} />
@@ -228,23 +193,23 @@ export default function ViewReport() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-10 gap-y-6 my-3 w-full">
 
-            {/* The reported user's username */}
+            {/* The reporter_id */}
             <div className="flex flex-col items-center md:items-start">
               <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-                Username:
+                Reporter ID:
               </p>
               <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">
-                {username}
+                {reporterId}
               </h2>
             </div>
 
-            {/* The reported user's email */}
+            {/* Date Reported */}
             <div className="flex flex-col items-center md:items-start">
               <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-                Email:
+                Date Reported:
               </p>
               <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">
-                {userEmail}
+                {dateReported}
               </h2>
             </div>
           </div>
