@@ -223,16 +223,13 @@ export default function Home() {
             }
           }
 
-          // Fetch unassigned cases for admin dashboard or assigned cases for mycologist dashboard
-          console.log('\n🟢🟢🟢 STARTING CASES FETCH 🟢🟢🟢');
-          console.log('📊 isAdministrator:', isAdministrator, 'isMycologist:', isMycologist, 'user.role:', user.role);
+          
           
           // Clear previous data to avoid confusion
           setUnassignedCases([]);
           
           if (isAdministrator) {
-            console.log('\n🔴 ADMIN BRANCH EXECUTING');
-            console.log('🔴🔴🔴 FETCHING FROM: /api/v1/mold-reports/unassigned 🔴🔴🔴');
+           
             try {
               // Only fetch first page to reduce requests
               if (shouldFetch('dash:unassigned-cases')) {
@@ -267,8 +264,7 @@ export default function Home() {
               console.error('📊 Failed to fetch unassigned cases:', err);
             }
           } else if (isMycologist) {
-            console.log('\n🔵 MYCOLOGIST BRANCH EXECUTING');
-            console.log('🔵🔵🔵 FETCHING FROM: /api/v1/mold-reports/assigned 🔵🔵🔵');
+            
             try {
               // Only fetch first page to reduce requests
               if (shouldFetch('dash:assigned-cases')) {
@@ -312,11 +308,11 @@ export default function Home() {
                 }
               }
             } catch (err) {
-              console.error('📊 Failed to fetch assigned cases:', err);
+              console.error('Failed to fetch assigned cases:', err);
             }
           } else {
-            console.log('\n❌ NO VALID ROLE DETECTED');
-            console.log('❌ User role not recognized - neither admin nor mycologist');
+            console.log('\nNO VALID ROLE DETECTED');
+            console.log('User role not recognized - neither admin nor mycologist');
           }
 
           // Fetch wikimold count (admin only to reduce requests)
