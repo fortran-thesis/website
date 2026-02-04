@@ -20,12 +20,14 @@ export default function Settings() {
   // State for handling loading and error states during role fetch
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Separate modal states for different actions
   const [isRemoveModalOpen, setRemoveModalOpen] = useState(false);
   const [isSaveModalOpen, setSaveModalOpen] = useState(false);
   const [isPasswordSaveModalOpen, setPasswordSaveModalOpen] = useState(false);
   const [isPasswordSaving, setPasswordSaving] = useState(false);
+  const [isProfileSaving, setProfileSaving] = useState(false);
   
   // Track if we've loaded user data from useAuth (not just browser load)
   const [userDataLoaded, setUserDataLoaded] = useState(false);
@@ -38,6 +40,7 @@ export default function Settings() {
     role: "Administrator",
     profilePicture: undefined,
   });
+  const [initialProfile, setInitialProfile] = useState<ProfileData | null>(null);
 
   // Keep the raw file for uploading via multipart/form-data
   const [profileFile, setProfileFile] = useState<File | null>(null);
@@ -95,6 +98,7 @@ export default function Settings() {
     const profileData = { firstName, lastName, email, role: formatRole(role), profilePicture };
     console.log('📤 Profile data being set:', profileData);
     setProfile(profileData);
+    setInitialProfile(profileData);
     const normalizedRole = (role || "").toString().toLowerCase();
     if (normalizedRole === "mycologist") {
       setUserRole("Mycologist");
@@ -109,15 +113,35 @@ export default function Settings() {
 
   // Shows confirm modal before saving profile
   const handleRequestSave = () => {
+    setError(null);
+    setSuccessMessage(null);
+    const hasProfileChanges = (() => {
+      if (!initialProfile) return true;
+      const baseChanged =
+        profile.firstName !== initialProfile.firstName ||
+        profile.lastName !== initialProfile.lastName ||
+        profile.email !== initialProfile.email;
+      const pictureChanged = !!profileFile || profile.profilePicture !== initialProfile.profilePicture;
+      return baseChanged || pictureChanged;
+    })();
+
+    if (!hasProfileChanges) {
+      setError("No changes to save.");
+      return;
+    }
+
     setSaveModalOpen(true);
   };
 
   // Executes save after confirming
   const handleConfirmSave = async () => {
+    if (isProfileSaving) return;
+    setSuccessMessage(null);
+    setProfileSaving(true);
     try {
       const details = {
-        firstName: profile.firstName,
-        lastName: profile.lastName,
+        first_name: profile.firstName,
+        last_name: profile.lastName,
         email: profile.email,
         displayName: `${profile.firstName} ${profile.lastName}`,
       };
@@ -154,13 +178,14 @@ export default function Settings() {
       } else {
         const data = await res.json();
         console.log('Profile updated', data);
-        alert('Profile updated successfully');
+        setSuccessMessage('Profile updated successfully');
         try { await refreshUser(); setProfileFile(null); } catch (e) { /* ignore */ }
       }
     } catch (err) {
       console.error('Failed to update profile', err);
       alert('Internal error while updating profile.');
     } finally {
+      setProfileSaving(false);
       setSaveModalOpen(false);
     }
   };
@@ -190,6 +215,16 @@ export default function Settings() {
 
   // Called when submitting password form — shows confirm modal
   const handleRequestSavePassword = (data: PasswordData) => {
+    setError(null);
+    setSuccessMessage(null);
+    const hasPasswordChanges =
+      !!data.oldPassword || !!data.newPassword || !!data.confirmNewPassword;
+
+    if (!hasPasswordChanges) {
+      setError("No changes to save.");
+      return;
+    }
+
     setPendingPasswordData(data);
     setPasswordSaveModalOpen(true);
   };
@@ -198,6 +233,7 @@ export default function Settings() {
   const handleConfirmSavePassword = async () => {
     if (!pendingPasswordData) return setPasswordSaveModalOpen(false);
     if (isPasswordSaving) return;
+    setSuccessMessage(null);
     setPasswordSaving(true);
 
     try {
@@ -220,7 +256,7 @@ export default function Settings() {
       if (!res.ok) {
         alert(`Failed to change password: ${json?.message || json?.error || res.statusText}`);
       } else {
-        alert(json?.data || json?.message || 'Password updated successfully');
+        setSuccessMessage(json?.data || json?.message || 'Password updated successfully');
       }
     } catch (err) {
       console.error('Change password error', err);
@@ -250,6 +286,7 @@ export default function Settings() {
             onSave={handleRequestSave}
             onChangePicture={handleChangePicture}
             onRemovePicture={handleRequestRemovePicture}
+            isLoading={isProfileSaving}
           />
         ),
       },
@@ -298,7 +335,20 @@ export default function Settings() {
   console.log('🟡 Current profile state:', profile);
 
   return (
-    <main className="relative flex flex-col xl:py-2 py-10 w-full">
+    <main
+      className={`relative flex flex-col xl:py-2 py-10 w-full ${
+        isProfileSaving || isPasswordSaving ? "cursor-wait pointer-events-none" : ""
+      }`}
+      aria-busy={isProfileSaving || isPasswordSaving}
+    >
+      {(isProfileSaving || isPasswordSaving) && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]"
+            style={{ width: "30%" }}
+          />
+        </div>
+      )}
       {/* Header Section */}
       <div className="flex flex-row justify-between">
         <div className="flex flex-col">
@@ -313,6 +363,13 @@ export default function Settings() {
       {error && (
         <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
           {error}
+        </div>
+      )}
+
+      {/* Success Message Display */}
+      {successMessage && (
+        <div className="mt-4 mb-6 p-3 bg-green-100 border border-green-200 text-green-700 rounded-lg text-xs text-left lg:text-left">
+          {successMessage}
         </div>
       )}
 
@@ -350,6 +407,8 @@ export default function Settings() {
         subtitle="Do you want to save your recent profile changes?"
         cancelText="Cancel"
         confirmText="Save"
+        confirmLoadingText="Saving..."
+        confirmDisabled={isProfileSaving}
         onCancel={() => setSaveModalOpen(false)}
         onConfirm={handleConfirmSave}
       />

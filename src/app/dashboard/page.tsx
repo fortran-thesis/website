@@ -25,12 +25,14 @@ export default function Home() {
     // State for fetched data
     const [totalUsers, setTotalUsers] = useState(0);
     const [totalCases, setTotalCases] = useState(0);
+    const [totalReports, setTotalReports] = useState(0);
     const [totalMoldGenus, setTotalMoldGenus] = useState(0);
     const [inProgressCases, setInProgressCases] = useState(0);
     const [wikimoldCount, setWikimoldCount] = useState(0);
     const [chartData, setChartData] = useState<any[]>([]);
     const [priorityData, setPriorityData] = useState({ high: 0, medium: 0, low: 0 });
     const [cases, setCases] = useState<any[]>([]);
+    const [unassignedCases, setUnassignedCases] = useState<any[]>([]);
     const [statusBreakDown, setStatusBreakDown] = useState<any[]>([]);
     
     const [loadingStats, setLoadingStats] = useState(true);
@@ -86,6 +88,13 @@ export default function Home() {
     // Determine dashboard content based on user role (backend uses lowercase 'admin' and 'mycologist')
     const isAdministrator = user.role === "admin" || user.role === "Administrator";
     const isMycologist = user.role === "mycologist" || user.role === "Mycologist";
+    
+    console.log('🔍 ROLE DETECTION:');
+    console.log('  user.role:', user.role);
+    console.log('  isAdministrator:', isAdministrator);
+    console.log('  isMycologist:', isMycologist);
+    console.log('  authUser?.user?.role:', authUser?.user?.role);
+    console.log('  authUser?.role:', authUser?.role);
 
     const notifications: NotificationItem[] = [
         {
@@ -115,6 +124,15 @@ export default function Home() {
         user?.profileImageUrl || fallbackProfileImage
     );
 
+    const shouldFetch = (key: string, ttlMs = 60000) => {
+      if (typeof window === 'undefined') return true;
+      const stamp = sessionStorage.getItem(key);
+      const now = Date.now();
+      if (stamp && now - Number(stamp) < ttlMs) return false;
+      sessionStorage.setItem(key, String(now));
+      return true;
+    };
+
     // Fetch dashboard data - MUST be before early return to follow Rules of Hooks
     useEffect(() => {
       if (authLoading) return; // Wait for auth to load
@@ -133,10 +151,10 @@ export default function Home() {
 
         try {
           // Fetch total users using role counts
-          if (isAdministrator) {
+          if (isAdministrator && shouldFetch('dash:users-count')) {
             console.log('📊 Fetching total users...');
             try {
-              const rolesRes = await fetch('/api/v1/users/counts/roles', { cache: 'no-store' });
+              const rolesRes = await fetch('/api/v1/users/counts/roles', { cache: 'default' });
               console.log('📊 Users role counts response status:', rolesRes.status);
               if (rolesRes.ok) {
                 const rolesData = await rolesRes.json();
@@ -158,69 +176,213 @@ export default function Home() {
             console.log('📊 Not an administrator, skipping user fetch');
           }
 
-          // Fetch total cases using status counts
-          try {
-            console.log('📊 Fetching total cases...');
-            const casesCountRes = await fetch('/api/v1/mold-reports/count/status', { cache: 'no-store' });
-            console.log('📊 Cases count response status:', casesCountRes.status);
-            if (casesCountRes.ok) {
-              const casesCountData = await casesCountRes.json();
-              console.log('📊 Cases count data received:', casesCountData);
-              if (casesCountData.success && casesCountData.data) {
-                const totalCaseCount = casesCountData.data.total;
-                console.log('📊 Setting totalCases to:', totalCaseCount);
-                setTotalCases(totalCaseCount);
+          // Fetch total cases using status counts (admin only)
+          if (isAdministrator && shouldFetch('dash:cases-count')) {
+            try {
+              const casesCountRes = await fetch('/api/v1/mold-reports/count/status', { cache: 'default' });
+              if (casesCountRes.ok) {
+                const casesCountData = await casesCountRes.json();
+                if (casesCountData.success && casesCountData.data) {
+                  const totalCaseCount = casesCountData.data.total;
+                  setTotalCases(totalCaseCount);
+                }
               }
+            } catch (err) {
+              console.error('📊 Failed to fetch total cases:', err);
             }
-          } catch (err) {
-            console.error('📊 Failed to fetch total cases:', err);
           }
 
-          // Fetch case data for table
-          try {
-            console.log('📊 Fetching case data for table...');
-            const casesRes = await fetch(`/api/v1/mold-reports?limit=10`, { cache: 'no-store' });
-            if (casesRes.ok) {
-              const casesData = await casesRes.json();
-              console.log('📊 Cases data received:', casesData);
-              if (casesData.data && Array.isArray(casesData.data.snapshot)) {
-                console.log('📊 Setting cases to:', casesData.data.snapshot.length);
-                setCases(casesData.data.snapshot);
+          // Fetch total reports (admin only)
+          if (isAdministrator && shouldFetch('dash:reports-count')) {
+            try {
+              const reportsRes = await fetch('/api/v1/reports?limit=1000', { cache: 'default' });
+              if (reportsRes.ok) {
+                const reportsData = await reportsRes.json();
+                if (reportsData.success && reportsData.data?.snapshot) {
+                  const totalReportCount = reportsData.data?.snapshot?.length || 0;
+                  setTotalReports(totalReportCount);
+                }
               }
+            } catch (err) {
+              console.error('📊 Failed to fetch total reports:', err);
             }
-          } catch (err) {
-            console.error('📊 Failed to fetch case data:', err);
           }
 
-          // Fetch wikimold count
-          try {
-            const moldRes = await fetch(`${envOptions.apiUrl}${endpoints.moldipedia.list}`, { headers });
-            if (moldRes.ok) {
-              const moldData = await moldRes.json();
-              if (Array.isArray(moldData.data)) {
-                setWikimoldCount(moldData.data.length);
+          // Fetch case data for table (admin only fallback list)
+          if (isAdministrator && shouldFetch('dash:cases-list')) {
+            try {
+              const casesRes = await fetch(`/api/v1/mold-reports?limit=10`, { cache: 'default' });
+              if (casesRes.ok) {
+                const casesData = await casesRes.json();
+                if (casesData.data && Array.isArray(casesData.data.snapshot)) {
+                  setCases(casesData.data.snapshot);
+                }
               }
+            } catch (err) {
+              console.error('📊 Failed to fetch case data:', err);
             }
-          } catch (err) {
-            console.error('Failed to fetch wikimold count:', err);
           }
 
-          // Fetch dashboard statistics (timeline data for chart)
-          try {
-            const statsRes = await fetch(`${envOptions.apiUrl}${endpoints.dashboard.timeline}`, { headers });
-            if (statsRes.ok) {
-              const statsData = await statsRes.json();
-              if (Array.isArray(statsData.data)) {
-                setChartData(statsData.data);
-              } else {
-                setChartData(fallbackChartData);
+          // Fetch unassigned cases for admin dashboard or assigned cases for mycologist dashboard
+          console.log('\n🟢🟢🟢 STARTING CASES FETCH 🟢🟢🟢');
+          console.log('📊 isAdministrator:', isAdministrator, 'isMycologist:', isMycologist, 'user.role:', user.role);
+          
+          // Clear previous data to avoid confusion
+          setUnassignedCases([]);
+          
+          if (isAdministrator) {
+            console.log('\n🔴 ADMIN BRANCH EXECUTING');
+            console.log('🔴🔴🔴 FETCHING FROM: /api/v1/mold-reports/unassigned 🔴🔴🔴');
+            try {
+              // Only fetch first page to reduce requests
+              if (shouldFetch('dash:unassigned-cases')) {
+                const url = '/api/v1/mold-reports/unassigned?limit=50';
+                const unassignedRes = await fetch(url, { cache: 'no-store' });
+                
+                if (unassignedRes.ok) {
+                  const unassignedData = await unassignedRes.json();
+                  if (unassignedData.data?.snapshot) {
+                    const transformedCases = unassignedData.data.snapshot.map((item: any) => {
+                      const timestamp = item.date_observed?._seconds 
+                        ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
+                        : 'N/A';
+                      
+                      return {
+                        id: item.id,
+                        caseName: item.case_name || 'N/A',
+                        cropName: item.host || 'N/A',
+                        location: item.host || 'N/A',
+                        submittedBy: item.user_id || 'N/A',
+                        dateSubmitted: timestamp,
+                        priority: item.priority || item.case_priority || 'N/A',
+                        status: item.status || 'pending',
+                      };
+                    });
+                    
+                    setUnassignedCases(transformedCases);
+                  }
+                }
               }
-            } else {
+            } catch (err) {
+              console.error('📊 Failed to fetch unassigned cases:', err);
+            }
+          } else if (isMycologist) {
+            console.log('\n🔵 MYCOLOGIST BRANCH EXECUTING');
+            console.log('🔵🔵🔵 FETCHING FROM: /api/v1/mold-reports/assigned 🔵🔵🔵');
+            try {
+              // Only fetch first page to reduce requests
+              if (shouldFetch('dash:assigned-cases')) {
+                const url = '/api/v1/mold-reports/assigned?limit=50';
+                const assignedRes = await fetch(url, { cache: 'no-store' });
+                
+                if (assignedRes.ok) {
+                  const assignedData = await assignedRes.json();
+                  if (assignedData.data?.snapshot) {
+                    const transformedCases = assignedData.data.snapshot.map((item: any) => {
+                      const timestamp = item.date_observed?._seconds 
+                        ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
+                        : 'N/A';
+                      
+                      return {
+                        id: item.id,
+                        caseName: item.case_name || 'N/A',
+                        cropName: item.host || 'N/A',
+                        location: item.host || 'N/A',
+                        submittedBy: item.user_id || 'N/A',
+                        dateSubmitted: timestamp,
+                        priority: item.priority || item.case_priority || 'N/A',
+                        status: item.status || 'pending',
+                      };
+                    });
+                    
+                    const inProgressCount = assignedData.data.snapshot.filter(
+                      (item: any) => (item.status || '').toLowerCase() === 'in progress'
+                    ).length;
+                    const resolvedCount = assignedData.data.snapshot.filter(
+                      (item: any) => (item.status || '').toLowerCase() === 'resolved'
+                    ).length;
+                    setUnassignedCases(transformedCases);
+                    setTotalCases(transformedCases.length);
+                    setInProgressCases(inProgressCount);
+                    setStatusBreakDown([
+                      { name: 'In Progress', value: inProgressCount, color: 'var(--moldify-blue)' },
+                      { name: 'Resolved', value: resolvedCount, color: 'var(--primary-color)' },
+                    ]);
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('📊 Failed to fetch assigned cases:', err);
+            }
+          } else {
+            console.log('\n❌ NO VALID ROLE DETECTED');
+            console.log('❌ User role not recognized - neither admin nor mycologist');
+          }
+
+          // Fetch wikimold count (admin only to reduce requests)
+          if (isAdministrator) {
+            try {
+              if (shouldFetch('dash:moldipedia')) {
+                const moldRes = await fetch(`${envOptions.apiUrl}${endpoints.moldipedia.list}`, { headers });
+                if (moldRes.ok) {
+                  const moldData = await moldRes.json();
+                  if (Array.isArray(moldData.data)) {
+                    setWikimoldCount(moldData.data.length);
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('Failed to fetch wikimold count:', err);
+            }
+          }
+
+          // Fetch dashboard statistics (monthly totals)
+          if (isAdministrator || isMycologist) {
+            try {
+              if (shouldFetch('dash:monthly')) {
+                const monthlyRes = await fetch('/api/v1/mold-reports/count/monthly', { cache: 'default' });
+                console.log('📊 Monthly totals response status:', monthlyRes.status);
+                if (monthlyRes.ok) {
+                  const monthlyData = await monthlyRes.json();
+                  console.log('📊 Monthly totals received:', monthlyData);
+                  if (monthlyData.success && Array.isArray(monthlyData.data)) {
+                    // Transform the data for the chart
+                    const chartData = monthlyData.data.map((item: any) => {
+                      // Extract month name from "January 2025" format
+                      const monthPart = item.month.split(' ')[0];
+                      return {
+                        month: monthPart,
+                        cases: item.total
+                      };
+                    });
+                    console.log('📊 Setting chart data:', chartData);
+                    setChartData(chartData);
+                  } else {
+                    setChartData(fallbackChartData);
+                  }
+                } else {
+                  setChartData(fallbackChartData);
+                }
+              }
+            } catch (err) {
+              console.error('📊 Failed to fetch monthly totals:', err);
               setChartData(fallbackChartData);
             }
-          } catch (err) {
-            console.error('Failed to fetch timeline data:', err);
-            setChartData(fallbackChartData);
+          }
+
+          // Fetch priority breakdown (admin only to reduce requests)
+          if (isAdministrator && shouldFetch('dash:priority')) {
+            try {
+              const priorityRes = await fetch('/api/v1/mold-reports/count/priorities', { cache: 'default' });
+              if (priorityRes.ok) {
+                const priorityData = await priorityRes.json();
+                if (priorityData.success && priorityData.data) {
+                  setPriorityData(priorityData.data);
+                }
+              }
+            } catch (err) {
+              console.error('📊 Failed to fetch priority breakdown:', err);
+            }
           }
 
         } finally {
@@ -229,7 +391,9 @@ export default function Home() {
       };
 
       fetchDashboardData();
-    }, [authLoading, isAdministrator]);
+    }, [authLoading]);
+
+    // Remove separate priority fetch - now consolidated in main useEffect
 
     // Show loading state while checking authentication
     if (authLoading) {
@@ -317,7 +481,7 @@ export default function Home() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-6">
                     <StatisticsTile icon={faUsers} iconColor="var(--accent-color)" title="Total Users" statNum={totalUsers} />
                     <StatisticsTile icon={faSeedling} iconColor="var(--accent-color)" title="Total Cases" statNum={totalCases} />
-                    <StatisticsTile icon={faTriangleExclamation} iconColor="var(--accent-color)" title="Total Reports" statNum={0} />
+                    <StatisticsTile icon={faTriangleExclamation} iconColor="var(--accent-color)" title="Total Reports" statNum={totalReports} />
                 </div>
             )}
 
@@ -325,7 +489,7 @@ export default function Home() {
                 <div className="flex flex-col xl:flex-row w-full mt-6 gap-x-2 gap-y-2">
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 w-full xl:w-2/3">
                         {/* Customize mycologist statistics here */}
-                        <StatisticsTile icon={faBacterium} iconColor="var(--accent-color)" title="Total Mold Genus" statNum={0} />
+                        <StatisticsTile icon={faBacterium} iconColor="var(--accent-color)" title="Total Mold Genus" statNum={6} />
                         <StatisticsTile icon={faSeedling} iconColor="var(--accent-color)" title="Total Cases" statNum={totalCases} />
                         <StatisticsTile icon={faHourglassHalf} iconColor="var(--accent-color)" title="In Progress Cases" statNum={inProgressCases} />
                         <StatisticsTile icon={faBookOpen} iconColor="var(--accent-color)" title="Total Wikimold Published" statNum={wikimoldCount} />
@@ -345,19 +509,20 @@ export default function Home() {
                     <MonthlyCasesChart data={chartData.length > 0 ? chartData : fallbackChartData} />
                 </div>
                 <div className="w-full lg:w-1/3">
-                    <PriorityBreakdown data={{ high: 12, medium: 20, low: 8 }} />
+                    <PriorityBreakdown data={priorityData} />
                 </div>
             </div>            
             
             {/* Line Chart & Priority Level Breakdown */}
             <div className="mt-6 w-full">
                 <h2 className="font-[family-name:var(--font-bricolage-grotesque)] font-extrabold text-[var(--primary-color)] mb-2">
-                    Unassigned Mold Cases
+                    {isAdministrator ? 'Unassigned Mold Cases' : 'Assigned Mold Cases'}
                 </h2>
                 <CaseTable 
-                    cases={cases} 
+                    cases={unassignedCases.length > 0 ? unassignedCases : (isAdministrator ? [] : cases)} 
                     showPriority={isMycologist}
-                    showStatus={false} 
+                    showStatus={false}
+                    showAction={false}
                     onEdit={(c: any) => {
                       window.location.href = '/investigation/view-case';
                   }}

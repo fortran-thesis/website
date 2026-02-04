@@ -59,7 +59,7 @@ export default function FAQ() {
         console.log('Fetching FAQs from:', envOptions.apiUrl + endpoints.faq.list);
         
         const response = await fetch(`${envOptions.apiUrl}${endpoints.faq.list}`, { 
-          cache: 'no-store' 
+          cache: 'default' 
         });
         
         console.log('📡 Response status:', response.status);

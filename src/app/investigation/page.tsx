@@ -69,7 +69,7 @@ export default function Investigation() {
         // Fetch stats
         const fetchStats = async () => {
             try {
-                const statsRes = await fetch('/api/v1/mold-reports/count/status', { cache: 'no-store' });
+                const statsRes = await fetch('/api/v1/mold-reports/count/status', { cache: 'default' });
                 if (statsRes.ok) {
                     const body = await statsRes.json();
                     if (body.success && body.data) setCaseStats(body.data);
@@ -249,7 +249,7 @@ export default function Investigation() {
                             </option>
                             <option value="all" className="bg-[var(--taupe)]">All</option>
                             <option value="pending" className="bg-[var(--taupe)]">Pending</option>
-                            <option value="in_progress" className="bg-[var(--taupe)]">In Progress</option>
+                            <option value="in progress" className="bg-[var(--taupe)]">In Progress</option>
                             <option value="resolved" className="bg-[var(--taupe)]">Resolved</option>
                             <option value="closed" className="bg-[var(--taupe)]">Closed</option>
                         </select>

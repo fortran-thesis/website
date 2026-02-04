@@ -51,7 +51,10 @@ export default function ChangePasswordForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col space-y-8 mt-5">
+    <form
+      onSubmit={handleSubmit}
+      className={`flex flex-col space-y-8 mt-5 ${isLoading ? "cursor-wait" : ""}`}
+    >
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
@@ -107,13 +110,16 @@ export default function ChangePasswordForm({
               <button
                 type="button"
                 onClick={() => togglePasswordVisibility(field as keyof PasswordData)}
-                className="absolute right-4 text-[var(--primary-color)] opacity-50 cursor-pointer hover:opacity-100 transition-all"
+                className={`absolute right-4 text-[var(--primary-color)] opacity-50 transition-all ${
+                  isLoading ? "cursor-not-allowed" : "cursor-pointer hover:opacity-100"
+                }`}
                 tabIndex={-1}
                 aria-label={
                   showPassword[field as keyof PasswordData]
                     ? "Hide password"
                     : "Show password"
                 }
+                disabled={isLoading}
               >
                 <FontAwesomeIcon
                   icon={
@@ -132,7 +138,7 @@ export default function ChangePasswordForm({
         <button
           type="submit"
           disabled={isLoading}
-          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] text-[var(--background-color)] px-10 py-3 rounded-lg font-[family-name:var(--font-bricolage-grotesque)] text-md font-semibold transition w-full md:w-auto cursor-pointer disabled:opacity-60"
+          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] text-[var(--background-color)] px-10 py-3 rounded-lg font-[family-name:var(--font-bricolage-grotesque)] text-md font-semibold transition w-full md:w-auto disabled:opacity-60 cursor-pointer"
         >
           {isLoading ? "Saving..." : "Save Changes"}
         </button>

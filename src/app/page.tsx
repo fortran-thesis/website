@@ -58,17 +58,18 @@ export default function Home() {
       try {
         const baseUrl = envOptions.apiUrl.replace('/api/v1', '');
         const response = await fetch(`${baseUrl}/api/v1/mold-report/public/resolved-count`, { 
-          cache: 'no-store',
+          cache: 'default',
           headers: { 'Content-Type': 'application/json' }
         });
         
         let data: any;
         try {
-          data = await response.json();
+          const responseText = await response.text();
+          data = responseText ? JSON.parse(responseText) : {};
         } catch (parseError) {
           // Response is not JSON (e.g., plain text error message)
           console.error('Failed to parse response as JSON:', parseError);
-          data = { success: false, error: await response.text() };
+          data = { success: false, error: parseError instanceof SyntaxError ? 'Invalid JSON response' : String(parseError) };
         }
         
         if (!response.ok) {

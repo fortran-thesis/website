@@ -2,16 +2,30 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { envOptions } from '@/configs/envOptions';
 
-// Proxy for /api/v1/dashboard/counts/totals
+// Proxy for GET /api/v1/mold-report/unassigned
 export async function GET(req: NextRequest) {
   try {
-    const upstreamUrl = new URL(`${envOptions.apiUrl}/dashboard/counts/totals`);
+    const upstreamUrl = new URL(`${envOptions.apiUrl}/mold-report/unassigned`);
+    
+    // Forward pagination parameters
+    const limit = req.nextUrl.searchParams.get('limit');
+    const pageToken = req.nextUrl.searchParams.get('pageToken');
+    
+    if (limit) {
+      upstreamUrl.searchParams.set('limit', limit);
+    }
+    if (pageToken) {
+      upstreamUrl.searchParams.set('pageToken', pageToken);
+    }
+    
     const sessionCookie = req.cookies.get('session')?.value;
 
     if (!sessionCookie) {
       return NextResponse.json({ success: false, error: 'Missing session' }, { status: 403 });
     }
 
+    console.log('📋 Fetching unassigned mold reports from:', upstreamUrl.toString());
+    
     const upstreamRes = await fetch(upstreamUrl.toString(), {
       method: 'GET',
       headers: {
@@ -29,9 +43,10 @@ export async function GET(req: NextRequest) {
       payload = { data: text };
     }
 
+    console.log('📋 Unassigned mold reports proxy response status:', upstreamRes.status);
     return NextResponse.json(payload, { status: upstreamRes.status });
   } catch (err) {
-    console.error('GET /api/v1/dashboard/counts/totals proxy error', err);
-    return NextResponse.json({ success: false, error: 'Server error' }, { status: 500 });
+    console.error('GET /api/v1/mold-reports/unassigned proxy error', err);
+    return NextResponse.json({ success: false, error: 'Proxy error' }, { status: 500 });
   }
 }

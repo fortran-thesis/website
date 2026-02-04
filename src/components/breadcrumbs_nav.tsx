@@ -2,19 +2,25 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
-export default function Breadcrumb({ role, skipSegments = [] }: { role: string; skipSegments?: string[] }) {
+export default function Breadcrumb({ role, skipSegments = [] }: { role?: string; skipSegments?: string[] }) {
   const pathname = usePathname();
+  const { user: authUser } = useAuth();
 
-  // Split the URL and remove empty parts
+  const normalizeRole = (value: string) => {
+    if (!value) return "Administrator";
+    return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+  };
+
+  const authRole = authUser?.user?.role || authUser?.role || "";
+  const resolvedRole = normalizeRole(authRole || role || "Administrator");
+
   const pathSegments = pathname.split("/").filter(Boolean);
 
-  // Filter out skipped segments
   const filteredSegments = pathSegments.filter(segment => !skipSegments.includes(segment));
 
-  // Generate clickable breadcrumbs for each segment
   const breadcrumbs = filteredSegments.map((segment, index) => {
-    // Build href using original path up to this filtered segment
     const originalIndex = pathSegments.indexOf(segment);
     const href = "/" + pathSegments.slice(0, originalIndex + 1).join("/");
     const label =
@@ -29,7 +35,7 @@ export default function Breadcrumb({ role, skipSegments = [] }: { role: string; 
       <span className="mx-2">{'>'}</span>
 
       {/* Role - not clickable */}
-      <span >{role}</span>
+      <span>{resolvedRole}</span>
 
       {/* Path breadcrumbs */}
       {breadcrumbs.map((crumb, index) => (

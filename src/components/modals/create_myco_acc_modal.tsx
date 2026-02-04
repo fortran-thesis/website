@@ -195,10 +195,8 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
 
             {/* Success Message */}
             {successMessage && (
-              <div className="bg-green-100 border-l-4 border-green-500 p-3 mb-4 rounded">
-                <p className="text-green-700 text-sm font-[family-name:var(--font-bricolage-grotesque)]">
-                  {successMessage}
-                </p>
+              <div className="mb-6 p-3 bg-green-100 border border-green-200 text-green-700 rounded-lg text-xs text-center lg:text-left">
+                {successMessage}
               </div>
             )}
 

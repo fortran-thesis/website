@@ -33,7 +33,7 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 bg-opacity-50 overflow-hidden">
-      <div className="bg-[var(--background-color)] rounded-2xl p-6 w-full max-w-lg shadow-lg relative">
+      <div className={`bg-[var(--background-color)] rounded-2xl p-6 w-full max-w-lg shadow-lg relative ${confirmDisabled ? "cursor-wait" : ""}`}>
         {/* Close button */}
         <div className ="flex justify-center items-center mb-4">
             <div className = "flex justify-between items-center space-x-3">
@@ -49,7 +49,10 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
             <button
                 type="button"
                 onClick={onCancel}
-                className="absolute top-5 right-3 text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
+                disabled={confirmDisabled}
+                className={`absolute top-5 right-3 text-[var(--moldify-red)] text-xl leading-none transition font-black ${
+                  confirmDisabled ? "cursor-not-allowed opacity-60" : "hover:scale-110 cursor-pointer"
+                }`}
                 >
                 ✕
             </button>
@@ -63,7 +66,12 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
         <div className="flex justify-end gap-4">
           <button
             onClick={onCancel}
-            className="px-7 py-2 rounded-full bg-transparent text-[var(--moldify-black)] hover:bg-[var(--moldify-red)]/10 hover:text-[var(--moldify-red)] font-[family-name:var(--font-bricolage-grotesque)] font-semibold cursor-pointer transition-colors duration-200 ease-in-out"
+            disabled={confirmDisabled}
+            className={`px-7 py-2 rounded-full bg-transparent text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] font-semibold transition-colors duration-200 ease-in-out ${
+              confirmDisabled
+                ? "cursor-not-allowed opacity-60"
+                : "hover:bg-[var(--moldify-red)]/10 hover:text-[var(--moldify-red)] cursor-pointer"
+            }`}
           >
             {cancelText}
           </button>

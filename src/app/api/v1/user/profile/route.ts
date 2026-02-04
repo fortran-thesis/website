@@ -89,9 +89,7 @@ export async function PATCH(req: NextRequest) {
     console.log('🔗 Upstream URL:', upstreamUrl);
 
     const contentType = req.headers.get('content-type') || '';
-    const contentLength = req.headers.get('content-length') || '';
     console.log('📋 Content-Type:', contentType);
-    console.log('📏 Content-Length:', contentLength);
 
     // Forward the body as-is without parsing
     const body = req.body;
@@ -100,7 +98,6 @@ export async function PATCH(req: NextRequest) {
       method: 'PATCH',
       headers: {
         'Content-Type': contentType,
-        'Content-Length': contentLength,
         Cookie: `session=${sessionCookie}`,
       },
       body: body,
@@ -111,6 +108,7 @@ export async function PATCH(req: NextRequest) {
     console.log('📍 Upstream status:', upstreamRes.status);
     const text = await upstreamRes.text();
     console.log('📥 Upstream response:', text.substring(0, 500));
+    console.log('🔍 Full upstream response for debugging:', text);
     
     let payload: any = {};
     try { payload = text ? JSON.parse(text) : {}; } catch { payload = { data: text }; }

@@ -38,11 +38,12 @@ export default function ViewWikiMold() {
         
         let data: any;
         try {
-          data = await response.json();
+          const responseText = await response.text();
+          data = responseText ? JSON.parse(responseText) : {};
         } catch (parseError) {
           // Response is not JSON (e.g., plain text error message like 429)
           console.error('Failed to parse response as JSON:', parseError);
-          data = { success: false, error: await response.text() };
+          data = { success: false, error: parseError instanceof SyntaxError ? 'Invalid JSON response' : String(parseError) };
         }
         
         if (!response.ok) {

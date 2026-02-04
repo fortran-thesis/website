@@ -219,7 +219,7 @@ export default function WikiMold() {
             WikiMold
           </motion.h1>
           <motion.p variants={itemVariants} className="text-sm md:text-base font-[family-name:var(--font-bricolage-grotesque)] max-w-xl mx-auto mb-10 leading-relaxed opacity-90">
-            Your comprehensive digital encyclopedia for agricultural mold detection, prevention, and fungal research.
+            Your comprehensive digital encyclopedia for agricultural mold identification, treatments, and fungal research.
           </motion.p>
           
           <motion.div variants={itemVariants} className="relative max-w-xl mx-auto">
@@ -279,7 +279,7 @@ export default function WikiMold() {
                 >
                   <motion.div variants={itemVariants} className="mb-8">
                      <h2 className="text-[var(--primary-color)] font-black font-[family-name:var(--font-montserrat)] text-2xl uppercase tracking-tight flex items-center gap-3">
-                        Latest Articles ({filteredArticles.length})
+                        Articles ({filteredArticles.length})
                      </h2>
                   </motion.div>
 

@@ -80,8 +80,8 @@ export default function Users() {
             const fetchCounts = async () => {
                 try {
                     const [rolesRes, disabledRes] = await Promise.all([
-                        fetch('/api/v1/users/counts/roles', { cache: 'no-store' }),
-                        fetch('/api/v1/users/counts/disabled', { cache: 'no-store' })
+                        fetch('/api/v1/users/counts/roles', { cache: 'default' }),
+                        fetch('/api/v1/users/counts/disabled', { cache: 'default' })
                     ]);
                     if (rolesRes.ok) {
                         const rolesBody = await rolesRes.json();
@@ -142,8 +142,8 @@ export default function Users() {
         // Refresh users list and counts (reset pagination)
         try {
             const [rolesRes, disabledRes] = await Promise.all([
-                fetch('/api/v1/users/counts/roles', { cache: 'no-store' }),
-                fetch('/api/v1/users/counts/disabled', { cache: 'no-store' })
+                fetch('/api/v1/users/counts/roles', { cache: 'default' }),
+                fetch('/api/v1/users/counts/disabled', { cache: 'default' })
             ]);
             if (rolesRes.ok) {
                 const rolesBody = await rolesRes.json();
