@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import Footer from '@/components/footer';
 import { Navbar } from '@/components/navbar';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -48,14 +49,41 @@ const itemVariants: Variants = {
 };
 
 export default function WikiMold() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
+
+  // Listen for route changes to show loading bar when navigating to article details
+  useEffect(() => {
+    const handleNavigate = () => {
+      setIsNavigating(true);
+      // Auto-hide loading bar after 3 seconds as fallback
+      const timeout = setTimeout(() => setIsNavigating(false), 3000);
+      return () => clearTimeout(timeout);
+    };
+
+    // Detect when user clicks on a WikimoldTile (which uses Link component)
+    // The route will change, so we listen for any navigation
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const linkElement = target.closest('a[href*="/wikimold/view-wikimold/"]');
+      if (linkElement) {
+        setIsNavigating(true);
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => {
+      document.removeEventListener('click', handleClick);
+    };
+  }, []);
 
   // Fetch articles from API
   useEffect(() => {
@@ -207,6 +235,16 @@ export default function WikiMold() {
       variants={containerVariants}
       className="relative w-full bg-[var(--background-color)]"
     >
+      {/* Top Loading Bar */}
+      {isNavigating && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
       <Navbar />
 
       <header className="relative h-[60vh] min-h-[500px] w-full flex items-center justify-center overflow-hidden">

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import StepIndicator from "@/components/step_indicator";
 import { useRouter } from 'next/navigation';
+import ConfirmModal from '@/components/modals/confirmation_modal';
 import { useAccountRecoveryUtils2 } from './accountRecoveryUtils2';
 
 const CodeImage = '/assets/code-recover-image.svg';
@@ -30,20 +31,20 @@ export default function AccountRecovery2() {
   const {
     codeSegments,
     handleCodeChange,
+    showCancelModal,
     handleCancel,
+    confirmCancel,
+    closeCancelModal,
     handleVerify,
     isLoading,
     error,
+    successMessage,
   } = useAccountRecoveryUtils2();
 
   const headerLabel = recoveryType === "forgot-password" ? "Forgot Password" : "Forgot Username";
 
   return (
     <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
-      {/* Consistency Fixes: 
-         1. Changed 'flex-grow' to 'h-fit' so the box expands with content rather than stretching/cutting.
-         2. Kept 'md:max-w-1/2' and 'xl:flex-row' to match Step 1 exactly.
-      */}
       <main className="relative overflow-hidden p-5 font-[family-name:var(--font-bricolage-grotesque)] flex h-fit xl:flex-row w-full md:max-w-1/2 max-w-full shadow-lg rounded-xl gap-x-10 bg-[var(--background-color)]">
           <div className="w-full flex flex-col z-10">
           
@@ -61,7 +62,15 @@ export default function AccountRecovery2() {
           </div>
 
           {error && (
-            <p className="text-red-500 text-sm mb-5 text-center">{error}</p>
+            <div className="mb-5 p-3 bg-red-100 border border-red-200 text-red-700 rounded-lg text-xs text-left">
+              {error}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="mb-5 p-3 bg-green-100 border border-green-200 text-green-700 rounded-lg text-xs text-left">
+              {successMessage}
+            </div>
           )}
 
           <form className="flex flex-col" onSubmit={handleVerify}>
@@ -95,7 +104,7 @@ export default function AccountRecovery2() {
                 <div className = "flex flex-col flex-1">
                     <button
                     type="button"
-                    className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-full border-3 border-[var(--primary-color)] hover:bg-black/10 transition"
+                    className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-full border-3 border-[var(--primary-color)] hover:bg-[var(--primary-color)]/10 transition-all duration-300 ease-in-out active:scale-[0.98]"                    
                     onClick={handleCancel}
                     >
                     Cancel
@@ -104,7 +113,7 @@ export default function AccountRecovery2() {
                 <div className="flex flex-col flex-1">
                     <button
                     type="submit"
-                    className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-full hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-full hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"                    
                     disabled={isLoading}
                     >
                     {isLoading ? "Verifying..." : "Verify Code"}
@@ -125,6 +134,17 @@ export default function AccountRecovery2() {
             />
         </div>
       </main>
+      
+      {/* Cancel Confirmation Modal */}
+      <ConfirmModal
+        isOpen={showCancelModal}
+        onConfirm={confirmCancel}
+        onCancel={closeCancelModal}
+        title="Cancel Account Recovery?"
+        subtitle="Are you sure you want to cancel? All entered data will be lost."
+        confirmText="Yes, Cancel"
+        cancelText="No, Go Back"
+      />
     </div>
   );
 }

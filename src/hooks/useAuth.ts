@@ -17,6 +17,7 @@ export const useAuth = () => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const lastRefreshRef = useRef<number>(0);
+  const refreshKey = 'auth:profile:refreshAt';
 
   useEffect(() => {
     // Check auth status on mount
@@ -31,6 +32,11 @@ export const useAuth = () => {
     const now = Date.now();
     const minIntervalMs = 60000;
 
+    if (typeof window !== 'undefined') {
+      const lastStored = Number(sessionStorage.getItem(refreshKey) || 0);
+      if (now - lastStored < minIntervalMs) return null;
+    }
+
     if (now - lastRefreshRef.current < minIntervalMs) return null;
     if (now - sharedLastRefreshAt < minIntervalMs) return null;
 
@@ -38,6 +44,9 @@ export const useAuth = () => {
 
     lastRefreshRef.current = now;
     sharedLastRefreshAt = now;
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(refreshKey, String(now));
+    }
 
     const storedUser = getUserData();
     if (!storedUser) return null;
@@ -45,6 +54,7 @@ export const useAuth = () => {
     sharedRefreshPromise = (async () => {
       try {
         const res = await fetch('/api/v1/user/profile', { cache: 'no-store', credentials: 'include' });
+        if (res.status === 429) return null;
         if (!res.ok) return null;
         const text = await res.text();
         let payload: any = {};

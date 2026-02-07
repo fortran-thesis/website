@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Image from 'next/image';
 import StepIndicator from "@/components/step_indicator";
+import ConfirmModal from '@/components/modals/confirmation_modal';
 import { useAccountRecovery1 } from './accountRecoveryUtils1';
 
 const EmailImage = '/assets/email-recover-image.svg';
@@ -17,7 +18,10 @@ export default function AccountRecovery() {
         email,
         setEmail,
         isLoading,
+        showCancelModal,
         handleCancel,
+        confirmCancel,
+        closeCancelModal,
         handleSendCode
     } = useAccountRecovery1();
 
@@ -67,25 +71,25 @@ export default function AccountRecovery() {
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         />
-                        <div className = "flex flex-col sm:flex-row gap-x-5 gap-y-5 mt-20 mb-30">
-                            <div className = "flex flex-col flex-1">
+                        <div className="flex flex-col sm:flex-row gap-x-5 gap-y-5 mt-20 mb-30">
+                            <div className="flex flex-col flex-1">
                                 {/* Cancel Button */}
                                 <button
-                                type="button"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-full border-3 border-[var(--primary-color)] hover:bg-black/10 transition"
-                                onClick={handleCancel}
+                                    type="button"
+                                    className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-full border-3 border-[var(--primary-color)] hover:bg-[var(--primary-color)]/10 transition-all duration-300 ease-in-out active:scale-[0.98]"
+                                    onClick={handleCancel}
                                 >
-                                Cancel
+                                    Cancel
                                 </button>  
                             </div>
                             <div className="flex flex-col flex-1">
                                 {/* Send Code Button */}
                                 <button
-                                type="submit"
-                                disabled={isLoading}
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-full hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-full hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                                 >
-                                {isLoading ? "Sending..." : "Send Code"}
+                                    {isLoading ? "Sending..." : "Send Code"}
                                 </button> 
                             </div>
                         </div>
@@ -103,6 +107,17 @@ export default function AccountRecovery() {
                     />
                 </div>
             </main>
+            
+            {/* Cancel Confirmation Modal */}
+            <ConfirmModal
+                isOpen={showCancelModal}
+                onConfirm={confirmCancel}
+                onCancel={closeCancelModal}
+                title="Cancel Account Recovery?"
+                subtitle="Are you sure you want to cancel? All entered data will be lost."
+                confirmText="Yes, Cancel"
+                cancelText="No, Go Back"
+            />
         </div>
     )
 }

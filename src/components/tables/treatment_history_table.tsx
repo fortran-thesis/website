@@ -29,7 +29,7 @@ export default function TreatmentHistoryTable({
             />
           </div>
         ) : (
-        <table className="w-[1183px] text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] border-collapse">
+        <table className="min-w-full w-full text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] border-collapse">
           <thead className="bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center sticky top-0 z-10">
             <tr>
               <th className="py-3 px-4 text-center w-[25%] rounded-tl-xl">Treatment ID</th>
@@ -51,7 +51,7 @@ export default function TreatmentHistoryTable({
                 <td className="lg:whitespace-nowrap py-3 px-4">
                   {item.recommendedFungicides}
                 </td>
-                <td className="py-3 px-4">{item.additionalNotes}</td>
+                <td className="py-3 px-4 break-words">{item.additionalNotes}</td>
                 <td className="lg:whitespace-nowrap py-3 px-4">{item.date}</td>
               </tr>
             ))}

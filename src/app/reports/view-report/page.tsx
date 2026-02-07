@@ -140,7 +140,7 @@ export default function ViewReport() {
   };
 
   return (
-    <main className="relative flex flex-col xl:py-2 py-10 w-full max-w-295 overflow-hidden">
+    <main className="relative flex flex-col xl:py-2 py-10 w-full max-w-none overflow-hidden">
       {/* Header Section */}
       <div className="flex flex-row justify-between mb-10">
         <div className="flex flex-col">

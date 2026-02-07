@@ -37,6 +37,10 @@ export default function Home() {
     
     const [loadingStats, setLoadingStats] = useState(true);
     const hasFetchedRef = useRef(false);
+    const updatedRef = useRef(false);
+    const cacheKey = 'dash:cache';
+    const lastFetchKey = 'dash:lastFetchAt';
+    const cacheTtlMs = 60000;
     
     // Fallback mock data for initial UI
     const fallbackChartData = [
@@ -124,14 +128,79 @@ export default function Home() {
         user?.profileImageUrl || fallbackProfileImage
     );
 
-    const shouldFetch = (key: string, ttlMs = 60000) => {
+    const shouldFetch = (key: string, ttlMs = cacheTtlMs) => {
       if (typeof window === 'undefined') return true;
-      const stamp = sessionStorage.getItem(key);
       const now = Date.now();
+      const lastFetch = Number(sessionStorage.getItem(lastFetchKey) || 0);
+      const hasCache = Boolean(sessionStorage.getItem(cacheKey));
+      if (hasCache && lastFetch && now - lastFetch < ttlMs) return false;
+      const stamp = sessionStorage.getItem(key);
       if (stamp && now - Number(stamp) < ttlMs) return false;
-      sessionStorage.setItem(key, String(now));
       return true;
     };
+
+    const markFetched = (key: string) => {
+      if (typeof window === 'undefined') return;
+      updatedRef.current = true;
+      sessionStorage.setItem(key, String(Date.now()));
+    };
+
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+      const raw = sessionStorage.getItem(cacheKey);
+      if (!raw) return;
+      try {
+        const cached = JSON.parse(raw);
+        if (cached.totalUsers !== undefined) setTotalUsers(cached.totalUsers);
+        if (cached.totalCases !== undefined) setTotalCases(cached.totalCases);
+        if (cached.totalReports !== undefined) setTotalReports(cached.totalReports);
+        if (cached.totalMoldGenus !== undefined) setTotalMoldGenus(cached.totalMoldGenus);
+        if (cached.inProgressCases !== undefined) setInProgressCases(cached.inProgressCases);
+        if (cached.wikimoldCount !== undefined) setWikimoldCount(cached.wikimoldCount);
+        if (cached.chartData) setChartData(cached.chartData);
+        if (cached.priorityData) setPriorityData(cached.priorityData);
+        if (cached.cases) setCases(cached.cases);
+        if (cached.unassignedCases) setUnassignedCases(cached.unassignedCases);
+        if (cached.statusBreakDown) setStatusBreakDown(cached.statusBreakDown);
+      } catch {
+        // ignore cache parse errors
+      }
+    }, []);
+
+    useEffect(() => {
+      if (typeof window === 'undefined') return;
+      if (loadingStats) return;
+      if (!updatedRef.current) return;
+      const payload = {
+        totalUsers,
+        totalCases,
+        totalReports,
+        totalMoldGenus,
+        inProgressCases,
+        wikimoldCount,
+        chartData,
+        priorityData,
+        cases,
+        unassignedCases,
+        statusBreakDown,
+      };
+      sessionStorage.setItem(cacheKey, JSON.stringify(payload));
+      sessionStorage.setItem(lastFetchKey, String(Date.now()));
+      updatedRef.current = false;
+    }, [
+      loadingStats,
+      totalUsers,
+      totalCases,
+      totalReports,
+      totalMoldGenus,
+      inProgressCases,
+      wikimoldCount,
+      chartData,
+      priorityData,
+      cases,
+      unassignedCases,
+      statusBreakDown,
+    ]);
 
     // Fetch dashboard data - MUST be before early return to follow Rules of Hooks
     useEffect(() => {
@@ -151,7 +220,8 @@ export default function Home() {
 
         try {
           // Fetch total users using role counts
-          if (isAdministrator && shouldFetch('dash:users-count')) {
+          const usersCountKey = 'dash:users-count';
+          if (isAdministrator && shouldFetch(usersCountKey)) {
             console.log('📊 Fetching total users...');
             try {
               const rolesRes = await fetch('/api/v1/users/counts/roles', { cache: 'default' });
@@ -163,6 +233,7 @@ export default function Home() {
                   const totalCount = (rolesData.data.farmer || 0) + (rolesData.data.mycologist || 0) + (rolesData.data.admin || 0);
                   console.log('📊 Setting totalUsers to:', totalCount);
                   setTotalUsers(totalCount);
+                  markFetched(usersCountKey);
                 } else {
                   console.log('📊 Unexpected users data structure:', rolesData);
                 }
@@ -177,7 +248,8 @@ export default function Home() {
           }
 
           // Fetch total cases using status counts (admin only)
-          if (isAdministrator && shouldFetch('dash:cases-count')) {
+          const casesCountKey = 'dash:cases-count';
+          if (isAdministrator && shouldFetch(casesCountKey)) {
             try {
               const casesCountRes = await fetch('/api/v1/mold-reports/count/status', { cache: 'default' });
               if (casesCountRes.ok) {
@@ -185,6 +257,7 @@ export default function Home() {
                 if (casesCountData.success && casesCountData.data) {
                   const totalCaseCount = casesCountData.data.total;
                   setTotalCases(totalCaseCount);
+                  markFetched(casesCountKey);
                 }
               }
             } catch (err) {
@@ -193,7 +266,8 @@ export default function Home() {
           }
 
           // Fetch total reports (admin only)
-          if (isAdministrator && shouldFetch('dash:reports-count')) {
+          const reportsCountKey = 'dash:reports-count';
+          if (isAdministrator && shouldFetch(reportsCountKey)) {
             try {
               const reportsRes = await fetch('/api/v1/reports?limit=1000', { cache: 'default' });
               if (reportsRes.ok) {
@@ -201,6 +275,7 @@ export default function Home() {
                 if (reportsData.success && reportsData.data?.snapshot) {
                   const totalReportCount = reportsData.data?.snapshot?.length || 0;
                   setTotalReports(totalReportCount);
+                  markFetched(reportsCountKey);
                 }
               }
             } catch (err) {
@@ -209,13 +284,15 @@ export default function Home() {
           }
 
           // Fetch case data for table (admin only fallback list)
-          if (isAdministrator && shouldFetch('dash:cases-list')) {
+          const casesListKey = 'dash:cases-list';
+          if (isAdministrator && shouldFetch(casesListKey)) {
             try {
               const casesRes = await fetch(`/api/v1/mold-reports?limit=10`, { cache: 'default' });
               if (casesRes.ok) {
                 const casesData = await casesRes.json();
                 if (casesData.data && Array.isArray(casesData.data.snapshot)) {
                   setCases(casesData.data.snapshot);
+                  markFetched(casesListKey);
                 }
               }
             } catch (err) {
@@ -225,14 +302,14 @@ export default function Home() {
 
           
           
-          // Clear previous data to avoid confusion
-          setUnassignedCases([]);
-          
           if (isAdministrator) {
            
             try {
               // Only fetch first page to reduce requests
-              if (shouldFetch('dash:unassigned-cases')) {
+              const unassignedKey = 'dash:unassigned-cases';
+              if (shouldFetch(unassignedKey)) {
+                // Clear previous data only when we intend to refetch
+                setUnassignedCases([]);
                 const url = '/api/v1/mold-reports/unassigned?limit=50';
                 const unassignedRes = await fetch(url, { cache: 'no-store' });
                 
@@ -257,6 +334,7 @@ export default function Home() {
                     });
                     
                     setUnassignedCases(transformedCases);
+                    markFetched(unassignedKey);
                   }
                 }
               }
@@ -267,7 +345,10 @@ export default function Home() {
             
             try {
               // Only fetch first page to reduce requests
-              if (shouldFetch('dash:assigned-cases')) {
+              const assignedKey = 'dash:assigned-cases';
+              if (shouldFetch(assignedKey)) {
+                // Clear previous data only when we intend to refetch
+                setUnassignedCases([]);
                 const url = '/api/v1/mold-reports/assigned?limit=50';
                 const assignedRes = await fetch(url, { cache: 'no-store' });
                 
@@ -304,6 +385,7 @@ export default function Home() {
                       { name: 'In Progress', value: inProgressCount, color: 'var(--moldify-blue)' },
                       { name: 'Resolved', value: resolvedCount, color: 'var(--primary-color)' },
                     ]);
+                    markFetched(assignedKey);
                   }
                 }
               }
@@ -318,12 +400,14 @@ export default function Home() {
           // Fetch wikimold count (admin only to reduce requests)
           if (isAdministrator) {
             try {
-              if (shouldFetch('dash:moldipedia')) {
+              const moldipediaKey = 'dash:moldipedia';
+              if (shouldFetch(moldipediaKey)) {
                 const moldRes = await fetch(`${envOptions.apiUrl}${endpoints.moldipedia.list}`, { headers });
                 if (moldRes.ok) {
                   const moldData = await moldRes.json();
                   if (Array.isArray(moldData.data)) {
                     setWikimoldCount(moldData.data.length);
+                    markFetched(moldipediaKey);
                   }
                 }
               }
@@ -335,7 +419,8 @@ export default function Home() {
           // Fetch dashboard statistics (monthly totals)
           if (isAdministrator || isMycologist) {
             try {
-              if (shouldFetch('dash:monthly')) {
+              const monthlyKey = 'dash:monthly';
+              if (shouldFetch(monthlyKey)) {
                 const monthlyRes = await fetch('/api/v1/mold-reports/count/monthly', { cache: 'default' });
                 console.log('📊 Monthly totals response status:', monthlyRes.status);
                 if (monthlyRes.ok) {
@@ -344,15 +429,16 @@ export default function Home() {
                   if (monthlyData.success && Array.isArray(monthlyData.data)) {
                     // Transform the data for the chart
                     const chartData = monthlyData.data.map((item: any) => {
-                      // Extract month name from "January 2025" format
-                      const monthPart = item.month.split(' ')[0];
+                      const monthPart = (item.month || "").split(' ')[0];
+                      const abbrev = monthPart ? monthPart.slice(0, 3) : "";
                       return {
-                        month: monthPart,
-                        cases: item.total
+                        month: abbrev,
+                        cases: item.total,
                       };
                     });
                     console.log('📊 Setting chart data:', chartData);
                     setChartData(chartData);
+                    markFetched(monthlyKey);
                   } else {
                     setChartData(fallbackChartData);
                   }
@@ -367,13 +453,15 @@ export default function Home() {
           }
 
           // Fetch priority breakdown (admin only to reduce requests)
-          if (isAdministrator && shouldFetch('dash:priority')) {
+          const priorityKey = 'dash:priority';
+          if (isAdministrator && shouldFetch(priorityKey)) {
             try {
               const priorityRes = await fetch('/api/v1/mold-reports/count/priorities', { cache: 'default' });
               if (priorityRes.ok) {
                 const priorityData = await priorityRes.json();
                 if (priorityData.success && priorityData.data) {
                   setPriorityData(priorityData.data);
+                  markFetched(priorityKey);
                 }
               }
             } catch (err) {

@@ -11,11 +11,13 @@ export interface PasswordData {
 
 interface ChangePasswordFormProps {
   onSave: (data: PasswordData) => void;
+  onError?: (message: string | null) => void;
   isLoading?: boolean;
 }
 
 export default function ChangePasswordForm({
   onSave,
+  onError,
   isLoading = false,
 }: ChangePasswordFormProps) {
   const [formData, setFormData] = useState<PasswordData>({
@@ -39,9 +41,11 @@ export default function ChangePasswordForm({
     e.preventDefault();
 
     if (formData.newPassword !== formData.confirmNewPassword) {
-      alert("New passwords do not match.");
+      onError?.("New passwords do not match.");
       return;
     }
+
+    onError?.(null);
 
     onSave(formData);
   };

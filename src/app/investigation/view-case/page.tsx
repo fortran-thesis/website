@@ -15,6 +15,7 @@ import CaseDetailsTab from "../investigation-tabs/case_details";
 import InVitroTab from "../investigation-tabs/in_vitro";
 import InVivoTab from "../investigation-tabs/in_vivo";
 import AddTreatmentModal from "@/components/modals/add_treatment_modal";
+import { useAuth } from "@/hooks/useAuth";
 
 type Mycologist = {
   name: string;
@@ -26,6 +27,7 @@ type Mycologist = {
 function ViewCaseContent() {
   const searchParams = useSearchParams();
   const caseId = searchParams.get('id');
+  const priorityFromQuery = searchParams.get('priority');
   
   const [caseData, setCaseData] = useState<any>(null);
   const [moldCase, setMoldCase] = useState<any>(null);
@@ -61,20 +63,25 @@ function ViewCaseContent() {
           setCaseData(body.data);
           console.log("Full case data:", body.data); // Log the entire case data
           console.log("Priority from case data:", body.data.priority); // Log the priority specifically
+          console.log("Mold case from report:", body.data.mold_case);
+          console.log("Priority from report mold_case:", body.data.mold_case?.priority);
 
-          // If case has assigned mycologist, fetch the mold-case
-          if (body.data.assigned_mycologist_id) {
-            try {
-              const moldCaseRes = await fetch(`/api/v1/mold-cases/by-report/${caseId}`, { cache: 'no-store' });
-              if (moldCaseRes.ok) {
-                const moldCaseBody = await moldCaseRes.json();
-                if (moldCaseBody.success && moldCaseBody.data) {
-                  setMoldCase(moldCaseBody.data);
-                }
+          // Always attempt to fetch the mold-case so priority can be shown
+          try {
+            const moldCaseRes = await fetch(`/api/v1/mold-cases/by-report/${caseId}`, { cache: 'no-store' });
+            if (moldCaseRes.ok) {
+              const moldCaseBody = await moldCaseRes.json();
+              if (moldCaseBody.success && moldCaseBody.data) {
+                setMoldCase(moldCaseBody.data);
+              } else {
+                setMoldCase(null);
               }
-            } catch (err: any) {
-              console.error('Failed to fetch mold-case:', err);
+            } else {
+              setMoldCase(null);
             }
+          } catch (err: any) {
+            setMoldCase(null);
+            console.error('Failed to fetch mold-case:', err);
           }
         } else {
           throw new Error(body.error || 'Failed to load case');
@@ -196,8 +203,10 @@ function ViewCaseContent() {
   };
 
   type UserRole = "Administrator" | "Mycologist";
+  const { user: authUser } = useAuth();
 
-  const [userRole] = useState<UserRole>("Administrator");
+  const rawRole = (authUser?.user?.role || authUser?.role || "").toLowerCase();
+  const userRole: UserRole = rawRole === "mycologist" ? "Mycologist" : "Administrator";
   
   // Use data from API
   const caseName = caseData?.case_name || "Loading...";
@@ -207,7 +216,10 @@ function ViewCaseContent() {
     ? new Date(caseData.date_observed).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : "Loading...";
   const status = caseData?.status ? caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1) : "Pending";
-  const priority = caseData?.priority || "------";
+  const priorityValue = caseData?.mold_case?.priority || caseData?.priority || moldCase?.priority || priorityFromQuery || "";
+  const priority = priorityValue
+    ? priorityValue.charAt(0).toUpperCase() + priorityValue.slice(1)
+    : "Unknown";
   
   // Reporter info
   const reporterName = caseData?.reporter?.details.displayName || "Loading...";
@@ -347,147 +359,147 @@ function ViewCaseContent() {
   const [imgSrc, setImgSrc] = useState(imageUrl);
 
   return (
-    <div className="flex flex-col min-h-screen xl:py-2 py-10">
-      {/* Header */}
-      <header className="w-full bg-[var(--background-color)] z-10 mb-5">
-        <Breadcrumbs role={userRole} />
-        <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-          INVESTIGATION OVERSIGHT
-        </h1>
-      </header>
+    <div className="flex flex-col min-h-screen bg-[var(--background-color)] w-full">
 
-      <BackButton />
 
-      {loading && (
-        <div className="flex justify-center items-center h-64">
-          <p className="text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">Loading case details...</p>
-        </div>
-      )}
+  {/* 1. TOP HEADER */}
+  <header className="mb-8">
+    <div>
+      <Breadcrumbs role={userRole} />
+      <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-4xl uppercase tracking-tighter mt-2">
+        Case Management
+      </h1>
+    </div>
+  </header>
 
-      {error && (
-        <div className="flex justify-center items-center h-64">
-          <p className="text-red-600 font-[family-name:var(--font-bricolage-grotesque)]">{error}</p>
-        </div>
-      )}
-
-      {!loading && !error && caseData && (
-      <div className="flex flex-col lg:flex-row flex-1 mt-2 gap-6">
-
-        <aside className="lg:sticky lg:top-10 lg:self-start w-full lg:w-1/3 bg-transparent rounded-xl">
-          {/* Show dropdown only if not assigned and not rejected */}
-          {userRole !== "Mycologist" && !isAssigned && !isRejected && (
-            <select
-              aria-label="action-options"
-              id="action"
-              className="bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold p-4 rounded-lg cursor-pointer focus:outline-none w-full"
-              defaultValue=""
-              onChange={(e) => {
-                if (e.target.value === "assign") setAssignModalOpen(true);
-                if (e.target.value === "reject") setRejectModalOpen(true);
-              }}
-            >
-              <option value="" disabled>Choose Action</option>
-              <option value="assign">Assign Case</option>
-              <option value="reject">Reject Case</option>
-            </select>
-          )}
-
-          {/* Show assigned message if assigned */}
-          {isAssigned && assignedMycologistName && (
-            <p className="p-4 rounded-lg bg-[var(--taupe)] font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] text-sm font-semibold">
-              Assigned to: {assignedMycologistName}
-            </p>
-          )}
-
-          {/* Show rejected message if rejected */}
-          {isRejected && (
-            <p className="p-4 rounded-lg bg-red-100 border border-red-400 font-[family-name:var(--font-bricolage-grotesque)] text-red-700 text-sm font-semibold">
-              This case has been rejected
-            </p>
-          )}
-
-          {/* Farmer Info */}
-          <div className="w-full min-h-screen p-6 bg-[var(--taupe)] mt-2 rounded-lg flex flex-col justify-start">
-            <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] items-start font-extrabold">
-              Farmer Information
-            </p>
-            <div className="mt-4 flex flex-col items-center">
-              <div className="relative w-50 h-50 rounded-full overflow-hidden shadow-sm">
-                <Image
-                  key={imgSrc}
-                  src={imgSrc}
-                  alt="Profile Picture"
-                  fill
-                  className="object-cover rounded-full"
-                  onError={() => setImgSrc("/assets/default-fallback.png")}
-                  priority
-                />
-              </div>
-              <div className="flex flex-col mt-4 items-center justify-center">
-                <h1 className="font-[family-name:var(--font-montserrat)] text-lg font-black text-[var(--primary-color)]">{reporterName}</h1>
-                <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Email Address:</p>
-                <p className="text-sm font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{reporterEmail}</p>
-                <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Phone Number:</p>
-                <p className="text-sm font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{reporterPhone}</p>
-              </div>
-            </div>
-            <hr className="my-8 border-t border-[var(--moldify-grey)]" />
-
-            <div className="flex flex-col gap-2">
-             {userRole !== "Administrator" && (
-                <button 
-                  className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer"
-                  onClick={() => setAddTreatmentOpen(true)}
-                >
-                  <FontAwesomeIcon icon={faPlus} className="w-4 h-4 text-[var(--accent-color)]" /> Add Treatment
-                </button>
-              )}
-              <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer">
-                <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4 text-[var(--accent-color)]" /> Export PDF
-              </button>
-                <button
-                className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer"
-                onClick={() => (window.location.href = "/investigation/identification-history")}
-                >
-                <FontAwesomeIcon icon={faClockRotateLeft} className="w-4 h-4 text-[var(--accent-color)]" /> View Identification History
-                </button>
-              <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer"
-              onClick={() => (window.location.href = "/investigation/treatment-history")}
-              >
-                <FontAwesomeIcon icon={faSprayCan} className="w-4 h-4 text-[var(--accent-color)]" /> View Treatment History
-              </button>
+  <div className="mb-4">
+    <BackButton />  
+  </div>
+  {!loading && !error && caseData && (
+    <div className="flex flex-col gap-4">
+      {/* 2. THE MANAGEMENT BAR (Farmer + Actions) */}
+       <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        
+        {/* Farmer Profile Card */}
+        <div className="lg:col-span-2 bg-[var(--taupe)]  rounded-2xl p-6 flex items-center gap-6">
+          <div className="relative w-24 h-24 rounded-full overflow-hidden shrink-0">
+            <Image
+              key={imgSrc}
+              src={imgSrc}
+              alt="Profile"
+              fill
+              className="object-cover"
+              onError={() => setImgSrc("/assets/default-fallback.png")}
+            />
+          </div>
+          <div className="flex-1">
+            <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] text-[10px] font-black uppercase tracking-widest mb-1">Farmer Information</p>
+            <h2 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] uppercase">{reporterName}</h2>
+            <div className="flex flex-wrap gap-x-6 mt-2">
+              <p className="text-sm font-bold font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
+                <span className="font-[family-name:var(--font-bricolage-grotesque)] font-normal mr-2">Email:</span>{reporterEmail}
+              </p>
+              <p className="text-sm font-bold font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
+                <span className="font-[family-name:var(--font-bricolage-grotesque)] font-normal  mr-2">Phone:</span>{reporterPhone}
+              </p>
             </div>
           </div>
-        </aside>
+        </div>
 
-        {/* Main Content */}
-        <main className="flex-1 px-2 mt-2 lg:mt-0">
-          <div className="flex items-center">
-            <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] mr-5">{caseName}</h1>
+        {/* Quick Decision Card */}
+        <div className="bg-[var(--taupe)] rounded-2xl p-6 flex flex-col justify-center">
+          {userRole !== "Mycologist" && !isAssigned && !isRejected && (
+            <>
+              <p className="text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-black uppercase tracking-widest mb-3 text-center">Case Status Action</p>
+              <select
+                className="bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-black p-3 rounded-lg w-full cursor-pointer outline-none"
+                defaultValue=""
+                onChange={(e) => {
+                  if (e.target.value === "assign") setAssignModalOpen(true);
+                  if (e.target.value === "reject") setRejectModalOpen(true);
+                }}
+              >
+                <option value="" disabled>Choose Action</option>
+                <option value="assign">Assign Case</option>
+                <option value="reject">Reject Case</option>
+              </select>
+            </>
+          )}
+          {(isAssigned || isRejected) && (
+             <div className="text-center">
+                <p className="text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest">
+                  {isRejected ? "Status: Rejected" : `Assigned: ${assignedMycologistName}`}
+                </p>
+             </div>
+          )}
+        </div>
+      </section>
+
+      {/* 3. THE CASE DETAILS HERO */}
+      <section className="bg-[var(--taupe)] rounded-2xl overflow-hidden">
+        <div className="p-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex-1 min-w-[220px]">
+            <h2 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] uppercase tracking-tight">
+              {caseName}
+            </h2>
+            </div>
             <div className="flex gap-2">
               <StatusBox status={status} />
-              {priority !== "------" && <StatusBox status={priority} />}
+              <StatusBox status={priority} />
             </div>
           </div>
-
-          <div className="flex justify-between items-center mt-3 mb-10">
-            <div className="flex flex-col">
-              <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Crop Name:</p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{cropName}</h2>
-            </div>
-            <div className="flex flex-col">
-              <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Location:</p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{location}</h2>
-            </div>
-            <div className="flex flex-col">
-              <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Date First Observed:</p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{dateObserved}</h2>
-            </div>
+          <div className="mt-3 h-[2px] w-full bg-[var(--primary-color)]/20" />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y-2 md:divide-y-0 md:divide-x-2 divide-[var(--primary-color)]/10 bg-[var(--taupe)] p-6">
+          <div className="pb-4 md:pb-0 md:px-4 flex flex-col items-center md:items-start">
+            <span className="text-xs font-black uppercase opacity-50 font-[family-name:var(--font-bricolage-grotesque)]">Crop Type</span>
+            <p className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">{cropName}</p>
           </div>
+          <div className="py-4 md:py-0 md:px-4 flex flex-col items-center md:items-start">
+            <span className="text-xs font-black uppercase opacity-50 font-[family-name:var(--font-bricolage-grotesque)]">Location</span>
+            <p className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">{location}</p>
+          </div>
+          <div className="pt-4 md:pt-0 md:px-4 flex flex-col items-center md:items-start">
+            <span className="text-xs font-black uppercase opacity-50 font-[family-name:var(--font-bricolage-grotesque)]">Observed On</span>
+            <p className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">{dateObserved}</p>
+          </div>
+        </div>
+      </section>
 
-          <TabBar tabs={tabs} initialIndex={0} />
-        </main>
+      {/* 4. UTILITY TOOLBAR (The 3 Buttons) */}
+      <div className="flex flex-wrap gap-4 items-center justify-center lg:justify-start">
+        {userRole !== "Administrator" && (
+          <button 
+            className="flex items-center gap-2 text-xs font-black uppercase font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] px-6 py-3 rounded-full hover:brightness-110 transition-all cursor-pointer"
+            onClick={() => setAddTreatmentOpen(true)}
+          >
+            <FontAwesomeIcon icon={faPlus} /> Add Treatment
+          </button>
+        )}
+        <button className="flex items-center gap-2 text-xs font-black uppercase font-[family-name:var(--font-bricolage-grotesque)] text-[var(--background-color)] px-6 py-3 rounded-full bg-[var(--primary-color)] hover:brightness-110 transition-all cursor-pointer">
+          <FontAwesomeIcon icon={faFilePdf} /> Export PDF
+        </button>
+        <button 
+          className="flex items-center gap-2 text-xs font-black uppercase font-[family-name:var(--font-bricolage-grotesque)] text-[var(--background-color)] px-6 py-3 rounded-full bg-[var(--primary-color)] hover:brightness-110 transition-all cursor-pointer"
+          onClick={() => (window.location.href = "/investigation/identification-history")}
+        >
+          <FontAwesomeIcon icon={faClockRotateLeft} /> Identification History
+        </button>
+        <button 
+          className="flex items-center gap-2 text-xs font-black uppercase font-[family-name:var(--font-bricolage-grotesque)] text-[var(--background-color)] px-6 py-3 rounded-full bg-[var(--primary-color)] hover:brightness-110 transition-all cursor-pointer"
+          onClick={() => (window.location.href = "/investigation/treatment-history")}
+        >
+          <FontAwesomeIcon icon={faSprayCan} /> Treatment History
+        </button>
       </div>
+
+      {/* 5. MAIN DATA TABS */}
+      <div className="mt-4">
+        <TabBar tabs={tabs} initialIndex={0} />
+      </div>
+    </div>
       )}
 
       {/* Modals */}

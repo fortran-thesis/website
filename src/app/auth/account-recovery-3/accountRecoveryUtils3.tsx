@@ -10,6 +10,7 @@ export function useAccountRecoveryUtils3 (){
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
+    const [showCancelModal, setShowCancelModal] = useState(false);
 
     const router = useRouter();
 
@@ -23,14 +24,24 @@ export function useAccountRecoveryUtils3 (){
 
     // This handles the cancel button
     const handleCancel = () => {
-        if (hasChanges() && confirm("Are you sure you want to cancel? You will lose all progress")) {
-            setPassword("");
-            setConfirmPassword("");
+        if (hasChanges()) {
+            setShowCancelModal(true);
+        } else {
             router.back();
         }
-        else if (!hasChanges()) {
-            router.back();
-        }
+    };
+
+    // This confirms the cancel action
+    const confirmCancel = () => {
+        setPassword("");
+        setConfirmPassword("");
+        setShowCancelModal(false);
+        router.back();
+    };
+
+    // This closes the cancel modal
+    const closeCancelModal = () => {
+        setShowCancelModal(false);
     };
 
     // This handles the Change Password Button
@@ -118,7 +129,10 @@ export function useAccountRecoveryUtils3 (){
         setPassword,
         confirmPassword,
         setConfirmPassword,
+        showCancelModal,
         handleCancel,
+        confirmCancel,
+        closeCancelModal,
         handleChangePassword,
         isLoading,
         error,

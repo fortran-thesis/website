@@ -7,19 +7,29 @@ import { motion } from "framer-motion";
 interface BackButtonProps {
   bgColor?: string;   // Optional: defaults to var(--taupe)
   iconColor?: string; // Optional: defaults to var(--primary-color)
+  onClick?: () => void; // Optional: custom click handler
 }
 
 export default function BackButton({ 
   bgColor = "var(--taupe)", 
-  iconColor = "var(--primary-color)" 
+  iconColor = "var(--primary-color)",
+  onClick
 }: BackButtonProps) {
   const router = useRouter();
+
+  const handleClick = () => {
+    if (onClick) {
+      onClick();
+    } else {
+      router.back();
+    }
+  };
 
   return (
     <motion.button
       aria-label="Go back"
       type="button"
-      onClick={() => router.back()}
+      onClick={handleClick}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
       // We move the background color to the style object for dynamic injection

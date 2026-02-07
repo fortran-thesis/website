@@ -47,7 +47,7 @@ const treatmentHistory = [
 
 export default function Home() {
     return (
-        <main className="relative flex flex-col xl:py-2 py-10 overflow-x-auto">
+        <main className="relative flex flex-col xl:py-2 py-10 overflow-x-auto w-full">
 
             {/* Header Section */}
             <div className="flex flex-row justify-between mb-10">

@@ -6,22 +6,21 @@ import Breadcrumbs from '@/components/breadcrumbs_nav';
 import DonutChart from '@/components/charts/donut-chart';
 import UserTable from '@/components/tables/user_table';
 import { useState, useEffect, useRef } from 'react';
-import AddMycoModal, { MycoFormData } from '@/components/modals/create_myco_acc_modal';
+import { useRouter } from 'next/navigation';
 
 
 export default function Users() {
 
     const userRole = "Administrator";
+    const router = useRouter();
 
     // UI state
     const [users, setUsers] = useState<any[]>([]);
-    const [isAddMycoModal, setShowAddMycoModal] = useState(false);
     const [loading, setLoading] = useState(false);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [nextPageToken, setNextPageToken] = useState<string | null>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
-    const debounceTimeout = useRef<NodeJS.Timeout | null>(null);
 
     // Search and filter state
     const [searchQuery, setSearchQuery] = useState('');
@@ -44,45 +43,54 @@ export default function Users() {
         { name: "Active", value: activeCount, color: "var(--primary-color)" },
     ];
 
-    // Build search URL with active filters
-    const buildSearchUrl = (token?: string | null) => {
-        const params = new URLSearchParams();
-        const hasSearch = !!searchQuery;
-        const hasRole = !!roleFilter && roleFilter !== 'all';
-        const hasStatus = !!statusFilter && statusFilter !== 'all';
+    // Client-side filter function
+    const getFilteredUsers = () => {
+        return users.filter(user => {
+            const searchLower = searchQuery.toLowerCase();
+            const roleValue = (user.user?.role || '').toLowerCase();
+            const normalizedRole = roleValue === 'user'
+                ? 'farmer'
+                : roleValue === 'administrator'
+                ? 'admin'
+                : roleValue;
 
-        if (hasSearch) params.set('search', searchQuery);
-        if (hasRole) params.set('role', roleFilter);
-        if (hasStatus) params.set('status', statusFilter);
-        params.set('limit', '10');
-        if (token) params.set('pageToken', token);
+            const fullName = `${user.user?.first_name ?? ''} ${user.user?.last_name ?? ''}`.trim();
+            const matchesSearch = !searchQuery ||
+                fullName.toLowerCase().includes(searchLower) ||
+                user.user?.username?.toLowerCase().includes(searchLower) ||
+                user.details?.displayName?.toLowerCase().includes(searchLower) ||
+                user.details?.email?.toLowerCase().includes(searchLower);
 
-        const queryString = params.toString();
-        // If no filters, use regular /users endpoint; otherwise use /users/search
-        if (!hasSearch && !hasRole && !hasStatus) {
-            return `/api/v1/users?${queryString}`;
-        }
-        return `/api/v1/users/search?${queryString}`;
+            const matchesRole = !roleFilter || roleFilter === 'all' || normalizedRole === roleFilter;
+
+            const isDisabled = user.details?.disabled === true;
+            const matchesStatus = !statusFilter || statusFilter === 'all' ||
+                (statusFilter === 'active' && !isDisabled) ||
+                (statusFilter === 'disabled' && isDisabled);
+
+            return matchesSearch && matchesRole && matchesStatus;
+        });
     };
 
-    // Fetch initial users page (no pagination for now)
-    useEffect(() => {
-        // Clear any pending debounce
-        if (debounceTimeout.current) {
-            clearTimeout(debounceTimeout.current);
-        }
+    const filteredUsers = getFilteredUsers();
 
-        // Debounce filter changes to prevent rapid API calls
-        debounceTimeout.current = setTimeout(async () => {
-            let mounted = true;
+    // Fetch initial users and stats on mount
+    useEffect(() => {
+        let mounted = true;
+        
+        const fetchCountsAndUsers = async () => {
+            setLoading(true);
+            setError(null);
             
-            // Fetch role and disabled counts
-            const fetchCounts = async () => {
-                try {
-                    const [rolesRes, disabledRes] = await Promise.all([
-                        fetch('/api/v1/users/counts/roles', { cache: 'default' }),
-                        fetch('/api/v1/users/counts/disabled', { cache: 'default' })
-                    ]);
+            try {
+                // Fetch role and disabled counts
+                const [rolesRes, disabledRes, usersRes] = await Promise.all([
+                    fetch('/api/v1/users/counts/roles', { cache: 'default' }),
+                    fetch('/api/v1/users/counts/disabled', { cache: 'default' }),
+                    fetch('/api/v1/users?limit=100', { cache: 'no-store' })
+                ]);
+                
+                if (mounted) {
                     if (rolesRes.ok) {
                         const rolesBody = await rolesRes.json();
                         if (rolesBody.success && rolesBody.data) setRoleCounts(rolesBody.data);
@@ -91,93 +99,43 @@ export default function Users() {
                         const disabledBody = await disabledRes.json();
                         if (disabledBody.success && disabledBody.data) setDisabledCounts(disabledBody.data);
                     }
-                } catch (err) {
-                    // Optionally handle error
-                }
-            };
-            
-            await fetchCounts();
-            
-            // Add small delay to avoid rate limiting
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            const fetchUsers = async () => {
-                setLoading(true);
-                setError(null);
-                // Reset pagination when filters change
-                if (mounted) {
-                    setNextPageToken(null);
-                }
-                try {
-                    const url = buildSearchUrl();
-                    const res = await fetch(url, { cache: 'no-store' });
-                    if (!res.ok) {
-                        const body = await res.json().catch(() => ({}));
-                        throw new Error(body?.error || 'Failed to load users');
-                    }
-                    const body = await res.json();
-                    const data = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
-                    if (mounted) {
+                    if (usersRes.ok) {
+                        const usersBody = await usersRes.json();
+                        const data = Array.isArray(usersBody.data?.snapshot) ? usersBody.data.snapshot : [];
                         setUsers(data);
-                        setNextPageToken(body.data?.nextPageToken || null);
+                        setNextPageToken(usersBody.data?.nextPageToken || null);
+                    } else {
+                        const errorBody = await usersRes.json().catch(() => ({}));
+                        throw new Error(errorBody?.error || 'Failed to load users');
                     }
+                }
             } catch (e: any) {
-                console.error('Failed to load users', e);
-                if (mounted) setError(e?.message || 'Failed to load users');
+                console.error('Failed to load data:', e);
+                if (mounted) setError(e?.message || 'Failed to load data');
             } finally {
                 if (mounted) setLoading(false);
             }
         };
-        await fetchUsers();
-        }, 500); // 500ms debounce delay
-
+        
+        fetchCountsAndUsers();
+        
         return () => {
-            if (debounceTimeout.current) {
-                clearTimeout(debounceTimeout.current);
-            }
+            mounted = false;
         };
-    }, [searchQuery, roleFilter, statusFilter]);
+    }, []);
 
-    const handleMycoSubmit = async (data: MycoFormData) => {
-        // Refresh users list and counts (reset pagination)
-        try {
-            const [rolesRes, disabledRes] = await Promise.all([
-                fetch('/api/v1/users/counts/roles', { cache: 'default' }),
-                fetch('/api/v1/users/counts/disabled', { cache: 'default' })
-            ]);
-            if (rolesRes.ok) {
-                const rolesBody = await rolesRes.json();
-                if (rolesBody.success && rolesBody.data) setRoleCounts(rolesBody.data);
-            }
-            if (disabledRes.ok) {
-                const disabledBody = await disabledRes.json();
-                if (disabledBody.success && disabledBody.data) setDisabledCounts(disabledBody.data);
-            }
-
-            // Refresh users list and reset pagination
-            const url = buildSearchUrl();
-            const usersRes = await fetch(url, { cache: 'no-store' });
-            if (usersRes.ok) {
-                const usersBody = await usersRes.json();
-                const usersData = Array.isArray(usersBody.data?.snapshot) ? usersBody.data.snapshot : [];
-                setUsers(usersData);
-                setNextPageToken(usersBody.data?.nextPageToken || null);
-            } else {
-                console.error('Failed to fetch users:', usersRes.status);
-            }
-        } catch (err) {
-            console.error('Failed to refresh data:', err);
-        }
-    };
-
-    // Intersection Observer for infinite scroll
+    // Infinite scroll - load more users without filters
     useEffect(() => {
         if (!nextPageToken || isLoadingMore) return;
 
         const handleLoadMore = async () => {
             setIsLoadingMore(true);
             try {
-                const url = buildSearchUrl(nextPageToken);
+                const params = new URLSearchParams();
+                params.set('limit', '100');
+                params.set('pageToken', nextPageToken);
+                const url = `/api/v1/users?${params.toString()}`;
+                
                 const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) {
                     const body = await res.json().catch(() => ({}));
@@ -198,7 +156,7 @@ export default function Users() {
                 const newToken = body.data?.nextPageToken || null;
                 if (!newToken || newToken === nextPageToken) {
                     console.warn('⚠️ Backend returned same token - stopping pagination');
-                    setNextPageToken(null); // Stop pagination
+                    setNextPageToken(null);
                     setIsLoadingMore(false);
                     return;
                 }
@@ -274,13 +232,13 @@ export default function Users() {
                 {/* Right Section */}
                 <button
                     className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
-                    onClick={() => setShowAddMycoModal(true)}
+                    onClick={() => router.push('/user/create-mycologist')}
                 >
                     <span>Create Mycologist Account</span>
                     <FontAwesomeIcon icon={faPlus} />
                 </button>
             </div>
-            <div className="flex flex-col mt-5 md:flex-row md:ml-auto gap-x-2 gap-y-3 w-full">
+            <div className="flex flex-col mt-2 md:flex-row md:ml-auto gap-x-2 gap-y-3 w-full">
                 {/* Search Bar */}
                 <div className="relative flex items-center w-full">
                     <label htmlFor="search" className="sr-only">Search Users</label>
@@ -342,10 +300,10 @@ export default function Users() {
 
 
             {/* Submitted Cases Table */}
-            <div className="mt-6 w-full">
+            <div className="mt-5 w-full">
                 {loading && <p>Loading users...</p>}
                 {error && <p className="text-red-600">{error}</p>}
-                {!loading && !error && <UserTable data={users} 
+                {!loading && !error && <UserTable data={filteredUsers} 
                     onEdit={(c: any) => {
                       window.location.href = `/user/view-user?id=${c.id}`;
                   }}/>}
@@ -355,12 +313,6 @@ export default function Users() {
                     {isLoadingMore && <p className="text-sm text-[var(--moldify-grey)]">Loading more users...</p>}
                 </div>
             </div>
-
-            <AddMycoModal
-                isOpen={isAddMycoModal}
-                onClose={() => setShowAddMycoModal(false)}
-                onSubmit={handleMycoSubmit}
-            />
         </main>
     );
 }

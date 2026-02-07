@@ -4,6 +4,7 @@ import StepIndicator from "@/components/step_indicator";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { useRouter } from 'next/navigation';
+import ConfirmModal from '@/components/modals/confirmation_modal';
 import { useAccountRecoveryUtils3 } from './accountRecoveryUtils3';
 import { useEffect } from 'react';
 
@@ -38,7 +39,10 @@ export default function AccountRecovery3() {
         setPassword,
         confirmPassword,
         setConfirmPassword,
+        showCancelModal,
         handleCancel,
+        confirmCancel,
+        closeCancelModal,
         handleChangePassword,
         isLoading,
         error,
@@ -118,7 +122,7 @@ export default function AccountRecovery3() {
                                 {/* Cancel Button */}
                                 <button
                                 type="button"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-full border-3 border-[var(--primary-color)] hover:bg-black/10 transition"
+                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] font-bold py-2 rounded-full border-3 border-[var(--primary-color)] hover:bg-[var(--primary-color)]/10 transition-all duration-300 ease-in-out active:scale-[0.98]"                    
                                 onClick={handleCancel}
                                 >
                                 Cancel
@@ -128,7 +132,7 @@ export default function AccountRecovery3() {
                                 {/* Change Password Button */}
                                 <button
                                 type="submit"
-                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-full hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-2 border-3 border-[var(--primary-color)] rounded-full hover:bg-[var(--hover-primary)] hover:border-[var(--hover-primary)] transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"                    
                                 disabled={isLoading}
                                 >
                                 {isLoading ? "Changing..." : "Change Password"}
@@ -147,7 +151,16 @@ export default function AccountRecovery3() {
                         className="w-full h-auto object-cover opacity-90"
                     />
                 </div>
-            </main>
-        </div>
+            </main>            
+            {/* Cancel Confirmation Modal */}
+            <ConfirmModal
+                isOpen={showCancelModal}
+                onConfirm={confirmCancel}
+                onCancel={closeCancelModal}
+                title="Cancel Password Reset?"
+                subtitle="Are you sure you want to cancel? You will lose all progress."
+                confirmText="Yes, Cancel"
+                cancelText="No, Go Back"
+            />        </div>
     )
 }

@@ -96,7 +96,11 @@ export default function CaseHistory() {
   const handleViewCase = (caseItem: CaseData) => {
     console.log("Viewing closed case:", caseItem.caseName);
     // Navigate to view case page using window.location (same as investigation page)
-    window.location.href = `/investigation/view-case?id=${caseItem.caseName}`;
+    const params = new URLSearchParams({
+      id: caseItem.caseName,
+      priority: caseItem.priority || "",
+    });
+    window.location.href = `/investigation/view-case?${params.toString()}`;
   };
 
   return (

@@ -23,22 +23,30 @@ export default function Investigation() {
         
         const userRole = "Mycologist";
 
-    // Build search URL with active filters
-    const buildSearchUrl = (token?: string | null) => {
-        const params = new URLSearchParams();
-        if (searchQuery) params.set('search', searchQuery);
-        if (priorityFilter && priorityFilter !== 'all') params.set('priority', priorityFilter);
-        if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
-        params.set('limit', '10');
-        if (token) params.set('pageToken', token);
+    // Client-side filtering for cases
+    const getFilteredCases = () => {
+        return cases.filter((c) => {
+            const searchLower = searchQuery.toLowerCase();
+            const matchesSearch = !searchQuery ||
+                c.caseName?.toLowerCase().includes(searchLower) ||
+                c.cropName?.toLowerCase().includes(searchLower) ||
+                c.location?.toLowerCase().includes(searchLower) ||
+                c.submittedBy?.toLowerCase().includes(searchLower) ||
+                c.description?.toLowerCase().includes(searchLower) ||
+                c.status?.toLowerCase().includes(searchLower) ||
+                c.priority?.toLowerCase().includes(searchLower);
 
-        const queryString = params.toString();
-        // If no filters, use regular /mold-reports endpoint; otherwise use /mold-reports/search
-        if (!searchQuery && !priorityFilter && !statusFilter) {
-            return `/api/v1/mold-reports?${queryString}`;
-        }
-        return `/api/v1/mold-reports/search?${queryString}`;
+            const priorityValue = c.priority?.toLowerCase();
+            const matchesPriority = !priorityFilter || priorityFilter === 'all' || priorityValue === priorityFilter;
+
+            const statusValue = c.status?.toLowerCase();
+            const matchesStatus = !statusFilter || statusFilter === 'all' || statusValue === statusFilter;
+
+            return matchesSearch && matchesPriority && matchesStatus;
+        });
     };
+
+    const filteredCases = getFilteredCases();
 
     // Map report data to display format
     const mapReportToCase = (it: any) => {
@@ -80,14 +88,13 @@ export default function Investigation() {
         };
         fetchStats();
         
-        // Fetch cases with current filters
+        // Fetch cases (initial load)
         let mounted = true;
         const fetchCases = async () => {
             setLoading(true);
             setError(null);
             try {
-                const url = buildSearchUrl();
-                const casesRes = await fetch(url, { cache: 'no-store' });
+                const casesRes = await fetch('/api/v1/mold-reports?limit=10', { cache: 'no-store' });
                 if (!casesRes.ok) {
                     throw new Error('Failed to load cases');
                 }
@@ -107,7 +114,7 @@ export default function Investigation() {
         
         fetchCases();
         return () => { mounted = false; };
-    }, [searchQuery, priorityFilter, statusFilter]);
+    }, []);
 
     // Intersection Observer for infinite scroll
     useEffect(() => {
@@ -116,7 +123,10 @@ export default function Investigation() {
         const handleLoadMore = async () => {
             setIsLoadingMore(true);
             try {
-                const url = buildSearchUrl(nextPageToken);
+                const params = new URLSearchParams();
+                params.set('limit', '10');
+                params.set('pageToken', nextPageToken);
+                const url = `/api/v1/mold-reports?${params.toString()}`;
                 const res = await fetch(url, { cache: 'no-store' });
                 if (!res.ok) {
                     throw new Error('Failed to load more cases');
@@ -204,7 +214,6 @@ export default function Investigation() {
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
-                                setNextPageToken(null);
                             }}
                             className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--background-color)] py-2 px-4 rounded-full border-2 border-[var(--primary-color)] focus:outline-none w-full pr-10"
                         />
@@ -220,7 +229,6 @@ export default function Investigation() {
                             value={priorityFilter}
                             onChange={(e) => {
                                 setPriorityFilter(e.target.value);
-                                setNextPageToken(null);
                             }}
                             className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full lg:w-auto"
                         >
@@ -240,7 +248,6 @@ export default function Investigation() {
                             value={statusFilter}
                             onChange={(e) => {
                                 setStatusFilter(e.target.value);
-                                setNextPageToken(null);
                             }}
                             className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full lg:w-auto"
                         >
@@ -259,15 +266,19 @@ export default function Investigation() {
 
 
             {/* Submitted Cases Table */}
-            <div className="mt-6 w-full">
+            <div className="w-full">
                 {loading && <p>Loading cases...</p>}
                 {error && <p className="text-red-600">{error}</p>}
                 {!loading && !error && (
                     <>
                         <CaseTable
-                            cases={cases}
+                            cases={filteredCases}
                             onEdit={(c: any) => {
-                                window.location.href = `/investigation/view-case?id=${c.id}`;
+                                const params = new URLSearchParams({
+                                    id: c.id,
+                                    priority: c.priority || "",
+                                });
+                                window.location.href = `/investigation/view-case?${params.toString()}`;
                             }}
                         />
                         {/* Infinite scroll trigger */}

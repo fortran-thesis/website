@@ -23,6 +23,47 @@ export default function ViewWikiMold() {
   const [bannerSrc, setBannerSrc] = useState(DEFAULT_BANNER);
   const [authorSrc, setAuthorSrc] = useState(DEFAULT_AUTHOR);
 
+  const slugify = (value: string) =>
+    value
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+  const extractArticles = (data: any): { list: any[]; nextToken: string | null } => {
+    let articlesData: any[] | null = null;
+    if (data?.success) {
+      const candidates = [
+        data.data?.data,
+        data.data?.snapshot,
+        data.data?.snapshot?.docs,
+        data.data?.items,
+        data.data?.records,
+        data.data?.articles,
+        data.data,
+      ];
+
+      const normalizedCandidates = candidates
+        .map((value) => {
+          if (Array.isArray(value)) return value;
+          if (value && typeof value === "object") return Object.values(value);
+          return null;
+        })
+        .filter((value): value is any[] => Array.isArray(value));
+
+      articlesData = normalizedCandidates.reduce<any[] | null>((best, current) => {
+        if (!best || current.length > best.length) return current;
+        return best;
+      }, null);
+    }
+
+    return {
+      list: articlesData && Array.isArray(articlesData) ? articlesData : [],
+      nextToken: data?.data?.nextPageToken || null,
+    };
+  };
+
   // Fetch article data from API
   useEffect(() => {
     const fetchArticle = async () => {
@@ -46,13 +87,7 @@ export default function ViewWikiMold() {
           data = { success: false, error: parseError instanceof SyntaxError ? 'Invalid JSON response' : String(parseError) };
         }
         
-        if (!response.ok) {
-          console.error(`API Error (Status: ${response.status}):`, data.error || data);
-          setLoading(false);
-          return;
-        }
-        
-        if (data.success && data.data) {
+        if (response.ok && data.success && data.data) {
           const articleData = data.data;
           if (articleData.metadata) {
             Object.entries(articleData.metadata).forEach(([key, value]) => {
@@ -96,9 +131,46 @@ export default function ViewWikiMold() {
             content: articleData.body || articleData.description || articleData.content || 'No content available'
           };
           setArticle(formattedArticle);
-        } else {
-          throw new Error('Invalid response format from API');
+          return;
         }
+
+        console.warn('Direct fetch failed, attempting slug fallback...');
+
+        // Fallback: try to find by slug from list endpoint
+        const targetSlug = slugify(String(id));
+        let pageToken: string | null = null;
+        let found: any | null = null;
+        let page = 0;
+
+        do {
+          let url = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
+          if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
+
+          const listRes = await fetch(url, { cache: 'no-store' });
+          const listData = await listRes.json();
+          const { list, nextToken } = extractArticles(listData);
+
+          found = list.find((item: any) => slugify(item?.title || "") === targetSlug) || null;
+          pageToken = nextToken;
+          page += 1;
+        } while (!found && pageToken && page < 10);
+
+        if (found) {
+          const formattedArticle = {
+            id: found.id || found._id || found.metadata?.id || found.metadata?.docId || id,
+            title: found.title || 'Untitled Article',
+            author: found.author || found.author_id || 'Unknown Author',
+            date: 'Date not available',
+            bannerImage: found.cover_photo || DEFAULT_BANNER,
+            authorImage: found.author_photo || DEFAULT_AUTHOR,
+            content: found.body || found.description || found.content || 'No content available'
+          };
+          setArticle(formattedArticle);
+          return;
+        }
+
+        console.error(`API Error (Status: ${response.status}):`, data.error || data);
+        throw new Error('Article not found');
       } catch (err) {
         console.error('Failed to fetch wikimold article:', err);
         setError(err instanceof Error ? err.message : 'Failed to load article');

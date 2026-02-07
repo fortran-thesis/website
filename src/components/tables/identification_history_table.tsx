@@ -43,23 +43,21 @@ export default function IdentificationHistoryTable({
           </thead>
 
           <tbody className="bg-[var(--background-color)] divide-y divide-[var(--taupe)]">
-            {identHistory.length > 0 ? (
-              identHistory.map((item, index) => (
-                <tr
-                  key={index}
-                  className="hover:bg-[var(--accent-color)]/10 transition-colors text-center"
-                >
-                  <td className="lg:whitespace-nowrap py-3 px-4 truncate max-w-[150px]">
-                    {item.genusID}
-                  </td>
-                  <td className="lg:whitespace-nowrap py-3 px-4 truncate max-w-[150px]">
-                    {item.genusName}
-                  </td>
-                  <td className="lg:whitespace-nowrap py-3 px-4 truncate max-w-[150px]">
-                    {item.dateIdentified}
-                  </td>
-                </tr>
-              ))
+            {identHistory.map((item, index) => (
+              <tr
+                key={index}
+                className="hover:bg-[var(--accent-color)]/10 transition-colors text-center"
+              >
+                <td className="lg:whitespace-nowrap py-3 px-4 truncate max-w-[150px]">
+                  {item.genusID}
+                </td>
+                <td className="lg:whitespace-nowrap py-3 px-4 truncate max-w-[150px]">
+                  {item.genusName}
+                </td>
+                <td className="lg:whitespace-nowrap py-3 px-4 truncate max-w-[150px]">
+                  {item.dateIdentified}
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>

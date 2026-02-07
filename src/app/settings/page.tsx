@@ -233,6 +233,7 @@ export default function Settings() {
   const handleConfirmSavePassword = async () => {
     if (!pendingPasswordData) return setPasswordSaveModalOpen(false);
     if (isPasswordSaving) return;
+    setError(null);
     setSuccessMessage(null);
     setPasswordSaving(true);
 
@@ -254,13 +255,13 @@ export default function Settings() {
       try { json = text ? JSON.parse(text) : {}; } catch { json = { error: text }; }
 
       if (!res.ok) {
-        alert(`Failed to change password: ${json?.message || json?.error || res.statusText}`);
+        setError(`Failed to change password: ${json?.message || json?.error || res.statusText}`);
       } else {
         setSuccessMessage(json?.data || json?.message || 'Password updated successfully');
       }
     } catch (err) {
       console.error('Change password error', err);
-      alert('Internal error while changing password.');
+      setError('Internal error while changing password.');
     } finally {
       setPasswordSaving(false);
       setPasswordSaveModalOpen(false);
@@ -296,6 +297,7 @@ export default function Settings() {
         content: (
           <ChangePasswordForm
             onSave={handleRequestSavePassword}
+            onError={setError}
             isLoading={isPasswordSaving}
           />
         ),

@@ -1,5 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/sidebar";
 import Footer from "@/components/footer";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,18 +8,70 @@ import { useAuth } from "@/hooks/useAuth";
 export default function LayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user: authUser } = useAuth();
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support") || pathname.startsWith("/wikimold") || pathname.startsWith("/faq") || pathname.startsWith("/terms-of-agreement") || pathname.startsWith("/privacy-policy") || pathname.startsWith("/about") || pathname == "/";
 
   // Determine user role - backend returns lowercase 'admin' or 'mycologist'
   const userRole = authUser?.user?.role ? authUser.user.role.charAt(0).toUpperCase() + authUser.user.role.slice(1).toLowerCase() : "Mycologist";
 
+  // Listen for navigation clicks and pathname changes
+  useEffect(() => {
+    // Add a small delay before hiding to ensure page has rendered
+    const timer = setTimeout(() => {
+      setIsNavigating(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Check if click is on a navigation link
+      const linkElement = target.closest('a[href^="/"]');
+      if (linkElement && !hideLayout) {
+        const href = linkElement.getAttribute('href');
+        // Only show loading if navigating to a different page
+        if (href && href !== pathname && !href.startsWith('http')) {
+          setIsNavigating(true);
+          // Auto-hide after 5 seconds as fallback
+          setTimeout(() => setIsNavigating(false), 5000);
+        }
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [pathname, hideLayout]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   return hideLayout ? (
     <main>{children}</main>
   ) : (
     <>
+        {/* Top Loading Bar */}
+        {isNavigating && (
+          <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+            <div 
+              className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+              style={{ width: '30%' }}
+            />
+          </div>
+        )}
+
         <div className="flex min-h-screen">
             {/* Sidebar */}
-            <Sidebar userRole={userRole} />
+            <div className="w-0 xl:w-auto">
+              {isMounted ? (
+                <Sidebar userRole={userRole} />
+              ) : (
+                <div className="hidden xl:block w-[280px]" aria-hidden="true" />
+              )}
+            </div>
 
             {/* Main content */}
             <div className="flex flex-col flex-grow min-w-0">

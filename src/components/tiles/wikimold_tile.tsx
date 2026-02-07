@@ -29,7 +29,7 @@ export default function WikimoldTile({ id, image, title, author }: WikimoldTileP
         <div className="relative w-full aspect-[21/9] overflow-hidden bg-gray-200 flex-shrink-0">
           <Image
             src={imgSrc}
-            alt={title}
+            alt={title || "Wikimold article cover"}
             fill
             className="object-cover transition-transform duration-700 hover:scale-110"
             onError={() => setImgSrc(fallbackImage)}
