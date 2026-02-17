@@ -45,7 +45,7 @@ export default function StatusBox({ status, fontSize = "0.75rem" }: StatusBoxPro
         color: textColor,
         fontSize: fontSize,
         fontFamily: "Bricolage Grotesque, sans-serif",
-        fontWeight: 700,
+        fontWeight: 500,
       }}
     >
       {status}

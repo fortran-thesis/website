@@ -359,148 +359,174 @@ function ViewCaseContent() {
   const [imgSrc, setImgSrc] = useState(imageUrl);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--background-color)] w-full">
-
-
-  {/* 1. TOP HEADER */}
-  <header className="mb-8">
-    <div>
-      <Breadcrumbs role={userRole} />
-      <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-4xl uppercase tracking-tighter mt-2">
-        Case Management
-      </h1>
-    </div>
-  </header>
-
-  <div className="mb-4">
-    <BackButton />  
-  </div>
-  {!loading && !error && caseData && (
-    <div className="flex flex-col gap-4">
-      {/* 2. THE MANAGEMENT BAR (Farmer + Actions) */}
-       <section className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        
-        {/* Farmer Profile Card */}
-        <div className="lg:col-span-2 bg-[var(--taupe)]  rounded-2xl p-6 flex items-center gap-6">
-          <div className="relative w-24 h-24 rounded-full overflow-hidden shrink-0">
-            <Image
-              key={imgSrc}
-              src={imgSrc}
-              alt="Profile"
-              fill
-              className="object-cover"
-              onError={() => setImgSrc("/assets/default-fallback.png")}
-            />
-          </div>
-          <div className="flex-1">
-            <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] text-[10px] font-black uppercase tracking-widest mb-1">Farmer Information</p>
-            <h2 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] uppercase">{reporterName}</h2>
-            <div className="flex flex-wrap gap-x-6 mt-2">
-              <p className="text-sm font-bold font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-                <span className="font-[family-name:var(--font-bricolage-grotesque)] font-normal mr-2">Email:</span>{reporterEmail}
-              </p>
-              <p className="text-sm font-bold font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-                <span className="font-[family-name:var(--font-bricolage-grotesque)] font-normal  mr-2">Phone:</span>{reporterPhone}
-              </p>
-            </div>
+    <main className="relative flex flex-col xl:py-2 py-10 w-full">
+      
+      {/* 1. MINIMALIST TOP NAV */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div className="space-y-1">
+          <Breadcrumbs role={userRole} />
+          <div className="flex items-center gap-4">
+            <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-4xl uppercase tracking-tighter">
+              Case Management
+            </h1>
           </div>
         </div>
 
-        {/* Quick Decision Card */}
-        <div className="bg-[var(--taupe)] rounded-2xl p-6 flex flex-col justify-center">
-          {userRole !== "Mycologist" && !isAssigned && !isRejected && (
-            <>
-              <p className="text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-black uppercase tracking-widest mb-3 text-center">Case Status Action</p>
-              <select
-                className="bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-black p-3 rounded-lg w-full cursor-pointer outline-none"
-                defaultValue=""
-                onChange={(e) => {
-                  if (e.target.value === "assign") setAssignModalOpen(true);
-                  if (e.target.value === "reject") setRejectModalOpen(true);
-                }}
+      </header>
+       {/* Back Button */}
+      <div className="mb-3">
+        <BackButton />
+      </div>
+
+      {!loading && !error && caseData && (
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          
+          {/* LEFT COLUMN: Sidebar Info (Farmer + Metadata) */}
+          <aside className="xl:col-span-4 space-y-6">
+            
+            {/* Farmer Profile Card - Earthy & Modern */}
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+              <div className="flex flex-col items-center text-center">
+                <div className="relative w-32 h-32 rounded-3xl overflow-hidden mb-4 border-4 border-[var(--taupe)] shadow-md">
+                   <Image
+                    key={imgSrc}
+                    src={imgSrc}
+                    alt="Profile"
+                    fill
+                    className="object-cover "
+                    onError={() => setImgSrc("/assets/default-fallback.png")}
+                  />
+                </div>
+                <h2 className="text-2xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase">{reporterName}</h2>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mt-1">Farmer</span>
+                
+                <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-[var(--primary-color)]/10 to-transparent my-6" />
+                
+                <div className="w-full space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-[family-name:var(--font-montserrat)] font-bold opacity-40">Email</span>
+                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[var(--primary-color)]">{reporterEmail}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-[family-name:var(--font-montserrat)] font-bold opacity-40">Phone</span>
+                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[var(--primary-color)]">{reporterPhone}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Assignment Status Sticky Note style */}
+            {(userRole !== "Mycologist" || isAssigned || isRejected) && (
+               <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+                  <p className="text-xs font-black uppercase text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">Filing Status</p>
+                  {(isAssigned || isRejected) ? (
+                    <p className="font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
+                      {isRejected ? "FILE CLOSED / REJECTED" : `MYCOLOGIST: ${assignedMycologistName?.toUpperCase()}`}
+                    </p>
+                  ) : (
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-xs font-black uppercase text-[var(--primary-color)]">Review Action:</span>
+                      <select
+                        className="bg-[var(--primary-color)] w-full text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer outline-none hover:brightness-110 transition-all"
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value === "assign") setAssignModalOpen(true);
+                          if (e.target.value === "reject") setRejectModalOpen(true);
+                        }}
+                      >
+                        <option value="" disabled>Select Action</option>
+                        <option value="assign">Approve & Assign</option>
+                        <option value="reject">Reject Case</option>
+                      </select>
+                    </div>
+                  )}
+               </div>
+            )}
+          </aside>
+
+          {/* RIGHT COLUMN: Case Core Data */}
+          <section className="xl:col-span-8 space-y-4">
+  
+          {/* MINIMALIST STATUS LINE - No boxes, just clean typography on the cream bg */}
+          <div className="font-[family-name:var(--font-montserrat)] flex items-center gap-6 px-2">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${status === 'Pending' ? 'bg-amber-500' : 'bg-green-600'}`} />
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--primary-color)]">
+                {status}
+              </span>
+            </div>
+            
+            <div className="w-[1px] h-3 bg-[var(--primary-color)]/20" />
+            
+            <div className="flex items-center gap-2">
+              <span className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.2em] opacity-60">Priority:</span>
+              <span className={`text-xs font-black uppercase tracking-[0.2em] ${priority === 'High' ? 'text-red-700' : 'text-[var(--primary-color)]'}`}>
+                {priority}
+              </span>
+            </div>
+          </div>
+
+          {/* THE ACTUAL HERO CARD - Now completely clean */}
+          <div className="bg-[var(--primary-color)] text-[var(--background-color)] rounded-[2.5rem] p-12 relative shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)] overflow-hidden">
+            <FontAwesomeIcon icon={faSeedling} className="absolute -right-10 -bottom-10 text-white/5 text-[18rem]" />
+            
+            <div className="relative z-10">
+              <h2 className="text-5xl font-black font-[family-name:var(--font-montserrat)] uppercase tracking-tighter leading-[0.9] mb-12">
+                {caseName}
+              </h2>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-12 pt-10 border-t border-white/10">
+                <div>
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Host Crop</span>
+                  <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{cropName}</p>
+                </div>
+                <div>
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Location</span>
+                  <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{location}</p>
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Log Date</span>
+                  <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{dateObserved}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+            {/* 4. MODERN UTILITY BAR */}
+            <div className="flex flex-wrap gap-3 bg-[var(--taupe)]/30 p-2 rounded-2xl border border-[var(--primary-color)]/5">
+              {userRole !== "Administrator" && (
+                <button 
+                  className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm group cursor-pointer"
+                  onClick={() => setAddTreatmentOpen(true)}
+                >
+                  <FontAwesomeIcon icon={faPlus} className="group-hover:scale-125 transition-transform" /> Add Treatment
+                </button>
+              )}
+              <button className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer">
+                <FontAwesomeIcon icon={faFilePdf} /> Export PDF
+              </button>
+              <button 
+                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
+                onClick={() => (window.location.href = "/investigation/identification-history")}
               >
-                <option value="" disabled>Choose Action</option>
-                <option value="assign">Assign Case</option>
-                <option value="reject">Reject Case</option>
-              </select>
-            </>
-          )}
-          {(isAssigned || isRejected) && (
-             <div className="text-center">
-                <p className="text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest">
-                  {isRejected ? "Status: Rejected" : `Assigned: ${assignedMycologistName}`}
-                </p>
-             </div>
-          )}
-        </div>
-      </section>
-
-      {/* 3. THE CASE DETAILS HERO */}
-      <section className="bg-[var(--taupe)] rounded-2xl overflow-hidden">
-        <div className="p-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex-1 min-w-[220px]">
-            <h2 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] uppercase tracking-tight">
-              {caseName}
-            </h2>
+                <FontAwesomeIcon icon={faClockRotateLeft} /> Identification History
+              </button>
+              <button 
+                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
+                onClick={() => (window.location.href = "/investigation/treatment-history")}
+              >
+                <FontAwesomeIcon icon={faSprayCan} /> Treatment History
+              </button>
             </div>
-            <div className="flex gap-2">
-              <StatusBox status={status} />
-              <StatusBox status={priority} />
+
+            {/* 5. DATA TABS */}
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+              <TabBar tabs={tabs} initialIndex={0} />
             </div>
-          </div>
-          <div className="mt-3 h-[2px] w-full bg-[var(--primary-color)]/20" />
+          </section>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 divide-y-2 md:divide-y-0 md:divide-x-2 divide-[var(--primary-color)]/10 bg-[var(--taupe)] p-6">
-          <div className="pb-4 md:pb-0 md:px-4 flex flex-col items-center md:items-start">
-            <span className="text-xs font-black uppercase opacity-50 font-[family-name:var(--font-bricolage-grotesque)]">Crop Type</span>
-            <p className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">{cropName}</p>
-          </div>
-          <div className="py-4 md:py-0 md:px-4 flex flex-col items-center md:items-start">
-            <span className="text-xs font-black uppercase opacity-50 font-[family-name:var(--font-bricolage-grotesque)]">Location</span>
-            <p className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">{location}</p>
-          </div>
-          <div className="pt-4 md:pt-0 md:px-4 flex flex-col items-center md:items-start">
-            <span className="text-xs font-black uppercase opacity-50 font-[family-name:var(--font-bricolage-grotesque)]">Observed On</span>
-            <p className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">{dateObserved}</p>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. UTILITY TOOLBAR (The 3 Buttons) */}
-      <div className="flex flex-wrap gap-4 items-center justify-center lg:justify-start">
-        {userRole !== "Administrator" && (
-          <button 
-            className="flex items-center gap-2 text-xs font-black uppercase font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] px-6 py-3 rounded-full hover:brightness-110 transition-all cursor-pointer"
-            onClick={() => setAddTreatmentOpen(true)}
-          >
-            <FontAwesomeIcon icon={faPlus} /> Add Treatment
-          </button>
-        )}
-        <button className="flex items-center gap-2 text-xs font-black uppercase font-[family-name:var(--font-bricolage-grotesque)] text-[var(--background-color)] px-6 py-3 rounded-full bg-[var(--primary-color)] hover:brightness-110 transition-all cursor-pointer">
-          <FontAwesomeIcon icon={faFilePdf} /> Export PDF
-        </button>
-        <button 
-          className="flex items-center gap-2 text-xs font-black uppercase font-[family-name:var(--font-bricolage-grotesque)] text-[var(--background-color)] px-6 py-3 rounded-full bg-[var(--primary-color)] hover:brightness-110 transition-all cursor-pointer"
-          onClick={() => (window.location.href = "/investigation/identification-history")}
-        >
-          <FontAwesomeIcon icon={faClockRotateLeft} /> Identification History
-        </button>
-        <button 
-          className="flex items-center gap-2 text-xs font-black uppercase font-[family-name:var(--font-bricolage-grotesque)] text-[var(--background-color)] px-6 py-3 rounded-full bg-[var(--primary-color)] hover:brightness-110 transition-all cursor-pointer"
-          onClick={() => (window.location.href = "/investigation/treatment-history")}
-        >
-          <FontAwesomeIcon icon={faSprayCan} /> Treatment History
-        </button>
-      </div>
-
-      {/* 5. MAIN DATA TABS */}
-      <div className="mt-4">
-        <TabBar tabs={tabs} initialIndex={0} />
-      </div>
-    </div>
       )}
+      
 
       {/* Modals */}
       <AssignCaseModal
@@ -532,7 +558,7 @@ function ViewCaseContent() {
         isOpen={isAddTreatmentOpen}
         onClose={() => setAddTreatmentOpen(false)}
       />
-    </div>
+    </main>
   );
 }
 
