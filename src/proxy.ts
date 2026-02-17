@@ -6,7 +6,7 @@ const publicRoutes = ['/auth/log-in', '/auth/sign-up', '/auth', '/auth/account-r
 // Public API routes (auth endpoints that don't require session)
 const publicApiRoutes = ['/api/v1/auth/send-verification', '/api/v1/auth/check-verification', '/api/v1/auth/verified-change-password', '/api/v1/auth/verified-forget-username'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // ALWAYS log - this should appear for EVERY request
