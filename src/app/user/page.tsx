@@ -102,6 +102,11 @@ export default function Users() {
                     if (usersRes.ok) {
                         const usersBody = await usersRes.json();
                         const data = Array.isArray(usersBody.data?.snapshot) ? usersBody.data.snapshot : [];
+                        console.log('📊 Users API response:', {
+                          statusCode: usersRes.status,
+                          snapshotLength: data.length,
+                          firstUserStructure: data[0] ? { keys: Object.keys(data[0]), id: data[0].id } : 'EMPTY'
+                        });
                         setUsers(data);
                         setNextPageToken(usersBody.data?.nextPageToken || null);
                     } else {
@@ -151,6 +156,11 @@ export default function Users() {
                     setIsLoadingMore(false);
                     return;
                 }
+
+                console.log('📊 Load more users response:', {
+                  newDataLength: newData.length,
+                  firstUserStructure: newData[0] ? { keys: Object.keys(newData[0]), id: newData[0].id } : 'EMPTY'
+                });
 
                 // Safety check: if token didn't change, stop loading
                 const newToken = body.data?.nextPageToken || null;
@@ -305,6 +315,11 @@ export default function Users() {
                 {error && <p className="text-red-600">{error}</p>}
                 {!loading && !error && <UserTable data={filteredUsers} 
                     onEdit={(c: any) => {
+                      console.log('📋 UserTable edit clicked:', { user: c, userId: c?.id });
+                      if (!c?.id) {
+                        console.error('❌ User has no id:', c);
+                        return;
+                      }
                       window.location.href = `/user/view-user?id=${c.id}`;
                   }}/>}
 

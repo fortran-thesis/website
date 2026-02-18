@@ -230,7 +230,7 @@ function ViewCaseContent() {
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
   const isRejected = caseData?.status === 'closed';
-  const assignedMycologistName = caseData?.assigned_mycologist?.details?.displayName || null;
+  const assignedMycologistName = moldCase?.mycologist_name || caseData?.assigned_mycologist?.details?.displayName || null;
 
   // Normalize case_details
   const caseDetailsEntries = (caseData?.case_details ?? []).map((d: any) => {
@@ -532,6 +532,7 @@ function ViewCaseContent() {
       <AssignCaseModal
         isOpen={isAssignModalOpen}
         onClose={() => setAssignModalOpen(false)}
+        caseId={caseId || undefined}
         onAssign={handleAssignClick}
       />
 

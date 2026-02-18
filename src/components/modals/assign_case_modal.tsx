@@ -18,20 +18,20 @@ interface Mycologist {
 interface AssignCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
+  caseId?: string; // Add case ID for assignment
   mycologists?: Mycologist[]; // Make optional since we'll fetch from backend
   onAssign?: (mycologist: Mycologist, priority: string, endDate: Date | null) => void; 
 }
 
 const CAPACITY_THRESHOLD = 8; // Mycologists with >= 8 cases are at capacity
 
-export default function AssignCaseModal({ isOpen, onClose, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
+export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
   const [filter, setFilter] = useState<"all" | "available" | "at-capacity">("all");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [mycologists, setMycologists] = useState<Mycologist[]>(propMycologists || []);
   const [loading, setLoading] = useState(false);
-  const [isAssigned, setIsAssigned] = useState(false); 
 
 
   // Fetch mycologists and assigned cases when modal opens
@@ -108,16 +108,14 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
     if (selectedMycologist) {
       if (onAssign) {
         onAssign(selectedMycologist, priority, endDate);
-        setIsAssigned(true);
       }
+      onClose();
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 overflow-hidden">
       <form
-        method="post"
-        action="/api/assign-case" 
         className="bg-[var(--background-color)] rounded-xl w-full max-w-md p-6 relative"
         onSubmit={handleSubmit}
       >
@@ -260,10 +258,10 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
         </div>
         <button
           type="submit"
-          className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5"
-          disabled={isAssigned} // Disable button if assigned
+          className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!selectedMycologist}
         >
-          {isAssigned ? "Assigned" : "Assign Case"} {/* Change button text */}
+          Assign Case
         </button>
       </form>
     </div>

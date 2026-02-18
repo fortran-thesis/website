@@ -13,7 +13,7 @@ export async function GET(
     }
 
     const { reportId } = await params;
-    const upstreamUrl = `${envOptions.apiUrl}/mold-cases/by-report/${reportId}`;
+    const upstreamUrl = `${envOptions.apiUrl}/mold-case/by-report/${reportId}`;
 
     const upstreamRes = await fetch(upstreamUrl, {
       method: 'GET',

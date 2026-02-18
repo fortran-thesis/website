@@ -6,6 +6,8 @@ import { envOptions } from '@/configs/envOptions';
 export async function GET(req: NextRequest, context: { params: { id: string } }) {
   try {
     const { id } = context.params;
+    console.log(`🔍 GET /api/v1/user/:id proxy - received id:`, { id, isUndefined: id === 'undefined', length: id?.length });
+    
     const upstreamUrl = new URL(`${envOptions.apiUrl}/user/${id}`);
     const sessionCookie = req.cookies.get('session')?.value;
 

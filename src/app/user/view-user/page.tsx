@@ -28,6 +28,7 @@ type UserDetails = {
 export default function ViewUser() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("id");
+  console.log('👤 ViewUser page loaded:', { userId, isUndefined: userId === "undefined", isNull: userId === null });
 
   const [isEditMycoModal, setShowEditMycoModal] = useState(false);
   const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
