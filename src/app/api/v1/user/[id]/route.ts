@@ -3,9 +3,9 @@ import type { NextRequest } from 'next/server';
 import { envOptions } from '@/configs/envOptions';
 
 // Proxy for /api/v1/user/:id
-export async function GET(req: NextRequest, context: { params: { id: string } }) {
+export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = context.params;
+    const { id } = await context.params;
     console.log(`🔍 GET /api/v1/user/:id proxy - received id:`, { id, isUndefined: id === 'undefined', length: id?.length });
     
     const upstreamUrl = new URL(`${envOptions.apiUrl}/user/${id}`);
