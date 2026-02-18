@@ -16,17 +16,20 @@ export async function GET(req: NextRequest) {
     }
 
     // Build upstream URL with query params
-    const upstreamUrl = new URL(`${envOptions.apiUrl}/audit-logs`);
+    // Backend has /audit-log (singular), with optional /{action} for specific actions
+    let upstreamPath = '/audit-log';
     if (action) {
-      upstreamUrl.searchParams.set('action', action);
+      upstreamPath += `/${action}`;
     }
+    
+    const upstreamUrl = new URL(`${envOptions.apiUrl}${upstreamPath}`);
     upstreamUrl.searchParams.set('limit', limit);
     if (pageToken) {
       upstreamUrl.searchParams.set('pageToken', pageToken);
     }
 
     console.log('📤 GET /api/v1/audit-logs proxy');
-    console.log('  Query params:', { action: action ? `${action.substring(0, 20)}...` : 'NONE', limit, pageToken: pageToken ? `${pageToken.substring(0, 20)}...` : 'NONE' });
+    console.log('  Query params:', { action: action ? `${action}` : 'NONE', limit, pageToken: pageToken ? `${pageToken.substring(0, 20)}...` : 'NONE' });
     console.log('  Upstream URL:', upstreamUrl.toString());
 
     const upstreamRes = await fetch(upstreamUrl.toString(), {
@@ -54,21 +57,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
     }
 
-    // If upstream returns 404, forward as 404
-    if (upstreamRes.status === 404) {
-      return NextResponse.json({ success: false, error: 'No audit logs found' }, { status: 404 });
-    }
-
-    // Forward any other non-success status
-    if (!upstreamRes.ok) {
+    // Forward any other non-success status (except 404 which we treat as empty)
+    if (!upstreamRes.ok && upstreamRes.status !== 404) {
       return NextResponse.json(
         payload || { success: false, error: 'Failed to fetch audit logs' },
         { status: upstreamRes.status }
       );
     }
 
-    // Return successful response
-    return NextResponse.json(payload, { status: 200 });
+    // Return successful response (200) - even if no logs found, return empty data
+    return NextResponse.json(payload || { data: [], success: true }, { status: 200 });
   } catch (error) {
     console.error('  Error in proxy:', error);
     return NextResponse.json(
