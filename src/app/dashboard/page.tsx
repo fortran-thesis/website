@@ -247,16 +247,20 @@ export default function Home() {
             console.log('📊 Not an administrator, skipping user fetch');
           }
 
-          // Fetch total cases using status counts (admin only)
+          // Fetch total mold cases using metadata (admin only)
           const casesCountKey = 'dash:cases-count';
           if (isAdministrator && shouldFetch(casesCountKey)) {
             try {
-              const casesCountRes = await fetch('/api/v1/mold-reports/count/status', { cache: 'default' });
+              const casesCountRes = await fetch('/api/v1/mold-cases/counts/metadata', { cache: 'default' });
               if (casesCountRes.ok) {
                 const casesCountData = await casesCountRes.json();
                 if (casesCountData.success && casesCountData.data) {
-                  const totalCaseCount = casesCountData.data.total;
+                  const totalCaseCount = casesCountData.data.count;
                   setTotalCases(totalCaseCount);
+                  console.log('📊 Mold cases count fetched:', {
+                    count: totalCaseCount,
+                    createdAt: casesCountData.data.createdAt
+                  });
                   markFetched(casesCountKey);
                 }
               }
