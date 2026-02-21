@@ -32,8 +32,8 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 bg-opacity-50 overflow-hidden">
-      <div className={`bg-[var(--background-color)] rounded-2xl p-6 w-full max-w-lg shadow-lg relative ${confirmDisabled ? "cursor-wait" : ""}`}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto p-4">
+      <div className={`bg-[var(--background-color)] rounded-2xl p-6 w-full max-w-lg shadow-lg relative my-auto ${confirmDisabled ? "cursor-wait" : ""}`}>
         {/* Close button */}
         <div className ="flex justify-center items-center mb-4">
             <div className = "flex justify-between items-center space-x-3">

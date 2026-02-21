@@ -4,6 +4,7 @@ import { faSearch, faSeedling, faClockRotateLeft, faHourglassHalf, faCircleCheck
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
+import StatusDropdown from '@/components/StatusDropdown';
 import {useState, useEffect, useRef} from 'react'
 import { faHourglass } from '@fortawesome/free-solid-svg-icons/faHourglass';
 
@@ -47,6 +48,9 @@ export default function Investigation() {
     };
 
     const filteredCases = getFilteredCases();
+    
+    console.log('📊 Total cases in state:', cases.length);
+    console.log('📊 Filtered cases to display:', filteredCases.length);
 
     // Map report data to display format
     const mapReportToCase = (it: any) => {
@@ -88,22 +92,80 @@ export default function Investigation() {
         };
         fetchStats();
         
-        // Fetch cases (initial load)
+        // Fetch ALL cases (load all pages immediately)
         let mounted = true;
-        const fetchCases = async () => {
+        const fetchAllCases = async () => {
             setLoading(true);
             setError(null);
             try {
-                const casesRes = await fetch('/api/v1/mold-reports?limit=10', { cache: 'no-store' });
-                if (!casesRes.ok) {
+                let allCases: any[] = [];
+                let currentToken: string | null = null;
+                let pageCount = 0;
+                
+                // Load first page
+                const firstRes = await fetch('/api/v1/mold-reports?limit=50', { cache: 'no-store' });
+                if (!firstRes.ok) {
                     throw new Error('Failed to load cases');
                 }
-                const body = await casesRes.json();
-                const items = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
-                const mapped = items.map(mapReportToCase);
+                const firstBody = await firstRes.json();
+                const firstItems = Array.isArray(firstBody.data?.snapshot) ? firstBody.data.snapshot : [];
+                allCases = firstItems.map(mapReportToCase);
+                currentToken = firstBody.data?.nextPageToken || null;
+                pageCount++;
+                
+                console.log('📄 Page 1: loaded', firstItems.length, 'cases');
+                console.log('� First case:', firstItems[0]?.case_name, 'ID:', firstItems[0]?.id);
+                console.log('📄 Last case:', firstItems[firstItems.length - 1]?.case_name, 'ID:', firstItems[firstItems.length - 1]?.id);
+                console.log('�🔍 Next page token:', currentToken);
+                
+                // Load remaining pages
+                while (currentToken && mounted) {
+                    const params = new URLSearchParams();
+                    params.set('limit', '10');
+                    params.set('pageToken', currentToken);
+                    const url = `/api/v1/mold-reports?${params.toString()}`;
+                    
+                    const res = await fetch(url, { cache: 'no-store' });
+                    if (!res.ok) break;
+                    
+                    const body = await res.json();
+                    const items = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
+                    const mapped = items.map(mapReportToCase);
+                    
+                    console.log(`📄 Page ${pageCount}: received`, items.length, 'items from API');
+                    console.log(`📄 First item ID:`, items[0]?.id, 'case name:', items[0]?.case_name);
+                    console.log(`📄 Last item ID:`, items[items.length - 1]?.id, 'case name:', items[items.length - 1]?.case_name);
+                    console.log(`📄 New token:`, body.data?.nextPageToken);
+                    console.log(`📄 Previous token:`, currentToken);
+                    
+                    // Check if we're getting duplicate data
+                    const existingIds = new Set(allCases.map(c => c.id));
+                    const duplicateCount = mapped.filter((c: any) => existingIds.has(c.id)).length;
+                    const newCases = mapped.filter((c: any) => !existingIds.has(c.id));
+                    
+                    console.log(`📄 Duplicates found: ${duplicateCount}, New cases: ${newCases.length}`);
+                    
+                    if (newCases.length === 0 && mapped.length > 0) {
+                        console.warn('⚠️ All cases are duplicates, stopping pagination');
+                        break;
+                    }
+                    
+                    allCases = [...allCases, ...newCases];
+                    pageCount++;
+                    
+                    const newToken = body.data?.nextPageToken || null;
+                    if (newToken === currentToken) {
+                        console.warn('⚠️ Same token returned, stopping');
+                        break;
+                    }
+                    currentToken = newToken;
+                }
+                
+                console.log('✅ All pages loaded:', allCases.length, 'total cases');
+                
                 if (mounted) {
-                    setCases(mapped);
-                    setNextPageToken(body.data?.nextPageToken || null);
+                    setCases(allCases);
+                    setNextPageToken(null); // No more pages needed
                 }
             } catch (err) {
                 if (mounted) setError(err instanceof Error ? err.message : 'Failed to load cases');
@@ -112,11 +174,72 @@ export default function Investigation() {
             }
         };
         
-        fetchCases();
+        fetchAllCases();
         return () => { mounted = false; };
     }, []);
 
-    // Intersection Observer for infinite scroll
+    // Auto-load all pages recursively
+    useEffect(() => {
+        console.log('🔍 Auto-load effect fired:', { 
+            hasToken: !!nextPageToken, 
+            isLoadingMore, 
+            loading,
+            token: nextPageToken 
+        });
+        
+        if (!nextPageToken || isLoadingMore) {
+            console.log('❌ Auto-load blocked:', { 
+                reason: !nextPageToken ? 'no token' : 'already loading' 
+            });
+            return;
+        }
+        
+        console.log('✅ Auto-load proceeding...');
+        
+        const loadNextPage = async () => {
+            setIsLoadingMore(true);
+            try {
+                const params = new URLSearchParams();
+                params.set('limit', '12');
+                params.set('pageToken', nextPageToken);
+                const url = `/api/v1/mold-reports?${params.toString()}`;
+                const res = await fetch(url, { cache: 'no-store' });
+                if (!res.ok) {
+                    throw new Error('Failed to load more cases');
+                }
+                const body = await res.json();
+                const items = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
+                const mapped = items.map(mapReportToCase);
+
+                console.log('📊 Loaded additional', mapped.length, 'cases');
+
+                // Safety check: if token didn't change and we got data, stop loading
+                const newToken = body.data?.nextPageToken || null;
+                if (newToken === nextPageToken && mapped.length > 0) {
+                    console.warn('⚠️ Backend returned same token - stopping pagination');
+                    setNextPageToken(null);
+                    setIsLoadingMore(false);
+                    return;
+                }
+
+                setCases(prev => {
+                    const updated = [...prev, ...mapped];
+                    console.log('📊 Total cases now:', updated.length);
+                    return updated;
+                });
+                setNextPageToken(newToken);
+            } catch (err) {
+                console.error('Failed to load more cases:', err);
+            } finally {
+                setIsLoadingMore(false);
+            }
+        };
+
+        const timer = setTimeout(loadNextPage, 100);
+        return () => clearTimeout(timer);
+    }, [nextPageToken, isLoadingMore]);
+
+    // Intersection Observer for manual scroll pagination
     useEffect(() => {
         if (!nextPageToken || isLoadingMore) return;
 
@@ -135,7 +258,6 @@ export default function Investigation() {
                 const items = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
                 const mapped = items.map(mapReportToCase);
 
-                // Safety check: if token didn't change and we got data, stop loading
                 const newToken = body.data?.nextPageToken || null;
                 if (newToken === nextPageToken && mapped.length > 0) {
                     console.warn('⚠️ Backend returned same token - stopping pagination');
@@ -223,43 +345,38 @@ export default function Investigation() {
                     {/* Filter Dropdowns */}
                     <div className="flex gap-2 w-full lg:w-auto">
                         {/* Filter by Priority */}
-                        <label htmlFor="priority" className="sr-only">Filter by Priority</label>
-                        <select
-                            id="priority"
-                            value={priorityFilter}
-                            onChange={(e) => {
-                                setPriorityFilter(e.target.value);
-                            }}
-                            className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full lg:w-auto"
-                        >
-                            <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold">
-                            Filter By Priority
-                            </option>
-                            <option value="all" className="bg-[var(--taupe)]">All</option>
-                            <option value="low" className="bg-[var(--taupe)]">Low Priority</option>
-                            <option value="medium" className="bg-[var(--taupe)]">Medium Priority</option>
-                            <option value="high" className="bg-[var(--taupe)]">High Priority</option>
-                        </select>
+                        <div className="w-full lg:w-auto">
+                            <StatusDropdown
+                                placeholder="Filter By Priority"
+                                backgroundColor="var(--accent-color)"
+                                textColor="var(--moldify-black)"
+                                options={[
+                                    { label: "All", value: "all" },
+                                    { label: "Low Priority", value: "low" },
+                                    { label: "Medium Priority", value: "medium" },
+                                    { label: "High Priority", value: "high" }
+                                ]}
+                                onSelect={(value) => setPriorityFilter(value)}
+                            />
+                        </div>
 
                         {/* Filter by Status */}
-                        <label htmlFor="status" className="sr-only">Filter by Status</label>
-                        <select
-                            id="status"
-                            value={statusFilter}
-                            onChange={(e) => {
-                                setStatusFilter(e.target.value);
-                            }}
-                            className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full lg:w-auto"
-                        >
-                            <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold">
-                            Filter By Status
-                            </option>
-                            <option value="all" className="bg-[var(--taupe)]">All</option>
-                            <option value="pending" className="bg-[var(--taupe)]">Pending</option>
-                            <option value="in progress" className="bg-[var(--taupe)]">In Progress</option>
-                            <option value="resolved" className="bg-[var(--taupe)]">Resolved</option>
-                            <option value="closed" className="bg-[var(--taupe)]">Closed</option>
-                        </select>
+                        <div className="w-full lg:w-auto">
+                            <StatusDropdown
+                                placeholder="Filter By Status"
+                                backgroundColor="var(--accent-color)"
+                                textColor="var(--moldify-black)"
+                                options={[
+                                    { label: "All", value: "all" },
+                                    { label: "Pending", value: "pending" },
+                                    { label: "In Progress", value: "in progress" },
+                                    { label: "Resolved", value: "resolved" },
+                                    { label: "Rejected", value: "rejected", variant: "danger" },
+                                    { label: "Closed", value: "closed" }
+                                ]}
+                                onSelect={(value) => setStatusFilter(value)}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
