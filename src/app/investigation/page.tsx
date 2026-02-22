@@ -7,8 +7,36 @@ import Breadcrumbs from '@/components/breadcrumbs_nav';
 import StatusDropdown from '@/components/StatusDropdown';
 import {useState, useEffect, useRef} from 'react'
 import { faHourglass } from '@fortawesome/free-solid-svg-icons/faHourglass';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function Investigation() {
+        console.log('🚀 Investigation component rendering');
+        const { user: authUser, loading: authLoading } = useAuth();
+        console.log('🔐 Auth state:', { authUser, authLoading });
+        
+        // Map auth user data  
+        const user = authUser ? {
+            name: (authUser.user?.first_name && authUser.user?.last_name) 
+                ? `${authUser.user.first_name} ${authUser.user.last_name}`
+                : authUser.user?.username || authUser.name || "Guest User",
+            role: authUser.user?.role || authUser.role || "admin"
+        } : {
+            name: "Guest User",
+            role: "admin"
+        };
+
+        // Determine user role
+        const isAdministrator = user.role === "admin" || user.role === "Administrator";
+        const isMycologist = user.role === "mycologist" || user.role === "Mycologist";
+        const userRole = user.role === "admin" ? "Administrator" : user.role === "mycologist" ? "Mycologist" : "User";
+        
+        console.log('🔍 INVESTIGATION ROLE DETECTION:');
+        console.log('  authUser:', authUser);
+        console.log('  user.role:', user.role);
+        console.log('  isAdministrator:', isAdministrator);
+        console.log('  isMycologist:', isMycologist);
+        console.log('  userRole:', userRole);
+    
         const [caseStats, setCaseStats] = useState({ total: 0, pending: 0, in_progress: 0, resolved: 0, closed: 0 });
         const [cases, setCases] = useState<any[]>([]);
         const [loading, setLoading] = useState(false);
@@ -21,8 +49,6 @@ export default function Investigation() {
         const [searchQuery, setSearchQuery] = useState('');
         const [priorityFilter, setPriorityFilter] = useState('');
         const [statusFilter, setStatusFilter] = useState('');
-        
-        const userRole = "Mycologist";
 
     // Client-side filtering for cases
     const getFilteredCases = () => {
@@ -49,11 +75,21 @@ export default function Investigation() {
 
     const filteredCases = getFilteredCases();
     
-    console.log('📊 Total cases in state:', cases.length);
-    console.log('📊 Filtered cases to display:', filteredCases.length);
-
+    // Track if we've logged sample data
+    let hasLoggedSample = false;
+    
     // Map report data to display format
     const mapReportToCase = (it: any) => {
+        // Log first item to debug data structure
+        if (!hasLoggedSample) {
+            console.log('🔍 Sample case data structure:', it);
+            console.log('  reporter:', it.reporter);
+            console.log('  mold_case:', it.mold_case);
+            console.log('  user_id:', it.user_id);
+            console.log('  location:', it.location);
+            hasLoggedSample = true;
+        }
+        
         let dateSubmittedISO = '';
         if (it.metadata?.created_at?._seconds) {
             dateSubmittedISO = new Date(it.metadata.created_at._seconds * 1000).toISOString();
@@ -64,12 +100,25 @@ export default function Investigation() {
             ? new Date(dateSubmittedISO).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: '2-digit' })
             : '';
         const description = Array.isArray(it.case_details) && it.case_details[0]?.description ? it.case_details[0].description : '';
+        
+        // Use correct field paths based on API response structure
+        const location = it.mold_case?.location || 
+                        it.location || 
+                        it.reporter?.address || 
+                        it.address || 
+                        'N/A';
+        
+        const submittedBy = it.user_id || 
+                           it.reporter?.name || 
+                           it.mold_case?.user_id ||
+                           'N/A';
+        
         return {
             id: it.id,
             caseName: it.case_name || '',
             cropName: it.host || '',
-            location: it.reporter?.address || '',
-            submittedBy: it.reporter?.name || '',
+            location,
+            submittedBy,
             dateSubmitted,
             priority: it.mold_case?.priority.charAt(0).toUpperCase() + it.mold_case?.priority.slice(1) || 'Unassigned',
             status: it.status.charAt(0).toUpperCase() + it.status.slice(1) || 'Pending',
@@ -78,16 +127,61 @@ export default function Investigation() {
     };
 
     useEffect(() => {
-        // Fetch stats
+        console.log('🔍 Investigation useEffect triggered:', { authLoading, isAdministrator, isMycologist });
+        if (authLoading) {
+            console.log('⏳ Auth still loading, skipping fetch');
+            return;
+        }
+        
+        // Fetch stats based on role
         const fetchStats = async () => {
             try {
-                const statsRes = await fetch('/api/v1/mold-reports/count/status', { cache: 'default' });
-                if (statsRes.ok) {
-                    const body = await statsRes.json();
-                    if (body.success && body.data) setCaseStats(body.data);
+                let statsEndpoint = '';
+                
+                if (isAdministrator) {
+                    // Admin: get all cases count
+                    statsEndpoint = '/api/v1/mold-reports/count/status';
+                    console.log('📊 Fetching admin stats from:', statsEndpoint);
+                    
+                    const statsRes = await fetch(statsEndpoint, { cache: 'no-store' });
+                    if (statsRes.ok) {
+                        const body = await statsRes.json();
+                        if (body.success && body.data) {
+                            setCaseStats(body.data);
+                            console.log('✅ Admin stats loaded:', body.data);
+                        }
+                    }
+                } else if (isMycologist) {
+                    // Mycologist: get assigned cases count
+                    const mycologistId = authUser?.user?.id || authUser?.id;
+                    if (!mycologistId) {
+                        console.error('❌ Mycologist ID not found');
+                        return;
+                    }
+                    
+                    statsEndpoint = `/api/v1/mold-report/assigned/count?id=${mycologistId}`;
+                    console.log('📊 Fetching mycologist stats from:', statsEndpoint);
+                    
+                    const statsRes = await fetch(statsEndpoint, { cache: 'no-store' });
+                    if (statsRes.ok) {
+                        const body = await statsRes.json();
+                        if (body.data) {
+                            // API returns { data: { total: 0 } }
+                            // Set stats with total for all tiles
+                            const totalAssigned = body.data.total || 0;
+                            setCaseStats({
+                                total: totalAssigned,
+                                pending: 0, // These will be calculated from fetched cases
+                                in_progress: 0,
+                                resolved: 0,
+                                closed: 0
+                            });
+                            console.log('✅ Mycologist stats loaded:', { total: totalAssigned });
+                        }
+                    }
                 }
             } catch (err) {
-                // ignore for now
+                console.error('❌ Failed to fetch stats:', err);
             }
         };
         fetchStats();
@@ -102,8 +196,22 @@ export default function Investigation() {
                 let currentToken: string | null = null;
                 let pageCount = 0;
                 
-                // Load first page
-                const firstRes = await fetch('/api/v1/mold-reports?limit=50', { cache: 'no-store' });
+                // Determine endpoint based on role
+                let endpoint = '';
+                if (isAdministrator) {
+                    endpoint = '/api/v1/mold-reports?limit=100';
+                } else if (isMycologist) {
+                    endpoint = '/api/v1/mold-reports/assigned?limit=100';
+                } else {
+                    console.error('❌ Invalid user role');
+                    setLoading(false);
+                    return;
+                }
+                
+                console.log('🔍 Investigation - Fetching from:', endpoint);
+                
+                // Load first page with higher limit to try to get all cases at once
+                const firstRes = await fetch(endpoint, { cache: 'no-store' });
                 if (!firstRes.ok) {
                     throw new Error('Failed to load cases');
                 }
@@ -113,18 +221,20 @@ export default function Investigation() {
                 currentToken = firstBody.data?.nextPageToken || null;
                 pageCount++;
                 
-                console.log('📄 Page 1: loaded', firstItems.length, 'cases');
-                console.log('� First case:', firstItems[0]?.case_name, 'ID:', firstItems[0]?.id);
-                console.log('📄 Last case:', firstItems[firstItems.length - 1]?.case_name, 'ID:', firstItems[firstItems.length - 1]?.id);
-                console.log('�🔍 Next page token:', currentToken);
+                console.log('📄 Page 1: loaded', firstItems.length, 'cases with limit=100');
+                console.log('🔍 Next page token:', currentToken);
+                
+                // Determine base URL for pagination
+                const baseUrl = isAdministrator ? '/api/v1/mold-reports' : '/api/v1/mold-reports/assigned';
                 
                 // Load remaining pages
                 while (currentToken && mounted) {
                     const params = new URLSearchParams();
                     params.set('limit', '10');
                     params.set('pageToken', currentToken);
-                    const url = `/api/v1/mold-reports?${params.toString()}`;
+                    const url = `${baseUrl}?${params.toString()}`;
                     
+                    console.log(`📄 Fetching page ${pageCount + 1} with token:`, currentToken);
                     const res = await fetch(url, { cache: 'no-store' });
                     if (!res.ok) break;
                     
@@ -132,11 +242,7 @@ export default function Investigation() {
                     const items = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
                     const mapped = items.map(mapReportToCase);
                     
-                    console.log(`📄 Page ${pageCount}: received`, items.length, 'items from API');
-                    console.log(`📄 First item ID:`, items[0]?.id, 'case name:', items[0]?.case_name);
-                    console.log(`📄 Last item ID:`, items[items.length - 1]?.id, 'case name:', items[items.length - 1]?.case_name);
-                    console.log(`📄 New token:`, body.data?.nextPageToken);
-                    console.log(`📄 Previous token:`, currentToken);
+                    console.log(`📄 Page ${pageCount + 1}: received`, items.length, 'items from API');
                     
                     // Check if we're getting duplicate data
                     const existingIds = new Set(allCases.map(c => c.id));
@@ -154,6 +260,7 @@ export default function Investigation() {
                     pageCount++;
                     
                     const newToken = body.data?.nextPageToken || null;
+                    console.log(`📄 New token:`, newToken);
                     if (newToken === currentToken) {
                         console.warn('⚠️ Same token returned, stopping');
                         break;
@@ -166,6 +273,24 @@ export default function Investigation() {
                 if (mounted) {
                     setCases(allCases);
                     setNextPageToken(null); // No more pages needed
+                    
+                    // Update stats breakdown for mycologists based on actual cases
+                    if (isMycologist && allCases.length > 0) {
+                        const statusBreakdown = allCases.reduce((acc, c) => {
+                            const status = c.status?.toLowerCase() || 'pending';
+                            if (status === 'pending') acc.pending++;
+                            else if (status === 'in progress') acc.in_progress++;
+                            else if (status === 'resolved') acc.resolved++;
+                            else if (status === 'closed') acc.closed++;
+                            return acc;
+                        }, { pending: 0, in_progress: 0, resolved: 0, closed: 0 });
+                        
+                        setCaseStats({
+                            total: allCases.length,
+                            ...statusBreakdown
+                        });
+                        console.log('✅ Updated mycologist stats breakdown:', statusBreakdown);
+                    }
                 }
             } catch (err) {
                 if (mounted) setError(err instanceof Error ? err.message : 'Failed to load cases');
@@ -176,7 +301,7 @@ export default function Investigation() {
         
         fetchAllCases();
         return () => { mounted = false; };
-    }, []);
+    }, [authLoading, isAdministrator, isMycologist]);
 
     // Auto-load all pages recursively
     useEffect(() => {
@@ -211,12 +336,10 @@ export default function Investigation() {
                 const items = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
                 const mapped = items.map(mapReportToCase);
 
-                console.log('📊 Loaded additional', mapped.length, 'cases');
 
                 // Safety check: if token didn't change and we got data, stop loading
                 const newToken = body.data?.nextPageToken || null;
                 if (newToken === nextPageToken && mapped.length > 0) {
-                    console.warn('⚠️ Backend returned same token - stopping pagination');
                     setNextPageToken(null);
                     setIsLoadingMore(false);
                     return;
@@ -224,7 +347,6 @@ export default function Investigation() {
 
                 setCases(prev => {
                     const updated = [...prev, ...mapped];
-                    console.log('📊 Total cases now:', updated.length);
                     return updated;
                 });
                 setNextPageToken(newToken);
@@ -260,7 +382,7 @@ export default function Investigation() {
 
                 const newToken = body.data?.nextPageToken || null;
                 if (newToken === nextPageToken && mapped.length > 0) {
-                    console.warn('⚠️ Backend returned same token - stopping pagination');
+                    console.warn('Backend returned same token - stopping pagination');
                     setNextPageToken(null);
                     setIsLoadingMore(false);
                     return;
@@ -311,9 +433,11 @@ export default function Investigation() {
             {/* End Header Section */}
             
             {/* Statistics Tiles */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3 mt-6">
+            <div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 mt-6 ${isMycologist ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
                 <StatisticsTile icon={faSeedling} iconColor="var(--moldify-black)" title="Total Cases" statNum={caseStats.total} />
-                <StatisticsTile icon={faClockRotateLeft} iconColor="var(--accent-color)" title="Pending Mold Cases" statNum={caseStats.pending} />
+                {!isMycologist && (
+                    <StatisticsTile icon={faClockRotateLeft} iconColor="var(--accent-color)" title="Pending Mold Cases" statNum={caseStats.pending} />
+                )}
                 <StatisticsTile icon={faHourglassHalf} iconColor="var(--moldify-blue)" title="In Progress Mold Cases" statNum={caseStats.in_progress} />
                 <StatisticsTile icon={faCircleCheck} iconColor="var(--primary-color)" title="Resolved Mold Cases" statNum={caseStats.resolved} />
             </div>
@@ -366,14 +490,23 @@ export default function Investigation() {
                                 placeholder="Filter By Status"
                                 backgroundColor="var(--accent-color)"
                                 textColor="var(--moldify-black)"
-                                options={[
-                                    { label: "All", value: "all" },
-                                    { label: "Pending", value: "pending" },
-                                    { label: "In Progress", value: "in progress" },
-                                    { label: "Resolved", value: "resolved" },
-                                    { label: "Rejected", value: "rejected", variant: "danger" },
-                                    { label: "Closed", value: "closed" }
-                                ]}
+                                options={
+                                    isMycologist
+                                        ? [
+                                            { label: "All", value: "all" },
+                                            { label: "In Progress", value: "in progress" },
+                                            { label: "Resolved", value: "resolved" },
+                                            { label: "Closed", value: "closed" }
+                                        ]
+                                        : [
+                                            { label: "All", value: "all" },
+                                            { label: "Pending", value: "pending" },
+                                            { label: "In Progress", value: "in progress" },
+                                            { label: "Resolved", value: "resolved" },
+                                            { label: "Rejected", value: "rejected"},
+                                            { label: "Closed", value: "closed" }
+                                        ]
+                                }
                                 onSelect={(value) => setStatusFilter(value)}
                             />
                         </div>
@@ -384,7 +517,7 @@ export default function Investigation() {
 
             {/* Submitted Cases Table */}
             <div className="w-full">
-                {loading && <p>Loading cases...</p>}
+                {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading cases...</p>}
                 {error && <p className="text-red-600">{error}</p>}
                 {!loading && !error && (
                     <>

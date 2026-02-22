@@ -70,6 +70,7 @@ export const endpoints = {
   moldipedia: {
     list: '/moldipedia',
     getById: (id: string) => `/moldipedia/${id}`,
+    update: (id: string) => `/moldipedia/${id}`,
   },
 
   // FAQ

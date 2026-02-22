@@ -20,7 +20,7 @@ interface WikiMoldData {
 
 export default function AddWikiMold() {
   const userRole = "Mycologist";
-
+    const fallbackImage = "/assets/wikimold-fallback.png";
   const [wikiMoldData, setWikiMoldData] = useState<WikiMoldData>({
     title: "",
     coverImage: "",
@@ -84,128 +84,114 @@ export default function AddWikiMold() {
         </div>
       )}
 
-    <main className="relative flex flex-col xl:py-2 py-10 w-full">
-      {/* Header Section */}
-      <div className="flex flex-col gap-2">
-        <Breadcrumbs role={userRole} skipSegments={["tab-content", "wikimold"]} />
-        <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-          CONTENT MANAGEMENT
-        </h1>
-      </div>
+      <main className="relative flex flex-col xl:py-2 py-10 w-full">
+        {/* Header Section */}
+        <div className="flex flex-col gap-2">
+          <Breadcrumbs role={userRole} skipSegments={["tab-content", "wikimold"]} />
+          <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
+            CONTENT MANAGEMENT
+          </h1>
+        </div>
 
-      {/* Back Button */}
-      <div className="mt-6 mb-8">
-        <BackButton />
-      </div>
+        {/* Navigation - Back Button above the image */}
+        <div className="mt-8 mb-6">
+          <BackButton />
+        </div>
 
-      {/* Main Content */}
-      <form onSubmit={handleSubmit} className="w-full">
-        {/* Cover Image Section */}
-        <div className="mb-8">
-          <label className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-bold text-sm mb-3">
-            Cover Photo
-          </label>
-          <div className="relative w-full h-64 rounded-xl overflow-hidden bg-[var(--moldify-softGrey)] group">
-            {coverImagePreview ? (
+        <form className="w-full" onSubmit={handleSubmit}>
+          {/* Full Width Cover Image Section */}
+          <div className="relative w-full mb-16 group">
+            <div className="relative w-full h-[350px] rounded-[2.5rem] overflow-hidden bg-[var(--taupe)] shadow-2xl transition-all duration-700">
               <Image
-                src={coverImagePreview}
+                src={coverImagePreview || fallbackImage}
                 alt="Cover"
                 fill
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105"
               />
-            ) : (
-              <div className="flex items-center justify-center w-full h-full">
-                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)] text-sm">
-                  No cover photo uploaded
-                </p>
-              </div>
-            )}
+              {/* Gradient Overlay for depth */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-60" />
+              <label className="font-[family-name:var(--font-bricolage-grotesque)] absolute bottom-8 right-8 flex items-center gap-3 bg-white/90 backdrop-blur-md text-[var(--moldify-black)] px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-[var(--primary-color)] hover:text-white transition-all cursor-pointer shadow-2xl border border-white/20">
+                <FontAwesomeIcon icon={faPen} />
+                Add Cover Image
+                <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
+              </label>
+            </div>
+          </div>
 
-            {/* Pencil Icon Overlay */}
-            <label className="absolute bottom-4 right-4 flex items-center justify-center w-12 h-12 rounded-full bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] transition cursor-pointer shadow-lg hover:scale-110">
-              <FontAwesomeIcon icon={faPen} className="text-[var(--background-color)]" style={{ width: "16px", height: "16px" }} />
+          {/* Writer Layout Container */}
+          <div className="max-w-full mx-auto px-4">
+            {/* Title Section */}
+            <div className="mb-12">
               <input
-                type="file"
-                accept="image/*"
-                onChange={handleCoverImageChange}
-                className="hidden"
+                id="title"
+                type="text"
+                value={wikiMoldData.title}
+                onChange={(e) => setWikiMoldData({ ...wikiMoldData, title: e.target.value })}
+                placeholder="Enter Title..."
+                className="w-full font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] text-4xl font-black bg-transparent border-none placeholder:opacity-20 focus:outline-none transition-all"
               />
-            </label>
+            </div>
+
+            {/* Manuscript Content */}
+            <div className="relative">
+              <style>{`
+                .ql-toolbar.ql-snow {
+                  border: none !important;
+                  background: transparent !important;
+                  padding: 0 0 1.5rem 0 !important;
+                  margin-bottom: 2rem !important;
+                  border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+                }
+                .ql-container.ql-snow {
+                  border: none !important;
+                  font-[family-name:var(--font-bricolage-grotesque)] !important;
+                }
+                .ql-editor {
+                  font-size: 1.25rem !important;
+                  line-height: 1.9 !important;
+                  color: var(--moldify-black) !important;
+                  padding: 0 !important;
+                  min-height: 600px !important;
+                  font-family: var(--font-bricolage-grotesque);
+                }
+                .ql-editor.ql-blank::before {
+                  left: 0 !important;
+                  font-style: normal !important;
+                  opacity: 0.3 !important;
+                  color: var(--moldify-grey) !important;
+                }
+                .ql-stroke { stroke: var(--moldify-grey) !important; }
+                .ql-fill { fill: var(--moldify-grey) !important; }
+                .ql-active .ql-stroke { stroke: var(--primary-color) !important; }
+              `}</style>
+              <ReactQuill
+                value={wikiMoldData.content}
+                onChange={(content) => setWikiMoldData({ ...wikiMoldData, content })}
+                theme="snow"
+                modules={{
+                  toolbar: [
+                    [{ header: [2, 3, false] }],
+                    ["bold", "italic", "underline"],
+                    [{ list: "ordered" }, { list: "bullet" }],
+                  ],
+                }}
+                placeholder="Write your body here..."
+              />
+            </div>
           </div>
-        </div>
 
-        {/* Title Section */}
-        <div className="mb-8">
-          <label htmlFor="title" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-bold text-sm mb-3">
-            Article Title
-          </label>
-          <input
-            id="title"
-            type="text"
-            value={wikiMoldData.title}
-            onChange={(e) => setWikiMoldData({ ...wikiMoldData, title: e.target.value })}
-            placeholder="Enter article title"
-            className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
-          />
-        </div>
-
-        {/* Content Section with Rich Text Editor */}
-        <div className="mb-8">
-          <label className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-bold text-sm mb-3">
-            Article Content
-          </label>
-          <style>{`
-            .ql-container { 
-              background-color: var(--taupe); 
-              font-size: 16px; 
-              min-height: 350px;
-            }
-            .ql-editor {
-              min-height: 250px;
-              padding: 12px;
-              font-family: var(--font-bricolage-grotesque);
-            }
-            .ql-toolbar { 
-              background-color: var(--taupe);
-              border: none;
-            }
-          `}</style>
-          <div className="rounded-lg overflow-hidden" style={{ backgroundColor: "var(--taupe)" }}>
-            <ReactQuill
-              value={wikiMoldData.content}
-              onChange={(content) => setWikiMoldData({ ...wikiMoldData, content })}
-              theme="snow"
-              modules={{
-                toolbar: [
-                  ["bold", "italic", "underline", "strike"],
-                  ["blockquote", "code-block"],
-                  [{ header: 1 }, { header: 2 }],
-                  [{ list: "ordered" }, { list: "bullet" }],
-                  ["link", "image"],
-                  ["clean"],
-                ],
-              }}
-              placeholder="Write your article content here..."
-              className="text-[var(--moldify-black)]"
-            />
+          {/* Floating Action Bar */}
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-fit">
+            <button
+              type="submit"
+              disabled={isSubmitting || !wikiMoldData.title.trim()}
+              className="font-[family-name:var(--font-montserrat)] flex items-center gap-4 bg-[var(--primary-color)] text-white font-black uppercase tracking-[0.2em] px-10 py-5 rounded-full hover:shadow-[0_20px_40px_-10px_rgba(var(--primary-rgb),0.4)] hover:scale-105 active:scale-95 transition-all cursor-pointer text-xs shadow-2xl disabled:opacity-30 disabled:cursor-not-allowed border-2 border-white/20 backdrop-blur-md"
+            >
+              {isSubmitting ? "Syncing to Database..." : "Publish Article"}
+            </button>
           </div>
-        </div>
-
-        {/* Publish Button */}
-        <div className="flex gap-4 justify-end">
-          <button
-            type="submit"
-            disabled={isSubmitting || !wikiMoldData.title.trim() || !wikiMoldData.coverImage || !wikiMoldData.content.trim()}
-            className={`flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors text-sm disabled:opacity-50 ${
-              isSubmitting ? 'cursor-wait' : 'cursor-pointer'
-            }`}
-          >
-            Create Article
-          </button>
-        </div>
-      </form>
-    </main>
+        </form>
+      </main>
     </>
   );
 }
-     

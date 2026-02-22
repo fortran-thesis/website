@@ -54,7 +54,10 @@ export const useAuth = () => {
     sharedRefreshPromise = (async () => {
       try {
         const res = await fetch('/api/v1/user/profile', { cache: 'no-store', credentials: 'include' });
-        if (res.status === 429) return null;
+        if (res.status === 429) {
+          console.warn('⚠️ Rate limit exceeded on profile fetch');
+          return null;
+        }
         if (!res.ok) return null;
         const text = await res.text();
         let payload: any = {};
@@ -71,7 +74,7 @@ export const useAuth = () => {
     })();
 
     return sharedRefreshPromise;
-  }, []);
+  }, [refreshKey]);
 
   // Try to refresh user once on mount if we have stored user data
   useEffect(() => {
@@ -84,7 +87,8 @@ export const useAuth = () => {
     } else {
       setLoading(false);
     }
-  }, [refreshUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     isAuthenticated: isAuth,

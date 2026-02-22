@@ -19,10 +19,11 @@ interface WikiMoldTableProps {
   onArchive?: (wikimold: WikiMold) => void;
   isLoading?: boolean;
   hideEdit?: boolean;
+  searchEmpty?: boolean;
 }
 
-export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = false, hideEdit = false }: WikiMoldTableProps) {
-  const fallbackImage = "/assets/wikimold-fallback.png";
+export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = false, hideEdit = false, searchEmpty = false }: WikiMoldTableProps) {
+  const fallbackImage = "/assets/mold.jpg";
   const [navigatingId, setNavigatingId] = useState<string | null>(null);
 
   const handleEditClick = (wikimold: WikiMold) => {
@@ -34,6 +35,20 @@ export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = fal
     return (
       <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow p-6">
         <p className="text-center text-[var(--moldify-grey)]">Loading WikiMold data...</p>
+      </div>
+    );
+  }
+
+  if (searchEmpty) {
+    return (
+      <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
+        <div className="h-[600px] flex items-center justify-center">
+          <EmptyState
+            icon={faBook}
+            title="No WikiMold Articles Match"
+            message="No WikiMold articles match your search."
+          />
+        </div>
       </div>
     );
   }
@@ -103,7 +118,7 @@ export default function WikiMoldTable({ data, onEdit, onArchive, isLoading = fal
                     </span>
                   </td>
                   
-                  <td className="py-3 px-6 text-left">{wikimold.datePublished}</td>
+                  <td className="py-3 px-6 text-left">{wikimold.datePublished || 'N/A'}</td>
                   
                   <td className="py-3 px-6 text-center">
                     <div className="flex items-center justify-center gap-2">

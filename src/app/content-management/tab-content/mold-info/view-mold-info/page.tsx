@@ -7,14 +7,6 @@ import TabBar from '@/components/tab_bar';
 import ConfirmModal from '@/components/modals/confirmation_modal';
 import { faInfoCircle, faLeaf } from '@fortawesome/free-solid-svg-icons';
 
-// Dummy data - replace with actual API call
-const DUMMY_MOLD_DATA = [
-  { id: "MG-001", genusName: "Aspergillus" },
-  { id: "MG-002", genusName: "Penicillium" },
-  { id: "MG-003", genusName: "Fusarium" },
-  { id: "MG-004", genusName: "Alternaria" },
-  { id: "MG-005", genusName: "Cladosporium" },
-];
 
 interface MoldInfoFormData {
   moldName: string;
@@ -70,28 +62,42 @@ export default function ViewMoldInfo() {
 
     // Fetch mold data based on ID
     useEffect(() => {
-      if (moldId) {
-        // TODO: Replace with actual API call
-        // const fetchMoldData = async () => {
-        //   const response = await fetch(`/api/v1/mold-genus/${moldId}`);
-        //   const data = await response.json();
-        //   setMoldInfo(data);
-        // };
-        // fetchMoldData();
-        
-        // For now, use dummy data
-        const mold = DUMMY_MOLD_DATA.find(m => m.id === moldId);
-        if (mold) {
+      if (!moldId) return;
+      const fetchMoldData = async () => {
+        try {
+          const response = await fetch(`/api/v1/mold/${moldId}`);
+          if (!response.ok) return;
+          const result = await response.json();
+          console.log('Fetched mold result:', result); // Debug log
+          if (!result.success || !result.data) return;
+          const mold = result.data;
+          const apiTax = mold.mold_details?.info?.taxonomy || {};
           setMoldInfo(prev => ({
             ...prev,
-            moldName: mold.genusName,
+            moldName: mold.name || '',
+            description: mold.mold_details?.info?.description || '',
             taxonomy: {
-              ...prev.taxonomy,
-              genus: mold.genusName
+              kingdom: apiTax.kingdom ?? prev.taxonomy.kingdom ?? '',
+              phylum: apiTax.phylum ?? prev.taxonomy.phylum ?? '',
+              class: apiTax.class ?? prev.taxonomy.class ?? '',
+              order: apiTax.order ?? prev.taxonomy.order ?? '',
+              family: apiTax.family ?? prev.taxonomy.family ?? '',
+              genus: mold.name || apiTax.genus || prev.taxonomy.genus || ''
             }
           }));
+          // Optionally, set management fields if needed from prevention
+          if (mold.mold_details?.prevention) {
+            setMoldManagement(prev => ({
+              ...prev,
+              chemicalControl: (mold.mold_details.prevention.fungicide || []).join(', '),
+              // Add more mappings if API provides them
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching mold:', error);
         }
-      }
+      };
+      fetchMoldData();
     }, [moldId]);
 
     // Update taxonomy field
