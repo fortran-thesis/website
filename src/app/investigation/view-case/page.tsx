@@ -7,6 +7,7 @@ import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import TabBar from "@/components/tab_bar";
 import StatusBox from "@/components/tiles/status_tile";
+import CaseStatusCard from "@/components/CaseStatusCard";
 import AssignCaseModal from "@/components/modals/assign_case_modal";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -221,6 +222,24 @@ function ViewCaseContent() {
     ? priorityValue.charAt(0).toUpperCase() + priorityValue.slice(1)
     : "Unknown";
   
+  // Helper function to get status color (matching status_tile.tsx)
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "pending":
+        return "var(--accent-color)";
+      case "in progress":
+        return "var(--moldify-blue)";
+      case "resolved":
+        return "var(--primary-color)";
+      case "closed":
+        return "var(--moldify-grey)";
+      case "rejected":
+        return "var(--moldify-red)";
+      default:
+        return "rgba(0, 0, 0, 0.15)";
+    }
+  };
+  
   // Reporter info
   const reporterName = caseData?.reporter?.details.displayName || "Loading...";
   const reporterEmail = caseData?.reporter?.details.email || "N/A";
@@ -229,8 +248,8 @@ function ViewCaseContent() {
 
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
-  const isRejected = caseData?.status === 'closed';
-  const assignedMycologistName = moldCase?.mycologist_name || caseData?.assigned_mycologist?.details?.displayName || null;
+  const isRejected = caseData?.status === 'closed' || caseData?.status === 'rejected';
+  const assignedMycologistName = moldCase?.mycologist_name || caseData?.assigned_mycologist?.details?.displayName || "Mycologist Assigned";
 
   // Normalize case_details
   const caseDetailsEntries = (caseData?.case_details ?? []).map((d: any) => {
@@ -415,33 +434,17 @@ function ViewCaseContent() {
               </div>
             </div>
 
-            {/* Assignment Status Sticky Note style */}
-            {(userRole !== "Mycologist" || isAssigned || isRejected) && (
-               <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
-                  <p className="text-xs font-black uppercase text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">Filing Status</p>
-                  {(isAssigned || isRejected) ? (
-                    <p className="font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-                      {isRejected ? "FILE CLOSED / REJECTED" : `MYCOLOGIST: ${assignedMycologistName?.toUpperCase()}`}
-                    </p>
-                  ) : (
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className="text-xs font-black uppercase text-[var(--primary-color)]">Review Action:</span>
-                      <select
-                        className="bg-[var(--primary-color)] w-full text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer outline-none hover:brightness-110 transition-all"
-                        defaultValue=""
-                        onChange={(e) => {
-                          if (e.target.value === "assign") setAssignModalOpen(true);
-                          if (e.target.value === "reject") setRejectModalOpen(true);
-                        }}
-                      >
-                        <option value="" disabled>Select Action</option>
-                        <option value="assign">Approve & Assign</option>
-                        <option value="reject">Reject Case</option>
-                      </select>
-                    </div>
-                  )}
-               </div>
-            )}
+            {/* Case Status Card */}
+            <CaseStatusCard
+              userRole={userRole}
+              isAssigned={isAssigned}
+              isRejected={isRejected}
+              assignedMycologistName={assignedMycologistName}
+              caseData={caseData}
+              status={status}
+              setAssignModalOpen={setAssignModalOpen}
+              setRejectModalOpen={setRejectModalOpen}
+            />
           </aside>
 
           {/* RIGHT COLUMN: Case Core Data */}
@@ -450,7 +453,10 @@ function ViewCaseContent() {
           {/* MINIMALIST STATUS LINE - No boxes, just clean typography on the cream bg */}
           <div className="font-[family-name:var(--font-montserrat)] flex items-center gap-6 px-2">
             <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${status === 'Pending' ? 'bg-amber-500' : 'bg-green-600'}`} />
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: getStatusColor(status) }}
+              />
               <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--primary-color)]">
                 {status}
               </span>
@@ -502,7 +508,15 @@ function ViewCaseContent() {
                   <FontAwesomeIcon icon={faPlus} className="group-hover:scale-125 transition-transform" /> Add Treatment
                 </button>
               )}
-              <button className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer">
+              <button 
+                className={`font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase px-4 py-4 rounded-xl transition-all shadow-sm ${
+                  caseData?.status?.toLowerCase() === 'resolved'
+                    ? 'bg-white text-[var(--primary-color)] hover:bg-[var(--primary-color)] hover:text-white cursor-pointer'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
+                }`}
+                disabled={caseData?.status?.toLowerCase() !== 'resolved'}
+                title={caseData?.status?.toLowerCase() !== 'resolved' ? 'PDF export is only available for resolved cases' : 'Export case as PDF'}
+              >
                 <FontAwesomeIcon icon={faFilePdf} /> Export PDF
               </button>
               <button 

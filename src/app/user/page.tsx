@@ -1,6 +1,7 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faUsers, faPlus } from '@fortawesome/free-solid-svg-icons';
+import StatusDropdown from '@/components/StatusDropdown';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import DonutChart from '@/components/charts/donut-chart';
@@ -267,51 +268,45 @@ export default function Users() {
 
                 {/* Filter Dropdowns */}
                 <div className="flex gap-2 w-full md:w-auto">
-                    {/* Filter by Role */}
-                    <label htmlFor="role" className="sr-only">Filter by Role</label>
-                    <select
-                        id="role"
-                        value={roleFilter}
-                        onChange={(e) => {
-                            setRoleFilter(e.target.value);
-                            setNextPageToken(null); // Reset pagination
+                    {/* Custom Role Dropdown */}
+                    <StatusDropdown
+                        placeholder="Filter By Role"
+                        backgroundColor="var(--accent-color)"
+                        textColor="var(--moldify-black)"
+                        options={[
+                            { label: "All", value: "all" },
+                            { label: "Farmer", value: "farmer" },
+                            { label: "Mycologist", value: "mycologist" },
+                            { label: "Admin", value: "admin" }
+                        ]}
+                        onSelect={(value) => {
+                            setRoleFilter(value);
+                            setNextPageToken(null);
                         }}
-                        className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
-                    >
-                        <option value="" className="bg-[var(--taupe)] font-bold text-[var(--primary-color)]">
-                            Filter By Role
-                        </option>
-                        <option value="all" className="bg-[var(--taupe)]">All</option>
-                        <option value="farmer" className="bg-[var(--taupe)]">Farmer</option>
-                        <option value="mycologist" className="bg-[var(--taupe)]">Mycologist</option>
-                        <option value="admin" className="bg-[var(--taupe)]">Admin</option>
-                    </select>
+                    />
 
-                    {/* Filter by Status */}
-                    <label htmlFor="status" className="sr-only">Filter by Status</label>
-                    <select
-                        id="status"
-                        value={statusFilter}
-                        onChange={(e) => {
-                            setStatusFilter(e.target.value);
-                            setNextPageToken(null); // Reset pagination
+                    {/* Custom Status Dropdown */}
+                    <StatusDropdown
+                        placeholder="Filter By Status"
+                        backgroundColor="var(--accent-color)"
+                        textColor="var(--moldify-black)"
+                        options={[
+                            { label: "All", value: "all" },
+                            { label: "Active", value: "active" },
+                            { label: "Disabled", value: "disabled" }
+                        ]}
+                        onSelect={(value) => {
+                            setStatusFilter(value);
+                            setNextPageToken(null);
                         }}
-                        className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
-                    >
-                        <option value="" className="bg-[var(--taupe)] font-bold text-[var(--primary-color)]">
-                            Filter By Status
-                        </option>
-                        <option value="all" className="bg-[var(--taupe)]">All</option>
-                        <option value="active" className="bg-[var(--taupe)]">Active</option>
-                        <option value="disabled" className="bg-[var(--taupe)]">Disabled</option>
-                    </select>
+                    />
                 </div>
             </div>
 
 
             {/* Submitted Cases Table */}
             <div className="mt-5 w-full">
-                {loading && <p>Loading users...</p>}
+                {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading users...</p>}
                 {error && <p className="text-red-600">{error}</p>}
                 {!loading && !error && <UserTable data={filteredUsers} 
                     onEdit={(c: any) => {

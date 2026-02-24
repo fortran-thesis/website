@@ -19,7 +19,6 @@ interface MoldGenusCTableProps {
 }
 
 export default function MoldGenusTable({ data, onEdit, isLoading = false }: MoldGenusCTableProps) {
-  const [moldData, setMoldData] = useState<MoldGenus[]>(data);
   const [navigatingId, setNavigatingId] = useState<string | null>(null);
 
   const handleEditClick = (mold: MoldGenus) => {
@@ -49,7 +48,7 @@ export default function MoldGenusTable({ data, onEdit, isLoading = false }: Mold
 
       <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
         <div className="h-[600px] overflow-y-auto">
-        {moldData.length === 0 ? (
+        {data.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <EmptyState
               icon={faBacterium}
@@ -69,7 +68,7 @@ export default function MoldGenusTable({ data, onEdit, isLoading = false }: Mold
               </tr>
             </thead>
             <tbody>
-              {moldData.map((mold, index) => (
+              {data.map((mold, index) => (
                 <tr
                   key={mold.id || index}
                   className="border-b border-[var(--taupe)] last:border-none hover:bg-[var(--accent-color)]/10 transition-colors"

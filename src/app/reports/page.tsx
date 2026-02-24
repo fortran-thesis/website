@@ -1,6 +1,7 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faTriangleExclamation} from '@fortawesome/free-solid-svg-icons';
+import StatusDropdown from '@/components/StatusDropdown';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import ReportsTable, { Report } from '@/components/tables/report_table';
@@ -262,28 +263,25 @@ export default function Reports() {
                     {/* Filter Dropdowns */}
                     <div className="flex gap-2 w-full md:w-auto">
 
-                        {/* Filter by Status */}
-                        <label htmlFor="status" className="sr-only">Filter by Status</label>
-                        <select
-                            id="status"
-                            className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
-                          value={statusFilter}
-                          onChange={(e) => setStatusFilter(e.target.value)}
-                        >
-                            <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold" disabled>
-                            Filter By Status
-                            </option>
-                            <option value="all" className="bg-[var(--taupe)]">All</option>
-                            <option value="resolved" className="bg-[var(--taupe)]">Resolved</option>
-                            <option value="unresolved" className="bg-[var(--taupe)]">Unresolved</option>
-                        </select>
+                        {/* Custom Status Dropdown */}
+                        <StatusDropdown
+                          placeholder="Filter By Status"
+                          backgroundColor="var(--accent-color)"
+                          textColor="var(--moldify-black)"
+                          options={[
+                            { label: "All", value: "all" },
+                            { label: "Resolved", value: "resolved" },
+                            { label: "Unresolved", value: "unresolved" }
+                          ]}
+                          onSelect={(value) => setStatusFilter(value)}
+                        />
                     </div>
                 </div>
             </div>
 
             {/* Submitted Cases Table */}
             <div className="mt-6 w-full">
-              {loading && <p>Loading reports...</p>}
+              {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading reports...</p>}
               {error && <p className="text-red-600">{error}</p>}
               {!loading && !error && <ReportsTable data={filteredReports} 
                 onEdit={(c: Report) => {

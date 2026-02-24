@@ -64,42 +64,41 @@ export default function ViewMoldInfo() {
     // Fetch mold data from API when editing existing mold
     useEffect(() => {
       if (!moldId) return;
-      const fetchMold = async () => {
-        setIsLoading(true);
-        setError(null);
+      const fetchMoldData = async () => {
         try {
-          const res = await fetch(`/api/v1/mold/${moldId}`, { cache: 'no-store', credentials: 'include' });
-          if (!res.ok) throw new Error(`Failed to fetch mold (${res.status})`);
-          const body = await res.json();
-          const data = body.data;
-          if (data) {
-            setMoldInfo({
-              moldName: data.name || '',
-              description: data.mold_details?.info?.description || '',
-              taxonomy: {
-                kingdom: data.mold_details?.info?.taxonomy?.kingdom || 'Fungi',
-                phylum: data.mold_details?.info?.taxonomy?.phylum || 'Ascomycota',
-                class: data.mold_details?.info?.taxonomy?.class || '',
-                order: data.mold_details?.info?.taxonomy?.order || '',
-                family: data.mold_details?.info?.taxonomy?.family || '',
-                genus: data.mold_details?.info?.taxonomy?.genus || '',
-              },
-            });
-            setMoldManagement({
-              physicalControl: data.mold_details?.prevention?.physicalControl || '',
-              mechanicalControl: data.mold_details?.prevention?.mechanicalControl || '',
-              culturalControl: data.mold_details?.prevention?.culturalControl || '',
-              biologicalControl: data.mold_details?.prevention?.biologicalControl || '',
-              chemicalControl: data.mold_details?.prevention?.chemicalControl || '',
-            });
+          const response = await fetch(`/api/v1/mold/${moldId}`);
+          if (!response.ok) return;
+          const result = await response.json();
+          console.log('Fetched mold result:', result); // Debug log
+          if (!result.success || !result.data) return;
+          const mold = result.data;
+          const apiTax = mold.mold_details?.info?.taxonomy || {};
+          setMoldInfo(prev => ({
+            ...prev,
+            moldName: mold.name || '',
+            description: mold.mold_details?.info?.description || '',
+            taxonomy: {
+              kingdom: apiTax.kingdom ?? prev.taxonomy.kingdom ?? '',
+              phylum: apiTax.phylum ?? prev.taxonomy.phylum ?? '',
+              class: apiTax.class ?? prev.taxonomy.class ?? '',
+              order: apiTax.order ?? prev.taxonomy.order ?? '',
+              family: apiTax.family ?? prev.taxonomy.family ?? '',
+              genus: mold.name || apiTax.genus || prev.taxonomy.genus || ''
+            }
+          }));
+          // Optionally, set management fields if needed from prevention
+          if (mold.mold_details?.prevention) {
+            setMoldManagement(prev => ({
+              ...prev,
+              chemicalControl: (mold.mold_details.prevention.fungicide || []).join(', '),
+              // Add more mappings if API provides them
+            }));
           }
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to load mold data');
-        } finally {
-          setIsLoading(false);
+        } catch (error) {
+          console.error('Error fetching mold:', error);
         }
       };
-      fetchMold();
+      fetchMoldData();
     }, [moldId]);
 
     // Update taxonomy field

@@ -205,8 +205,13 @@ export default function Home() {
     // Fetch dashboard data - MUST be before early return to follow Rules of Hooks
     useEffect(() => {
       if (authLoading) return; // Wait for auth to load
-      if (hasFetchedRef.current) return;
+      console.log('🔍 useEffect check:', { hasFetched: hasFetchedRef.current, authLoading, isMycologist, isAdministrator });
+      if (hasFetchedRef.current) {
+        console.log('🔍 Fetch blocked by hasFetchedRef');
+        return;
+      }
       hasFetchedRef.current = true;
+      console.log('🔍 Starting fetchDashboardData...');
       
       const fetchDashboardData = async () => {
         setLoadingStats(true);
@@ -320,23 +325,30 @@ export default function Home() {
                 if (unassignedRes.ok) {
                   const unassignedData = await unassignedRes.json();
                   if (unassignedData.data?.snapshot) {
-                    const transformedCases = unassignedData.data.snapshot.map((item: any) => {
-                      const timestamp = item.date_observed?._seconds 
-                        ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
-                        : 'N/A';
-                      
-                      return {
-                        id: item.id,
-                        caseName: item.case_name || 'N/A',
-                        cropName: item.host || 'N/A',
-                        location: item.host || 'N/A',
-                        submittedBy: item.user_id || 'N/A',
-                        dateSubmitted: timestamp,
-                        priority: item.priority || item.case_priority || 'N/A',
-                        status: item.status || 'pending',
-                      };
-                    });
+                    // Filter out rejected cases and map the data
+                    const transformedCases = unassignedData.data.snapshot
+                      .filter((item: any) => {
+                        const status = (item.status || '').toLowerCase();
+                        return status !== 'rejected'; // Exclude rejected cases
+                      })
+                      .map((item: any) => {
+                        const timestamp = item.date_observed?._seconds 
+                          ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
+                          : 'N/A';
+                        
+                        return {
+                          id: item.id,
+                          caseName: item.case_name || 'N/A',
+                          cropName: item.host || 'N/A',
+                          location: item.host || 'N/A',
+                          submittedBy: item.user_id || 'N/A',
+                          dateSubmitted: timestamp,
+                          priority: item.mold_case?.priority?.charAt(0).toUpperCase() + item.mold_case?.priority?.slice(1) || 'Unassigned',
+                          status: item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'Pending',
+                        };
+                      });
                     
+                    console.log('✅ Filtered unassigned cases (excluding rejected):', transformedCases.length, 'of', unassignedData.data.snapshot.length);
                     setUnassignedCases(transformedCases);
                     markFetched(unassignedKey);
                   }
@@ -346,41 +358,60 @@ export default function Home() {
               console.error('📊 Failed to fetch unassigned cases:', err);
             }
           } else if (isMycologist) {
-            
+            console.log('🔍 MYCOLOGIST BRANCH: Fetching assigned cases...');
             try {
               // Only fetch first page to reduce requests
               const assignedKey = 'dash:assigned-cases';
-              if (shouldFetch(assignedKey)) {
+              // Temporarily disable cache to see console logs
+              if (true || shouldFetch(assignedKey)) {
+                console.log('🔍 Cache check passed, making API call...');
                 // Clear previous data only when we intend to refetch
                 setUnassignedCases([]);
                 const url = '/api/v1/mold-reports/assigned?limit=50';
+                console.log('🔍 Fetching from URL:', url);
                 const assignedRes = await fetch(url, { cache: 'no-store' });
+                console.log('🔍 API response status:', assignedRes.status);
                 
                 if (assignedRes.ok) {
                   const assignedData = await assignedRes.json();
+                  console.log('🔍 API response body:', assignedData);
+                  console.log('🔍 Snapshot length:', assignedData.data?.snapshot?.length);
                   if (assignedData.data?.snapshot) {
-                    const transformedCases = assignedData.data.snapshot.map((item: any) => {
-                      const timestamp = item.date_observed?._seconds 
-                        ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
-                        : 'N/A';
-                      
-                      return {
-                        id: item.id,
-                        caseName: item.case_name || 'N/A',
-                        cropName: item.host || 'N/A',
-                        location: item.host || 'N/A',
-                        submittedBy: item.user_id || 'N/A',
-                        dateSubmitted: timestamp,
-                        priority: item.priority || item.case_priority || 'N/A',
-                        status: item.status || 'pending',
-                      };
-                    });
+                    // Filter out rejected cases and map the data
+                    const transformedCases = assignedData.data.snapshot
+                      .filter((item: any) => {
+                        const status = (item.status || '').toLowerCase();
+                        return status !== 'rejected'; // Exclude rejected cases
+                      })
+                      .map((item: any) => {
+                        const timestamp = item.date_observed?._seconds 
+                          ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
+                          : 'N/A';
+                        
+                        const priority = item.mold_case?.priority 
+                          ? (item.mold_case.priority.charAt(0).toUpperCase() + item.mold_case.priority.slice(1))
+                          : 'Unassigned';
+                        
+                        
+                        return {
+                          id: item.id,
+                          caseName: item.case_name || 'N/A',
+                          cropName: item.host || 'N/A',
+                          location: item.host || 'N/A',
+                          submittedBy: item.user_id || 'N/A',
+                          dateSubmitted: timestamp,
+                          priority: priority,
+                          status: item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'Pending',
+                        };
+                      });
                     
-                    const inProgressCount = assignedData.data.snapshot.filter(
-                      (item: any) => (item.status || '').toLowerCase() === 'in progress'
+                    console.log('✅ Filtered cases (excluding rejected):', transformedCases.length, 'of', assignedData.data.snapshot.length);
+                    
+                    const inProgressCount = transformedCases.filter(
+                      (c: any) => (c.status || '').toLowerCase() === 'in progress'
                     ).length;
-                    const resolvedCount = assignedData.data.snapshot.filter(
-                      (item: any) => (item.status || '').toLowerCase() === 'resolved'
+                    const resolvedCount = transformedCases.filter(
+                      (c: any) => (c.status || '').toLowerCase() === 'resolved'
                     ).length;
                     setUnassignedCases(transformedCases);
                     setTotalCases(transformedCases.length);
@@ -481,8 +512,6 @@ export default function Home() {
       fetchDashboardData();
     }, [authLoading]);
 
-    // Remove separate priority fetch - now consolidated in main useEffect
-
     // Show loading state while checking authentication
     if (authLoading) {
         return (
@@ -496,14 +525,8 @@ export default function Home() {
         );
     }
 
-    // Debug: log the auth user data
-    console.log('📊 Dashboard - Auth user:', authUser);
-    console.log('📊 Dashboard - Mapped user:', user);
-
-
     return (
         <main className="relative flex flex-col xl:py-2 py-10">
-            {/* Debug Component - Remove this in production */}
             <AuthDebug />
 
             <NotificationsPanel
@@ -609,10 +632,14 @@ export default function Home() {
                 <CaseTable 
                     cases={unassignedCases.length > 0 ? unassignedCases : (isAdministrator ? [] : cases)} 
                     showPriority={isMycologist}
-                    showStatus={false}
-                    showAction={false}
+                    showStatus={isMycologist}
+                    showAction={true}
                     onEdit={(c: any) => {
-                      window.location.href = '/investigation/view-case';
+                      const params = new URLSearchParams({
+                        id: c.id,
+                        priority: c.priority || "",
+                      });
+                      window.location.href = `/investigation/view-case?${params.toString()}`;
                   }}
                 />
             </div>
