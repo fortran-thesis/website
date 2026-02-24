@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import TabBar from '@/components/tab_bar';
@@ -10,74 +10,53 @@ import { type WikiMold } from '@/components/tables/wikimold_table';
 import WikiMoldManagement from './tab-content/wikimold/page';
 import ConfirmModal from '@/components/modals/confirmation_modal';
 
-// Dummy data for mold genus
-const DUMMY_MOLD_DATA: MoldGenus[] = [
-  {
-    id: "MG-001",
-    genusName: "Aspergillus",
-    reviewedBy: "Dr. Maria Santos",
-    dateReviewed: "2024-01-15",
-  },
-  {
-    id: "MG-002",
-    genusName: "Penicillium",
-    reviewedBy: "Dr. Juan Dela Cruz",
-    dateReviewed: "2024-01-10",
-  },
-  {
-    id: "MG-003",
-    genusName: "Fusarium",
-    reviewedBy: "Dr. Maria Santos",
-    dateReviewed: "2024-01-20",
-  },
-  {
-    id: "MG-004",
-    genusName: "Alternaria",
-    reviewedBy: "Dr. Juan Dela Cruz",
-    dateReviewed: "2024-01-18",
-  },
-  {
-    id: "MG-005",
-    genusName: "Cladosporium",
-    reviewedBy: "Dr. Maria Santos",
-    dateReviewed: "2024-01-22",
-  },
-  
-];
-
-// Dummy data for WikiMold
-const DUMMY_WIKIMOLD_DATA: WikiMold[] = [
-  {
-    id: "WM-001",
-    title: "Aspergillus: A Comprehensive Guide to Fungal Identification",
-    coverImage: "/assets/mold1.jpg",
-    datePublished: "2024-01-15",
-  },
-  {
-    id: "WM-002",
-    title: "Penicillium Species and Their Agricultural Impact",
-    coverImage: "",
-    datePublished: "2024-01-10",
-  },
-  {
-    id: "WM-003",
-    title: "Fusarium Contamination in Crops",
-    coverImage: "/assets/mold2.jpg",
-    datePublished: "2024-01-20",
-  },
-  {
-    id: "WM-004",
-    title: "Trichoderma: Beneficial Molds in Agriculture",
-    coverImage: "",
-    datePublished: "2024-01-18",
-  },
-];
-
 export default function ContentManagement() {
     const router = useRouter();
     const userRole = "Mycologist";
-    const [moldData, setMoldData] = useState<MoldGenus[]>(DUMMY_MOLD_DATA);
-    const [wikimoldData, setWikiMoldData] = useState<WikiMold[]>(DUMMY_WIKIMOLD_DATA);
+    const [moldData, setMoldData] = useState<MoldGenus[]>([]);
+    const [wikimoldData, setWikiMoldData] = useState<WikiMold[]>([]);
+
+    // Fetch mold genus list from API
+    useEffect(() => {
+      const fetchMolds = async () => {
+        try {
+          const res = await fetch('/api/v1/mold?limit=100', { cache: 'no-store', credentials: 'include' });
+          if (!res.ok) return;
+          const body = await res.json();
+          const items: any[] = body.data?.snapshot ?? body.data ?? [];
+          setMoldData(items.map((m: any) => ({
+            id: m.id,
+            genusName: m.name || '',
+            reviewedBy: m.metadata?.updated_by || '',
+            dateReviewed: m.metadata?.created_at?._seconds
+              ? new Date(m.metadata.created_at._seconds * 1000).toISOString().split('T')[0]
+              : (m.metadata?.created_at ?? ''),
+          })));
+        } catch { /* silently fail, table stays empty */ }
+      };
+      fetchMolds();
+    }, []);
+
+    // Fetch wikimold list from API
+    useEffect(() => {
+      const fetchWikiMolds = async () => {
+        try {
+          const res = await fetch('/api/v1/moldipedia?limit=100', { cache: 'no-store' });
+          if (!res.ok) return;
+          const body = await res.json();
+          const items: any[] = body.data?.snapshot ?? body.data ?? [];
+          setWikiMoldData(items.map((w: any) => ({
+            id: w.id,
+            title: w.title || '',
+            coverImage: w.cover_photo || '',
+            datePublished: w.metadata?.created_at?._seconds
+              ? new Date(w.metadata.created_at._seconds * 1000).toISOString().split('T')[0]
+              : (w.metadata?.created_at ?? ''),
+          })));
+        } catch { /* silently fail */ }
+      };
+      fetchWikiMolds();
+    }, []);
     const [showArchiveModal, setShowArchiveModal] = useState(false);
     const [selectedWikiMold, setSelectedWikiMold] = useState<WikiMold | null>(null);
     

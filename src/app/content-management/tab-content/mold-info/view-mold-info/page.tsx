@@ -1,20 +1,11 @@
 "use client";
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import BackButton from '@/components/buttons/back_button';
 import TabBar from '@/components/tab_bar';
 import ConfirmModal from '@/components/modals/confirmation_modal';
 import { faInfoCircle, faLeaf } from '@fortawesome/free-solid-svg-icons';
-
-// Dummy data - replace with actual API call
-const DUMMY_MOLD_DATA = [
-  { id: "MG-001", genusName: "Aspergillus" },
-  { id: "MG-002", genusName: "Penicillium" },
-  { id: "MG-003", genusName: "Fusarium" },
-  { id: "MG-004", genusName: "Alternaria" },
-  { id: "MG-005", genusName: "Cladosporium" },
-];
 
 interface MoldInfoFormData {
   moldName: string;
@@ -65,33 +56,50 @@ export default function ViewMoldInfo() {
       chemicalControl: '',
     });
 
-    // Confirmation modal state
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Fetch mold data based on ID
+    // Fetch mold data from API when editing existing mold
     useEffect(() => {
-      if (moldId) {
-        // TODO: Replace with actual API call
-        // const fetchMoldData = async () => {
-        //   const response = await fetch(`/api/v1/mold-genus/${moldId}`);
-        //   const data = await response.json();
-        //   setMoldInfo(data);
-        // };
-        // fetchMoldData();
-        
-        // For now, use dummy data
-        const mold = DUMMY_MOLD_DATA.find(m => m.id === moldId);
-        if (mold) {
-          setMoldInfo(prev => ({
-            ...prev,
-            moldName: mold.genusName,
-            taxonomy: {
-              ...prev.taxonomy,
-              genus: mold.genusName
-            }
-          }));
+      if (!moldId) return;
+      const fetchMold = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+          const res = await fetch(`/api/v1/mold/${moldId}`, { cache: 'no-store', credentials: 'include' });
+          if (!res.ok) throw new Error(`Failed to fetch mold (${res.status})`);
+          const body = await res.json();
+          const data = body.data;
+          if (data) {
+            setMoldInfo({
+              moldName: data.name || '',
+              description: data.mold_details?.info?.description || '',
+              taxonomy: {
+                kingdom: data.mold_details?.info?.taxonomy?.kingdom || 'Fungi',
+                phylum: data.mold_details?.info?.taxonomy?.phylum || 'Ascomycota',
+                class: data.mold_details?.info?.taxonomy?.class || '',
+                order: data.mold_details?.info?.taxonomy?.order || '',
+                family: data.mold_details?.info?.taxonomy?.family || '',
+                genus: data.mold_details?.info?.taxonomy?.genus || '',
+              },
+            });
+            setMoldManagement({
+              physicalControl: data.mold_details?.prevention?.physicalControl || '',
+              mechanicalControl: data.mold_details?.prevention?.mechanicalControl || '',
+              culturalControl: data.mold_details?.prevention?.culturalControl || '',
+              biologicalControl: data.mold_details?.prevention?.biologicalControl || '',
+              chemicalControl: data.mold_details?.prevention?.chemicalControl || '',
+            });
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'Failed to load mold data');
+        } finally {
+          setIsLoading(false);
         }
-      }
+      };
+      fetchMold();
     }, [moldId]);
 
     // Update taxonomy field
@@ -122,30 +130,37 @@ export default function ViewMoldInfo() {
     // Handle confirmed publish
     const handleConfirmPublish = async () => {
       setShowConfirmModal(false);
-      
-      // Prepare data for API
-      const formData = {
-        id: moldId,
-        ...moldInfo,
-        management: moldManagement
-      };
-
-      // TODO: Replace with actual API call
-      console.log('Publishing mold information:', formData);
-      
-      // Example API call structure:
-      // try {
-      //   const response = await fetch('/api/v1/mold-genus', {
-      //     method: moldId ? 'PUT' : 'POST',
-      //     headers: { 'Content-Type': 'application/json' },
-      //     body: JSON.stringify(formData)
-      //   });
-      //   if (response.ok) {
-      //     // Handle success - maybe redirect or show success message
-      //   }
-      // } catch (error) {
-      //   console.error('Error submitting:', error);
-      // }
+      setIsSaving(true);
+      setError(null);
+      try {
+        const payload = {
+          moldName: moldInfo.moldName,
+          details: {
+            info: {
+              description: moldInfo.description,
+              taxonomy: moldInfo.taxonomy,
+            },
+            prevention: moldManagement,
+          },
+        };
+        const method = moldId ? 'PATCH' : 'POST';
+        const url = moldId ? `/api/v1/mold/${moldId}` : '/api/v1/mold';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error || errBody.message || `Failed to save (${res.status})`);
+        }
+        alert(moldId ? 'Mold information updated successfully!' : 'Mold information published successfully!');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save mold information');
+      } finally {
+        setIsSaving(false);
+      }
     };
 
     // Tab content rendered directly without wrapper functions
@@ -377,7 +392,11 @@ export default function ViewMoldInfo() {
                 </div>
             </div>
 
+            {isLoading && <p className="mt-6 text-[var(--moldify-grey)] text-sm">Loading mold data...</p>}
+            {error && <p className="mt-4 text-red-600 text-sm">{error}</p>}
+
             {/* Form */}
+            {!isLoading && (
             <form onSubmit={handleSubmit} className="mt-8">
               {/* Mold Name Input */}
               <div className="mb-6">
@@ -404,20 +423,22 @@ export default function ViewMoldInfo() {
               <div className="flex justify-end">
                 <button
                   type="submit"
-                  className="font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm shadow-md"
+                  disabled={isSaving}
+                  className="font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Publish Information
+                  {isSaving ? 'Saving...' : moldId ? 'Update Information' : 'Publish Information'}
                 </button>
               </div>
             </form>
+            )}
 
             {/* Confirmation Modal */}
             <ConfirmModal
               isOpen={showConfirmModal}
-              title="Publish Mold Information"
-              subtitle="Are you sure you want to publish this mold information? This will make it available to all users."
+              title={moldId ? 'Update Mold Information' : 'Publish Mold Information'}
+              subtitle="Are you sure you want to save this mold information? This will make it available to all users."
               cancelText="Cancel"
-              confirmText="Publish"
+              confirmText={moldId ? 'Update' : 'Publish'}
               onCancel={() => setShowConfirmModal(false)}
               onConfirm={handleConfirmPublish}
             />

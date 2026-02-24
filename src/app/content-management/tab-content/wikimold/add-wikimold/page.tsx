@@ -28,11 +28,13 @@ export default function AddWikiMold() {
   });
 
   const [coverImagePreview, setCoverImagePreview] = useState("");
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setCoverImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setCoverImagePreview(reader.result as string);
@@ -44,29 +46,32 @@ export default function AddWikiMold() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!coverImageFile) {
+      alert('Please upload a cover photo.');
+      return;
+    }
     setIsSubmitting(true);
-
     try {
-      // TODO: Replace with actual API call
-      // Example:
-      // const response = await fetch('/api/v1/wikimold', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(wikiMoldData),
-      // });
-      // if (!response.ok) throw new Error('Failed to create WikiMold');
-      
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      alert("WikiMold article created successfully!");
-      
-      // Reset form
-      setWikiMoldData({ title: "", coverImage: "", content: "" });
-      setCoverImagePreview("");
+      const formData = new FormData();
+      formData.append('details', JSON.stringify({ title: wikiMoldData.title, body: wikiMoldData.content }));
+      formData.append('cover_photo', coverImageFile);
+
+      const res = await fetch('/api/v1/moldipedia', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || errBody.message || `Failed to create article (${res.status})`);
+      }
+      alert('WikiMold article created successfully!');
+      setWikiMoldData({ title: '', coverImage: '', content: '' });
+      setCoverImagePreview('');
+      setCoverImageFile(null);
     } catch (error) {
-      console.error("Error creating WikiMold:", error);
-      alert("Failed to create WikiMold article. Please try again.");
+      console.error('Error creating WikiMold:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create WikiMold article. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -195,7 +200,7 @@ export default function AddWikiMold() {
         <div className="flex gap-4 justify-end">
           <button
             type="submit"
-            disabled={isSubmitting || !wikiMoldData.title.trim() || !wikiMoldData.coverImage || !wikiMoldData.content.trim()}
+            disabled={isSubmitting || !wikiMoldData.title.trim() || !coverImageFile || !wikiMoldData.content.trim()}
             className={`flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors text-sm disabled:opacity-50 ${
               isSubmitting ? 'cursor-wait' : 'cursor-pointer'
             }`}

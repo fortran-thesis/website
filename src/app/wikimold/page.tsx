@@ -10,6 +10,7 @@ import WikimoldTile from '@/components/tiles/wikimold_tile';
 import EmptyState from '@/components/empty_state';
 import { envOptions } from '@/configs/envOptions';
 import { endpoints } from '@/services/endpoints';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 
 const mockArticles = [
   { id: 1, title: "The Rise of Molds: Dive into the Fungal Kingdom", author: "Dr. Aris Mendoza", image: "/assets/mold.jpg" },
@@ -57,7 +58,6 @@ export default function WikiMold() {
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
   const hasFetchedRef = useRef(false);
 
   // Listen for route changes to show loading bar when navigating to article details
@@ -144,9 +144,20 @@ export default function WikiMold() {
         if (articlesData && Array.isArray(articlesData)) {
           console.log('Found articles:', articlesData.length);
           if (pageToken) {
-            setArticles(prev => [...prev, ...articlesData]);
+            setArticles(prev => {
+              const idSet = new Set(prev.map(a => a.id));
+              const newArticles = articlesData.filter(a => !idSet.has(a.id));
+              return [...prev, ...newArticles];
+            });
           } else {
-            setArticles(articlesData);
+            // Remove duplicates from initial fetch
+            const uniqueIds = new Set<string>();
+            const uniqueArticles = articlesData.filter(a => {
+              if (uniqueIds.has(a.id)) return false;
+              uniqueIds.add(a.id);
+              return true;
+            });
+            setArticles(uniqueArticles);
           }
           setNextPageToken(data.data?.nextPageToken || null);
         } else {
@@ -167,52 +178,43 @@ export default function WikiMold() {
     fetchArticles();
   }, []);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        const lastEntry = entries[0];
-        if (lastEntry.isIntersecting && nextPageToken && !isLoadingMore && !searchQuery) {
-          console.log('📚 Scrolled to bottom, loading more articles...');
-          setIsLoadingMore(true);
-          
-          const fetchMoreArticles = async () => {
-            try {
-              let url = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
-              url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
-              
-              const response = await fetch(url, { cache: 'no-store' });
-              const data = await response.json();
-              
-              if (data.success && data.data?.snapshot && data.data.snapshot.length > 0) {
-                setArticles(prev => [...prev, ...data.data.snapshot]);
-                setNextPageToken(data.data.nextPageToken || null);
-                console.log('✅ Loaded', data.data.snapshot.length, 'more articles');
-              } else {
-                setNextPageToken(null);
-              }
-            } catch (err) {
-              console.error('Failed to load more articles:', err);
-            } finally {
-              setIsLoadingMore(false);
-            }
-          };
-          
-          fetchMoreArticles();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
-    }
-
-    return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current);
+  // Fetch more articles callback for infinite scroll
+  const handleLoadMore = async () => {
+    if (!nextPageToken || searchQuery) return;
+    
+    setIsLoadingMore(true);
+    try {
+      let url = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
+      url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
+      
+      const response = await fetch(url, { cache: 'no-store' });
+      const data = await response.json();
+      
+      if (data.success && data.data?.snapshot && data.data.snapshot.length > 0) {
+        setArticles(prev => {
+          const idSet = new Set(prev.map(a => a.id));
+          const newArticles = data.data.snapshot.filter((a: any) => !idSet.has(a.id));
+          return [...prev, ...newArticles];
+        });
+        setNextPageToken(data.data.nextPageToken || null);
+        console.log('✅ Loaded', data.data.snapshot.length, 'more articles');
+      } else {
+        setNextPageToken(null);
       }
-    };
-  }, [nextPageToken, isLoadingMore, searchQuery]);
+    } catch (err) {
+      console.error('Failed to load more articles:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Use infinite scroll hook to handle pagination
+  const { triggerRef } = useInfiniteScroll({
+    onLoadMore: handleLoadMore,
+    isLoading: isLoadingMore,
+    hasMore: !!nextPageToken && !searchQuery,
+    threshold: 0.1,
+  });
 
   const filteredArticles = useMemo(() => {
     const cleanQuery = searchQuery.toLowerCase().trim();
@@ -337,7 +339,7 @@ export default function WikiMold() {
                   {/* Infinite scroll trigger - appears when user scrolls near bottom */}
                   {!searchQuery && (
                     <div 
-                      ref={loadMoreRef} 
+                      ref={triggerRef} 
                       className="h-10 flex items-center justify-center mt-12"
                     >
                       {isLoadingMore && (

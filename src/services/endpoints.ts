@@ -66,10 +66,20 @@ export const endpoints = {
     statusOverview: '/dashboard/status-overview',
   },
 
+  // Mold Information
+  mold: {
+    list: '/mold',
+    getById: (id: string) => `/mold/${id}`,
+    create: '/mold',
+    update: (id: string) => `/mold/${id}`,
+  },
+
   // WikiMold/Moldipedia
   moldipedia: {
     list: '/moldipedia',
     getById: (id: string) => `/moldipedia/${id}`,
+    create: '/moldipedia',
+    update: (id: string) => `/moldipedia/${id}`,
   },
 
   // FAQ

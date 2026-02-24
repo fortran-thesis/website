@@ -21,53 +21,62 @@ interface WikiMoldDetail {
   datePublished: string;
 }
 
-// Dummy data for prefilling
-const DUMMY_WIKIMOLD_DETAILS: Record<string, WikiMoldDetail> = {
-  "WM-001": {
-    id: "WM-001",
-    title: "Aspergillus: A Comprehensive Guide to Fungal Identification",
-    coverImage: "/assets/mold1.jpg",
-    content: "<h2>Introduction to Aspergillus</h2><p>Aspergillus is one of the most important genera of fungi, known for its widespread occurrence in nature and significant impact on human health and industry.</p>",
-    datePublished: "2024-01-15",
-  },
-  "WM-002": {
-    id: "WM-002",
-    title: "Penicillium Species and Their Agricultural Impact",
-    coverImage: "",
-    content: "<h2>Penicillium in Agriculture</h2><p>Penicillium species play a crucial role in agricultural contexts, both beneficial and detrimental.</p>",
-    datePublished: "2024-01-10",
-  },
-};
-
 export default function ViewWikiMold() {
   const searchParams = useSearchParams();
-  const wikimoldId = searchParams.get("id") || "WM-001";
+  const wikimoldId = searchParams.get("id") ?? '';
   const userRole = "Mycologist";
 
-  const [wikiMoldInfo, setWikiMoldInfo] = useState<WikiMoldDetail>(
-    DUMMY_WIKIMOLD_DETAILS[wikimoldId] || {
-      id: "",
-      title: "",
-      coverImage: "",
-      content: "",
-      datePublished: new Date().toISOString().split("T")[0],
-    }
-  );
+  const [wikiMoldInfo, setWikiMoldInfo] = useState<WikiMoldDetail>({
+    id: '',
+    title: '',
+    coverImage: '',
+    content: '',
+    datePublished: new Date().toISOString().split('T')[0],
+  });
 
   const fallbackImage = "/assets/wikimold-fallback.png";
-  const [coverImagePreview, setCoverImagePreview] = useState(wikiMoldInfo.coverImage || fallbackImage);
+  const [coverImagePreview, setCoverImagePreview] = useState(fallbackImage);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // Fetch article from API
   useEffect(() => {
-    if (DUMMY_WIKIMOLD_DETAILS[wikimoldId]) {
-      setWikiMoldInfo(DUMMY_WIKIMOLD_DETAILS[wikimoldId]);
-      setCoverImagePreview(DUMMY_WIKIMOLD_DETAILS[wikimoldId].coverImage);
-    }
+    if (!wikimoldId) return;
+    const fetchArticle = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/v1/moldipedia/${wikimoldId}`, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Failed to fetch article (${res.status})`);
+        const body = await res.json();
+        const data = body.data;
+        if (data) {
+          setWikiMoldInfo({
+            id: data.id || wikimoldId,
+            title: data.title || '',
+            coverImage: data.cover_photo || '',
+            content: data.body || '',
+            datePublished: data.metadata?.created_at?._seconds
+              ? new Date(data.metadata.created_at._seconds * 1000).toISOString().split('T')[0]
+              : '',
+          });
+          setCoverImagePreview(data.cover_photo || fallbackImage);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load article');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchArticle();
   }, [wikimoldId]);
 
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setCoverImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setCoverImagePreview(reader.result as string);
@@ -79,10 +88,24 @@ export default function ViewWikiMold() {
 
   const handlePublish = async () => {
     setIsPublishing(true);
-    // Simulate publishing
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsPublishing(false);
-    alert("WikiMold article published successfully!");
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/moldipedia/${wikimoldId}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: wikiMoldInfo.title, body: wikiMoldInfo.content }),
+      });
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error(errBody.error || errBody.message || `Failed to update (${res.status})`);
+      }
+      alert('WikiMold article updated successfully!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update article');
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -99,6 +122,9 @@ export default function ViewWikiMold() {
       <div className="mt-6 mb-8">
         <BackButton />
       </div>
+
+      {isLoading && <p className="text-[var(--moldify-grey)] text-sm">Loading article...</p>}
+      {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
       {/* Main Content */}
       <form className="w-full">
@@ -198,7 +224,6 @@ export default function ViewWikiMold() {
               handlePublish();
             }}
             disabled={isPublishing || !wikiMoldInfo.title.trim()}
-            className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-8 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPublishing ? "Publishing..." : "Publish Article"}
           </button>
