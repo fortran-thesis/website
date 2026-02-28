@@ -305,8 +305,49 @@ export default function ViewWikiMold() {
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.8 }}
             className="prose prose-lg max-w-none text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-justify space-y-6"
+            style={{}}
           >
-            <p>{article.content}</p>
+            <style>{`
+              .prose ul, .prose ol {
+                list-style-position: inside !important;
+                list-style-type: disc !important;
+                margin-left: 1.5em !important;
+                padding-left: 0 !important;
+              }
+              .prose ol {
+                list-style-type: decimal !important;
+              }
+              .prose li {
+                margin-bottom: 0.5em !important;
+              }
+              .prose h2 {
+                font-family: var(--font-montserrat) !important;
+                font-size: 2rem !important;
+                font-weight: 900 !important;
+                margin-top: 2em !important;
+                margin-bottom: 1em !important;
+                color: var(--primary-color) !important;
+              }
+              .prose h3 {
+                font-family: var(--font-montserrat) !important;
+                font-size: 1.5rem !important;
+                font-weight: 700 !important;
+                margin-top: 1.5em !important;
+                margin-bottom: 0.75em !important;
+                color: var(--accent-color) !important;
+              }
+              .prose a {
+                color: var(--moldify-blue) !important;
+                text-decoration: underline !important;
+                font-weight: 600 !important;
+                transition: color 0.2s;
+              }
+              .prose a:hover {
+                color: var(--primary-color) !important;
+                text-decoration: underline !important;
+              }
+            `}</style>
+            <div dangerouslySetInnerHTML={{ __html: article.content }} />
           </motion.div>
         </article>
       </main>

@@ -10,65 +10,43 @@ import { faSearch, faFlag } from "@fortawesome/free-solid-svg-icons";
  * This is used for development/testing purposes
  * TODO: Remove this and use actual API responses when backend is ready
  */
-const DUMMY_FLAGGED_HISTORY: FlaggedHistory[] = [
-  {
-    flagId: "FLAG-2024-001",
-    systemPredicted: "Aspergillus",
-    correctedGenus: "Penicillium",
-    dateFlagged: "2024-01-20",
-  },
-  {
-    flagId: "FLAG-2024-002",
-    systemPredicted: "Fusarium",
-    correctedGenus: "Trichoderma",
-    dateFlagged: "2024-01-18",
-  },
-  {
-    flagId: "FLAG-2024-003",
-    systemPredicted: "Rhizopus",
-    correctedGenus: "Mucor",
-    dateFlagged: "2024-01-15",
-  },
-];
+import { endpoints } from '@/services/endpoints';
+import { apiClient } from "@/services";
 
+// Map API response to FlaggedHistoryTable format
+function mapApiFlagReport(item: any): FlaggedHistory {
+  return {
+    flagId: item.content_id || '',
+    systemPredicted: item.content_type || '',
+    correctedGenus: item.details || '',
+    dateFlagged: item.dateFlagged || '',
+  };
+}
 /**
  * Flag History Component
  * Displays a table of flagged mold genus predictions
  * Shows system predictions that were corrected by the mycologist
  */
-export default function FlagHistory() {
-  const [flaggedHistory, setFlaggedHistory] = useState<FlaggedHistory[]>(DUMMY_FLAGGED_HISTORY);
+
+interface FlagHistoryProps {
+  flaggedHistory: FlaggedHistory[];
+  isLoading: boolean;
+  error: string | null;
+}
+
+export default function FlagHistory({ flaggedHistory, isLoading, error }: FlagHistoryProps) {
   const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Fetch flagged history from backend
-   * Currently loads dummy data
-   * TODO: Replace with actual API call when backend server is ready
-   * Example API endpoint: GET /api/v1/flagged-history
-   */
-  useEffect(() => {
-    // Dummy data is already loaded in initial state
-    setIsLoading(false);
-
-    // TODO: Uncomment when backend API is ready
-    // const fetchFlaggedHistory = async () => {
-    //   try {
-    //     setIsLoading(true);
-    //     const response = await apiClient.get(endpoints.flaggedHistory.getAll());
-    //     if (response.success && Array.isArray(response.data)) {
-    //       setFlaggedHistory(response.data);
-    //     }
-    //   } catch (err) {
-    //     console.error("Error fetching flagged history:", err);
-    //     setError("Failed to load flagged history");
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-    // fetchFlaggedHistory();
-  }, []);
+  // Filter flaggedHistory by search
+  const filteredHistory = flaggedHistory.filter(item => {
+    const searchLower = search.toLowerCase();
+    return (
+      item.flagId.toLowerCase().includes(searchLower) ||
+      item.systemPredicted.toLowerCase().includes(searchLower) ||
+      item.correctedGenus.toLowerCase().includes(searchLower) ||
+      item.dateFlagged.toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div>
@@ -127,7 +105,7 @@ export default function FlagHistory() {
         <div className="p-6 text-center text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
           Loading flagged history...
         </div>
-      ) : flaggedHistory.length === 0 ? (
+      ) : filteredHistory.length === 0 ? (
         <div className="mt-6">
           <EmptyState
             icon={faFlag}
@@ -137,7 +115,7 @@ export default function FlagHistory() {
         </div>
       ) : (
         <FlaggedHistoryTable 
-          data={flaggedHistory}
+          data={filteredHistory}
           isLoading={isLoading}
         />
       )}

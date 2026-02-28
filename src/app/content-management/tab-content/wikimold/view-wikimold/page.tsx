@@ -6,7 +6,7 @@ import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleCheck, faCloudArrowUp, faPen } from "@fortawesome/free-solid-svg-icons";
+import { faPen } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
@@ -23,8 +23,6 @@ type WikiMoldDetail = {
 };
 
 export default function ViewWikiMold() {
-    // Import getAuthToken utility
-    // (If not already imported at the top, add: import { getAuthToken } from "@/utils/auth";)
   const searchParams = useSearchParams();
   const wikimoldId = searchParams.get("id") || "WM-001";
   const userRole = "Mycologist";
@@ -40,20 +38,15 @@ export default function ViewWikiMold() {
     tags: [],
   });
 
-  // Separate cover image preview state
   const [coverImagePreview, setCoverImagePreview] = useState<string>(fallbackImage);
-  // Track if a new cover image file was selected (base64)
-  const [newCoverImageBase64, setNewCoverImageBase64] = useState<string | null>(null);
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
 
   const [isPublishing, setIsPublishing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Use a ref to track whether the user has edited the title
-  // so that async fetch responses never clobber user input
   const titleEditedRef = useRef(false);
 
   useEffect(() => {
-    // Reset edit guards when the article ID changes
     titleEditedRef.current = false;
 
     async function fetchWikiMold() {
@@ -74,19 +67,17 @@ export default function ViewWikiMold() {
           tags: Array.isArray(data.tags) ? data.tags : [],
         };
 
-        // Only set fields the user hasn't touched yet
         setWikiMoldInfo((prev) => ({
           ...mapped,
           title: titleEditedRef.current ? prev.title : mapped.title,
         }));
 
-        // Only reset the preview if user hasn't picked a new image
-        if (!newCoverImageBase64) {
+        // Only reset preview if user hasn't picked a new image
+        if (!coverImageFile) {
           setCoverImagePreview(mapped.coverImage || fallbackImage);
         }
       } catch (err) {
         console.error("Fetch error:", err);
-        // Leave existing state intact on error; just stop loading
       } finally {
         setLoading(false);
       }
@@ -99,11 +90,10 @@ export default function ViewWikiMold() {
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setCoverImageFile(file);
     const reader = new FileReader();
     reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setCoverImagePreview(base64);
-      setNewCoverImageBase64(base64);
+      setCoverImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
   };
@@ -117,47 +107,88 @@ export default function ViewWikiMold() {
       return;
     }
 
+    // Get real author_id from auth — same as AddWikiMold
+    const { getUserData } = await import("@/utils/auth");
+    const user = getUserData();
+    const author_id = user?.id || "";
+
+
+// ADD THIS
+console.log("[handlePublish] user:", JSON.stringify(user));
+console.log("[handlePublish] author_id:", author_id);
+
+
+    if (!author_id) {
+      alert("Author ID is required. Please log in again.");
+      return;
+    }
+
     setIsPublishing(true);
+
     try {
-      const payload: Record<string, unknown> = {
-        id: articleId,
-        title: wikiMoldInfo.title,
-        body: wikiMoldInfo.content,
-        author_id: wikiMoldInfo.author ?? "",
+      const details = {
+        title: wikiMoldInfo.title.trim(),
+        body: wikiMoldInfo.content.trim(),
+        author_id,
         tags: wikiMoldInfo.tags ?? [],
       };
 
-      // Only send cover_photo if the user actually picked a new one
-      if (newCoverImageBase64) {
-        payload.cover_photo = newCoverImageBase64;
+      console.log("[handlePublish] articleId:", articleId);
+      console.log("[handlePublish] details:", JSON.stringify(details));
+
+      const formData = new FormData();
+      formData.append("details", JSON.stringify(details));
+      if (coverImageFile) {
+        formData.append("cover_photo", coverImageFile);
       }
 
-      const patchUrl = `/api/v1/moldipedia/${articleId}`;
-      console.log("PATCH URL:", patchUrl);
-      console.log("Payload:", JSON.stringify({ details: payload }));
-
-      // Add Authorization header
-      const token = typeof window !== "undefined" ? (await import("@/utils/auth")).getAuthToken() : null;
-      const res = await fetch(patchUrl, {
+      const res = await fetch(`/api/v1/moldipedia/${articleId}`, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
           Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // DO NOT set Content-Type — browser sets it with the correct boundary
         },
-        body: JSON.stringify({ details: payload }),
+        body: formData,
         credentials: "include",
       });
 
+      const responseText = await res.text();
+      console.log("[handlePublish] PATCH response status:", res.status);
+      console.log("[handlePublish] PATCH response body:", responseText);
+
       if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Failed to update article: ${res.status} ${errText}`);
+        let parsed: any = {};
+        try { parsed = JSON.parse(responseText); } catch {}
+        throw new Error(`Failed to update article: ${res.status} ${parsed?.error || responseText}`);
       }
 
-      // Don't overwrite local state from the response — just confirm success
-      // Reset the "new image" flag since it's now saved
-      setNewCoverImageBase64(null);
+      // Reset image state
+      setCoverImageFile(null);
       titleEditedRef.current = false;
+
+      // Refetch to sync latest server state
+      setLoading(true);
+      try {
+        const refetch = await fetch(`/api/v1/moldipedia/${articleId}`);
+        if (refetch.ok) {
+          const json = await refetch.json();
+          const data = json.data;
+          setWikiMoldInfo((prev) => ({
+            ...prev,
+            title: typeof data.title === "string" ? data.title : prev.title,
+            coverImage: typeof data.cover_photo === "string" ? data.cover_photo : prev.coverImage,
+            content: typeof data.body === "string" ? data.body : prev.content,
+            datePublished: data.created_at ? data.created_at.split("T")[0] : prev.datePublished,
+            author: typeof data.author === "string" ? data.author : prev.author,
+            tags: Array.isArray(data.tags) ? data.tags : prev.tags,
+          }));
+          setCoverImagePreview(data.cover_photo || fallbackImage);
+        }
+      } catch (refetchErr) {
+        console.error("Refetch error after save:", refetchErr);
+      } finally {
+        setLoading(false);
+      }
 
       alert("WikiMold article updated successfully!");
     } catch (err) {
@@ -195,7 +226,12 @@ export default function ViewWikiMold() {
             <label className="absolute bottom-8 right-8 flex items-center gap-3 bg-white/90 backdrop-blur-md text-[var(--moldify-black)] px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-[var(--primary-color)] hover:text-white transition-all cursor-pointer shadow-2xl border border-white/20">
               <FontAwesomeIcon icon={faPen} />
               Add Cover Image
-              <input type="file" accept="image/*" onChange={handleCoverImageChange} className="hidden" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleCoverImageChange}
+                className="hidden"
+              />
             </label>
           </div>
         </div>
@@ -220,7 +256,7 @@ export default function ViewWikiMold() {
             )}
           </div>
 
-          {/* Content */}
+          {/* Content Editor */}
           <div className="relative">
             <style>{`
               .ql-toolbar.ql-snow {

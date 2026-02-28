@@ -95,7 +95,7 @@ export default function WikiMold() {
         if (!pageToken) setLoading(true);
         else setIsLoadingMore(true);
         
-        let url = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
+        let url: string = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
         if (pageToken) {
           url += `&pageToken=${encodeURIComponent(pageToken)}`;
         }
@@ -289,7 +289,7 @@ export default function WikiMold() {
               message={error} 
             />
           ) : (
-            <AnimatePresence mode="popLayout">
+            <AnimatePresence mode="wait">
               {hasNoArticlesAtAll ? (
                 <motion.div key="no-articles" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                   <EmptyState 
