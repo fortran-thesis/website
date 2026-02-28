@@ -11,7 +11,6 @@ import { faSearch, faFlag } from "@fortawesome/free-solid-svg-icons";
  * TODO: Remove this and use actual API responses when backend is ready
  */
 import { endpoints } from '@/services/endpoints';
-import { apiClient } from "@/services";
 
 // Map API response to FlaggedHistoryTable format
 function mapApiFlagReport(item: any): FlaggedHistory {
