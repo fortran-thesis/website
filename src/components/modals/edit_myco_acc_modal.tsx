@@ -66,8 +66,24 @@ export default function EditMycoModal({ isOpen, onClose, onSubmit }: EditMycoMod
       setError("Password is required");
       return;
     }
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      setError("Password must contain at least one lowercase letter");
+      return;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      setError("Password must contain at least one uppercase letter");
+      return;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setError("Password must contain at least one number");
+      return;
+    }
+    if (!/[^a-zA-Z0-9]/.test(formData.password)) {
+      setError("Password must contain at least one special character");
       return;
     }
     if (formData.password !== formData.confirmPassword) {

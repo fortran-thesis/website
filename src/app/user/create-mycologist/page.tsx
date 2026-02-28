@@ -42,10 +42,11 @@ export default function CreateMycologist() {
   };
 
   // Password requirement checkers
+  const hasLowerCase = [...formData.password].some(char => /[a-z]/.test(char));
   const hasUpperCase = [...formData.password].some(char => /[A-Z]/.test(char));
   const hasNumber = [...formData.password].some(char => /[0-9]/.test(char));
-  const hasSpecialChar = [...formData.password].some(char => /[!@#$%^&*()_+\-=\[\]{};:'",.<>?/]/.test(char));
-  const hasMinLength = formData.password.length >= 6;
+  const hasSpecialChar = [...formData.password].some(char => /[^a-zA-Z0-9]/.test(char));
+  const hasMinLength = formData.password.length >= 8;
 
   const handleChange = (field: keyof MycoFormData, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -93,7 +94,7 @@ export default function CreateMycologist() {
       setError("Password is required");
       return;
     }
-    if (formData.password.length < 6 || !hasUpperCase || !hasNumber || !hasSpecialChar) {
+    if (formData.password.length < 8 || !hasLowerCase || !hasUpperCase || !hasNumber || !hasSpecialChar) {
       setError("Password doesn't follow requirements");
       return;
     }
@@ -325,7 +326,10 @@ export default function CreateMycologist() {
               {formData.password && (
                 <div className="space-y-2 text-xs font-[family-name:var(--font-bricolage-grotesque)] mb-3">
                   <div className={hasMinLength ? "text-green-600" : "text-red-600"}>
-                    ✓ At least 6 characters
+                    ✓ At least 8 characters
+                  </div>
+                  <div className={hasLowerCase ? "text-green-600" : "text-red-600"}>
+                    ✓ At least one lowercase letter (a-z)
                   </div>
                   <div className={hasUpperCase ? "text-green-600" : "text-red-600"}>
                     ✓ At least one capital letter (A-Z)
