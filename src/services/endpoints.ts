@@ -82,6 +82,9 @@ export const endpoints = {
     update: (id: string) => `/moldipedia/${id}`,
   },
 
+  // Flag Reports
+  flagReports: '/flag-report',
+
   // FAQ
   faq: {
     list: '/faq',

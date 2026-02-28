@@ -11,28 +11,24 @@ import { useAuth } from "@/hooks/useAuth";
 import Archive from "./tab_contents/archive";
 import CaseHistory from "./tab_contents/case-history";
 import FlagHistory from "./tab_contents/flag-history";
+import type { FlaggedHistory } from "@/components/tables/flagged_history_table";
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
-  // State for tracking user role fetched from backend
+
   const [userRole, setUserRole] = useState<"Administrator" | "Mycologist" | null>(null);
-  
-  // State for handling loading and error states during role fetch
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Separate modal states for different actions
   const [isRemoveModalOpen, setRemoveModalOpen] = useState(false);
   const [isSaveModalOpen, setSaveModalOpen] = useState(false);
   const [isPasswordSaveModalOpen, setPasswordSaveModalOpen] = useState(false);
   const [isPasswordSaving, setPasswordSaving] = useState(false);
   const [isProfileSaving, setProfileSaving] = useState(false);
-  
-  // Track if we've loaded user data from useAuth (not just browser load)
+
   const [userDataLoaded, setUserDataLoaded] = useState(false);
 
-  // Profile data state
   const [profile, setProfile] = useState<ProfileData>({
     firstName: "",
     lastName: "",
@@ -41,12 +37,56 @@ export default function Settings() {
     profilePicture: undefined,
   });
   const [initialProfile, setInitialProfile] = useState<ProfileData | null>(null);
-
-  // Keep the raw file for uploading via multipart/form-data
   const [profileFile, setProfileFile] = useState<File | null>(null);
-
-  // Store pending password data before confirming
   const [pendingPasswordData, setPendingPasswordData] = useState<PasswordData | null>(null);
+
+  // ✅ Flag history state — now correctly inside the component
+  const [flaggedHistory, setFlaggedHistory] = useState<FlaggedHistory[]>([]);
+  const [flagHistoryLoading, setFlagHistoryLoading] = useState(false);
+  const [flagHistoryError, setFlagHistoryError] = useState<string | null>(null);
+
+  // Fetch flag history
+  useEffect(() => {
+    const fetchFlagReports = async () => {
+      setFlagHistoryLoading(true);
+      setFlagHistoryError(null);
+      try {
+        const res = await fetch('/api/v1/flag-report?limit=20', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+        const text = await res.text();
+        console.log('[flag-reports] status:', res.status);
+console.log('[flag-reports] response:', text);
+        let json: any = {};
+        try { json = text ? JSON.parse(text) : {}; } catch { json = {}; }
+
+        if (!res.ok) {
+          setFlagHistoryError(json?.error || 'Failed to load flag reports');
+          setFlaggedHistory([]);
+          return;
+        }
+
+        if (json.success && json.data?.snapshot) {
+          setFlaggedHistory(json.data.snapshot.map((item: any) => ({
+            flagId: item.content_id || '',
+            systemPredicted: item.content_type || '',
+            correctedGenus: item.details || '',
+            dateFlagged: item.dateFlagged || '',
+          })));
+        } else {
+          setFlaggedHistory([]);
+        }
+      } catch (err) {
+        setFlagHistoryError('Failed to load flag reports');
+        setFlaggedHistory([]);
+      } finally {
+        setFlagHistoryLoading(false);
+      }
+    };
+    fetchFlagReports();
+  }, []);
 
   const formatRole = (value: string) => {
     const trimmed = value?.trim();
@@ -54,33 +94,27 @@ export default function Settings() {
     return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
   };
 
-
-  // Handles text field updates
   const handleProfileChange = (updatedData: ProfileData) => {
     console.log('📝 Profile changed:', updatedData);
     setProfile(updatedData);
   };
 
-  // Initialize profile state from authenticated user data if available
   useEffect(() => {
     console.log('🔍 Settings useEffect triggered, user:', user);
     if (!user) {
       console.log('⚠️ No user, returning');
       return;
     }
-    
-    // Backend returns nested structure: {user: {...}, details: {...}}
+
     const userObj = user?.user || user;
     const details = user?.details || {};
     console.log('📍 User object:', userObj, 'Details:', details);
-    
-    // Extract name fields from user object (backend uses snake_case)
+
     let firstName = userObj?.first_name || userObj?.firstName || '';
     let lastName = userObj?.last_name || userObj?.lastName || '';
-    
+
     console.log('🔤 Initial firstName:', firstName, 'lastName:', lastName);
-    
-    // If we only have displayName, parse it
+
     if (!firstName && details?.displayName) {
       console.log('📋 Parsing displayName:', details.displayName);
       const parts = details.displayName.split(' ');
@@ -88,12 +122,11 @@ export default function Settings() {
       lastName = parts.slice(1).join(' ') || '';
       console.log('✅ Parsed: firstName:', firstName, 'lastName:', lastName);
     }
-    
-    // Email comes from details object
+
     const email = details?.email || '';
     const role = userObj?.role || 'User';
     const profilePicture = details?.photo_url || details?.profilePicture || undefined;
-    
+
     console.log('💾 Setting profile:', { firstName, lastName, email, role, profilePicture });
     const profileData = { firstName, lastName, email, role: formatRole(role), profilePicture };
     console.log('📤 Profile data being set:', profileData);
@@ -107,11 +140,9 @@ export default function Settings() {
     }
     setUserDataLoaded(true);
     setIsLoading(false);
-    // Also clear any pending profile file
     setProfileFile(null);
   }, [user]);
 
-  // Shows confirm modal before saving profile
   const handleRequestSave = () => {
     setError(null);
     setSuccessMessage(null);
@@ -133,7 +164,6 @@ export default function Settings() {
     setSaveModalOpen(true);
   };
 
-  // Executes save after confirming
   const handleConfirmSave = async () => {
     if (isProfileSaving) return;
     setSuccessMessage(null);
@@ -147,26 +177,22 @@ export default function Settings() {
       };
 
       const formData = new FormData();
-      
-      // CRITICAL: Append details as stringified JSON
       formData.append('details', JSON.stringify(details));
-      
-      // Add file if present
+
       if (profileFile) {
         formData.append('photo', profileFile);
       }
 
-      console.log('📤 Sending PATCH with FormData:', { 
-        details, 
+      console.log('📤 Sending PATCH with FormData:', {
+        details,
         hasFile: !!profileFile,
-        fileName: profileFile?.name 
+        fileName: profileFile?.name
       });
 
-      // DO NOT set Content-Type header - let browser handle it
-      const res = await fetch('/api/v1/user/profile', { 
-        method: 'PATCH', 
-        body: formData, 
-        credentials: 'include' 
+      const res = await fetch('/api/v1/user/profile', {
+        method: 'PATCH',
+        body: formData,
+        credentials: 'include'
       });
 
       if (!res.ok) {
@@ -190,7 +216,6 @@ export default function Settings() {
     }
   };
 
-  // Handles uploaded file and sets it as preview
   const handleChangePicture = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
@@ -201,19 +226,16 @@ export default function Settings() {
     setProfileFile(file);
   };
 
-  // Shows confirm modal for removing picture
   const handleRequestRemovePicture = () => {
     setRemoveModalOpen(true);
   };
 
-  // Called when the user confirms “Yes” to remove profile picture
   const handleConfirmRemovePicture = () => {
     setProfile((prev) => ({ ...prev, profilePicture: undefined }));
     setProfileFile(null);
     setRemoveModalOpen(false);
   };
 
-  // Called when submitting password form — shows confirm modal
   const handleRequestSavePassword = (data: PasswordData) => {
     setError(null);
     setSuccessMessage(null);
@@ -229,7 +251,6 @@ export default function Settings() {
     setPasswordSaveModalOpen(true);
   };
 
-  // Actually saves the password after confirming
   const handleConfirmSavePassword = async () => {
     if (!pendingPasswordData) return setPasswordSaveModalOpen(false);
     if (isPasswordSaving) return;
@@ -269,13 +290,7 @@ export default function Settings() {
     }
   };
 
-  /**
-   * Build tabs based on user role
-   * - Administrator: Profile and Password tabs
-   * - Mycologist: Profile, Password, Archive, Case History, and Flag History tabs
-   */
   const getTabsByRole = () => {
-    // Base tabs available to all roles
     const baseTabs = [
       {
         label: "Profile",
@@ -304,7 +319,6 @@ export default function Settings() {
       },
     ];
 
-    // Additional tabs for Mycologist role
     const mycologistOnlyTabs = [
       {
         label: "Archive",
@@ -319,16 +333,20 @@ export default function Settings() {
       {
         label: "Flag History",
         icon: faFlag,
-        content: <FlagHistory />,
+        content: (
+          <FlagHistory
+            flaggedHistory={flaggedHistory}
+            isLoading={flagHistoryLoading}
+            error={flagHistoryError}
+          />
+        ),
       },
     ];
 
-    // Return tabs based on detected user role
     if (userRole === "Mycologist") {
       return [...baseTabs, ...mycologistOnlyTabs];
     }
 
-    // Default to Administrator tabs (Profile and Password only)
     return baseTabs;
   };
 
@@ -351,7 +369,7 @@ export default function Settings() {
           />
         </div>
       )}
-      {/* Header Section */}
+
       <div className="flex flex-row justify-between">
         <div className="flex flex-col">
           <Breadcrumbs role={userRole || "Administrator"} />
@@ -361,21 +379,18 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Error Message Display */}
       {error && (
         <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
           {error}
         </div>
       )}
 
-      {/* Success Message Display */}
       {successMessage && (
         <div className="mt-4 mb-6 p-3 bg-green-100 border border-green-200 text-green-700 rounded-lg text-xs text-left lg:text-left">
           {successMessage}
         </div>
       )}
 
-      {/* Loading State */}
       {isLoading ? (
         <div className="mt-10 p-6 text-center">
           <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)]">
@@ -384,14 +399,12 @@ export default function Settings() {
         </div>
       ) : (
         <>
-          {/* Tab Section - Only renders when user role is fetched */}
           <div className="mt-10">
             <TabBar tabs={tabs} initialIndex={0} />
           </div>
         </>
       )}
 
-      {/* Remove Picture Modal */}
       <ConfirmModal
         isOpen={isRemoveModalOpen}
         title="Remove Profile Picture?"
@@ -402,7 +415,6 @@ export default function Settings() {
         onConfirm={handleConfirmRemovePicture}
       />
 
-      {/* Save Profile Changes Modal */}
       <ConfirmModal
         isOpen={isSaveModalOpen}
         title="Save Changes?"
@@ -415,7 +427,6 @@ export default function Settings() {
         onConfirm={handleConfirmSave}
       />
 
-      {/* Save Password Changes Modal */}
       <ConfirmModal
         isOpen={isPasswordSaveModalOpen}
         title="Save Password Changes?"

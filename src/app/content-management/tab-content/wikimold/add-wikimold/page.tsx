@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import ConfirmModal from "@/components/modals/confirmation_modal";
 import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
@@ -8,7 +9,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 
-// Dynamically import ReactQuill with no SSR to avoid hydration issues
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
 
@@ -19,14 +19,33 @@ interface WikiMoldData {
 }
 
 export default function AddWikiMold() {
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
+  const initialData = useRef({ title: '', coverImage: '', content: '' });
+  const [showConfirm, setShowConfirm] = useState(false);
   const userRole = "Mycologist";
-    const fallbackImage = "/assets/wikimold-fallback.png";
+  const fallbackImage = "/assets/wikimold-fallback.png";
   const [wikiMoldData, setWikiMoldData] = useState<WikiMoldData>({
     title: "",
     coverImage: "",
     content: "",
   });
+  useEffect(() => {
+    initialData.current = { ...wikiMoldData };
+  }, []);
 
+  useEffect(() => {
+    const isChanged = wikiMoldData.title !== initialData.current.title || wikiMoldData.content !== initialData.current.content || wikiMoldData.coverImage !== initialData.current.coverImage;
+    setInfoMessage(isChanged ? '' : 'You haven\'t made any changes yet.');
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isChanged) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [wikiMoldData]);
   const [coverImagePreview, setCoverImagePreview] = useState("");
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,59 +57,112 @@ export default function AddWikiMold() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setCoverImagePreview(reader.result as string);
-        setWikiMoldData({ ...wikiMoldData, coverImage: reader.result as string });
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
     if (!coverImageFile) {
-      alert('Please upload a cover photo.');
+      alert("Cover photo is required. Please select an image file.");
       return;
     }
+
+    const { getUserData } = await import("@/utils/auth");
+    const user = getUserData();
+    const author_id = user?.id || "";
+    const title = wikiMoldData.title.trim();
+    const body = wikiMoldData.content.trim();
+
+    // Validation for required fields
+    if (!title) {
+      alert("Title is required.");
+      return;
+    }
+    if (!body) {
+      alert("Body is required.");
+      return;
+    }
+    if (!author_id) {
+      alert("Author ID is required. Please log in again.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('details', JSON.stringify({ title: wikiMoldData.title, body: wikiMoldData.content }));
-      formData.append('cover_photo', coverImageFile);
+      const details = {
+        title,
+        body,
+        author_id,
+        tags: [],
+      };
+      console.log("Submitting details:", details);
+      formData.append("details", JSON.stringify(details));
+      formData.append("cover_photo", coverImageFile);
 
-      const res = await fetch('/api/v1/moldipedia', {
-        method: 'POST',
-        credentials: 'include',
+      const response = await fetch("/api/v1/moldipedia", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+        },
         body: formData,
+        credentials: "include",
       });
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(errBody.error || errBody.message || `Failed to create article (${res.status})`);
+
+      let result: any = {};
+      const text = await response.text();
+      try {
+        result = text ? JSON.parse(text) : {};
+      } catch {
+        result = {};
       }
-      alert('WikiMold article created successfully!');
-      setWikiMoldData({ title: '', coverImage: '', content: '' });
-      setCoverImagePreview('');
+
+      if (!response.ok || !result?.success) {
+        console.error("Backend response:", text);
+        throw new Error(result?.error || `Failed to create WikiMold article. Backend response: ${text}`);
+      }
+
+      alert("WikiMold article created successfully!");
+      setWikiMoldData({ title: "", coverImage: "", content: "" });
+      setCoverImagePreview("");
       setCoverImageFile(null);
     } catch (error) {
-      console.error('Error creating WikiMold:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create WikiMold article. Please try again.');
+      console.error("Error creating WikiMold:", error);
+      alert("Failed to create WikiMold article. " + (error instanceof Error ? error.message : "Please try again."));
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleBack = () => {
+    const isChanged = wikiMoldData.title !== initialData.current.title || wikiMoldData.content !== initialData.current.content || wikiMoldData.coverImage !== initialData.current.coverImage;
+    if (isChanged) {
+      setShowBackConfirm(true);
+    } else {
+      window.history.back();
+    }
+  };
+
   return (
     <>
-      {/* Top Loading Bar */}
       {isSubmitting && (
         <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div 
-            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+          <div
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]"
             style={{ width: '30%' }}
           />
         </div>
       )}
 
       <main className="relative flex flex-col xl:py-2 py-10 w-full">
-        {/* Header Section */}
+        {infoMessage && (
+          <div className="w-full max-w-2xl mx-auto mb-4 px-4 py-3 bg-blue-100 text-blue-800 rounded-lg text-center font-semibold">
+            {infoMessage}
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <Breadcrumbs role={userRole} skipSegments={["tab-content", "wikimold"]} />
           <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
@@ -98,13 +170,37 @@ export default function AddWikiMold() {
           </h1>
         </div>
 
-        {/* Navigation - Back Button above the image */}
         <div className="mt-8 mb-6">
-          <BackButton />
+          <BackButton onClick={handleBack} />
         </div>
+      <ConfirmModal
+        isOpen={showBackConfirm}
+        title="Unsaved Changes"
+        subtitle="You have unsaved changes. Are you sure you want to go back? Your changes will not be saved."
+        confirmText="Go Back"
+        cancelText="Stay"
+        onCancel={() => setShowBackConfirm(false)}
+        onConfirm={() => {
+          setShowBackConfirm(false);
+          window.history.back();
+        }}
+      />
 
-        <form className="w-full" onSubmit={handleSubmit}>
-          {/* Full Width Cover Image Section */}
+        <form className="w-full" onSubmit={(e) => { e.preventDefault(); setShowConfirm(true); }}>
+                <ConfirmModal
+                  isOpen={showConfirm}
+                  title="Confirm Publish"
+                  subtitle="Are you sure you want to publish this WikiMold article?"
+                  confirmText="Publish"
+                  cancelText="Cancel"
+                  confirmDisabled={isSubmitting}
+                  confirmLoadingText="Publishing..."
+                  onCancel={() => setShowConfirm(false)}
+                  onConfirm={() => {
+                    setShowConfirm(false);
+                    handleSubmit();
+                  }}
+                />
           <div className="relative w-full mb-16 group">
             <div className="relative w-full h-[350px] rounded-[2.5rem] overflow-hidden bg-[var(--taupe)] shadow-2xl transition-all duration-700">
               <Image
@@ -113,7 +209,6 @@ export default function AddWikiMold() {
                 fill
                 className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105"
               />
-              {/* Gradient Overlay for depth */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-60" />
               <label className="font-[family-name:var(--font-bricolage-grotesque)] absolute bottom-8 right-8 flex items-center gap-3 bg-white/90 backdrop-blur-md text-[var(--moldify-black)] px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-widest hover:bg-[var(--primary-color)] hover:text-white transition-all cursor-pointer shadow-2xl border border-white/20">
                 <FontAwesomeIcon icon={faPen} />
@@ -123,9 +218,7 @@ export default function AddWikiMold() {
             </div>
           </div>
 
-          {/* Writer Layout Container */}
           <div className="max-w-full mx-auto px-4">
-            {/* Title Section */}
             <div className="mb-12">
               <input
                 id="title"
@@ -137,7 +230,6 @@ export default function AddWikiMold() {
               />
             </div>
 
-            {/* Manuscript Content */}
             <div className="relative">
               <style>{`
                 .ql-toolbar.ql-snow {
@@ -176,7 +268,7 @@ export default function AddWikiMold() {
                 modules={{
                   toolbar: [
                     [{ header: [2, 3, false] }],
-                    ["bold", "italic", "underline"],
+                    ["bold", "italic", "underline", "link"],
                     [{ list: "ordered" }, { list: "bullet" }],
                   ],
                 }}
@@ -185,7 +277,6 @@ export default function AddWikiMold() {
             </div>
           </div>
 
-          {/* Floating Action Bar */}
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-fit">
             <button
               type="submit"
