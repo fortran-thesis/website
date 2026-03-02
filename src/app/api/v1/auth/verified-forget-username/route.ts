@@ -1,6 +1,7 @@
 import { createProxyHandler } from '@/lib/proxy';
+import { endpoints } from '@/services/endpoints';
 
 export const POST = createProxyHandler({
-  upstream: '/auth/forgot-username/verify',
+  upstream: endpoints.auth.forgotUsernameVerify,
   auth: false,
 });

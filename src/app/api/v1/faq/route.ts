@@ -1,7 +1,8 @@
 import { createProxyHandler } from '@/lib/proxy';
+import { endpoints } from '@/services/endpoints';
 
 export const GET = createProxyHandler({
-  upstream: '/faq',
+  upstream: endpoints.faq.list,
   auth: false,
   forwardParams: ['search', 'limit', 'pageToken'],
 });

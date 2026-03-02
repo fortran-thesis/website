@@ -18,6 +18,11 @@ export interface AuditLogEntry {
   [key: string]: unknown;
 }
 
+export interface AuditLogPage {
+  snapshot: AuditLogEntry[];
+  nextPageToken: string | null;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Hooks                                                              */
 /* ------------------------------------------------------------------ */
@@ -27,7 +32,7 @@ export interface AuditLogEntry {
  * `?action=X` results in backend path `/audit-log/{action}`.
  */
 export function useAuditLogs(params?: { action?: string; limit?: number }) {
-  return useSWR<ApiResponse<AuditLogEntry[]>>(
+  return useSWR<ApiResponse<AuditLogPage | AuditLogEntry[]>>(
     apiUrl('/api/v1/audit-logs', {
       action: params?.action,
       limit: params?.limit ?? 10,

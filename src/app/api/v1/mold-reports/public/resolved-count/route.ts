@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { envOptions } from '@/configs/envOptions';
+import { endpoints } from '@/services/endpoints';
 
 const FALLBACK = { success: false, data: { resolvedCount: 0 } };
 const RESOLVED_COUNT_REVALIDATE_SECONDS = 600;
@@ -13,7 +14,7 @@ export const revalidate = RESOLVED_COUNT_REVALIDATE_SECONDS;
  */
 export async function GET() {
   try {
-    const url = `${envOptions.apiUrl}/mold-report/counts/statuses`;
+    const url = `${envOptions.apiUrl}${endpoints.moldReport.countStatuses}`;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
     const res = await fetch(url, {

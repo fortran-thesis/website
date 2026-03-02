@@ -1,5 +1,6 @@
 import { createProxyHandler } from '@/lib/proxy';
+import { endpoints } from '@/services/endpoints';
 
 export const PATCH = createProxyHandler({
-  upstream: (params) => `/mold-report/${params.id}/reject`,
+  upstream: (params) => endpoints.moldReport.reject(params.id),
 });

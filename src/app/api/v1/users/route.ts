@@ -1,7 +1,8 @@
 import { createProxyHandler } from '@/lib/proxy';
+import { endpoints } from '@/services/endpoints';
 
 export const GET = createProxyHandler({
-  upstream: '/user',
+  upstream: endpoints.user.list,
   forwardParams: ['limit', 'pageToken'],
   forwardCookies: true,
 });

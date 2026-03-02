@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { proxyFetch } from '@/lib/proxy';
+import { endpoints } from '@/services/endpoints';
 
 /**
  * GET /api/v1/users/search
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   const qs = params.toString();
   return proxyFetch(req, {
-    upstream: `/user/search${qs ? `?${qs}` : ''}`,
+    upstream: `${endpoints.user.search}${qs ? `?${qs}` : ''}`,
     forwardCookies: true,
   });
 }

@@ -1,5 +1,6 @@
 import { createProxyHandler } from '@/lib/proxy';
+import { endpoints } from '@/services/endpoints';
 
 export const GET = createProxyHandler({
-  upstream: '/mold-report/counts/statuses',
+  upstream: endpoints.moldReport.countStatuses,
 });

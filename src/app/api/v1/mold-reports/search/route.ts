@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { proxyFetch } from '@/lib/proxy';
+import { endpoints } from '@/services/endpoints';
 
 /**
  * GET /api/v1/mold-reports/search
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
 
   const qs = params.toString();
   return proxyFetch(req, {
-    upstream: `/mold-report/search${qs ? `?${qs}` : ''}`,
+    upstream: `${endpoints.moldReport.search}${qs ? `?${qs}` : ''}`,
     forwardCookies: true,
   });
 }

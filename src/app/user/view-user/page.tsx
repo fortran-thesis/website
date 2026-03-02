@@ -66,13 +66,25 @@ export default function ViewUser() {
   // SWR: audit logs
   const { data: logsData, isLoading: logsLoading } = useAuditLogs({ limit: 10 });
   const userLogs: UserLogTileEntry[] = useMemo(() => {
-    const entries = (logsData as any)?.data;
-    if (!Array.isArray(entries)) return [];
-    return entries.map((log: any) => ({
-      date: log.timestamp ? new Date(log.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A',
-      time: log.timestamp ? new Date(log.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-      description: `${log.action || 'Unknown Action'}: ${log.description || 'No description'}`,
-    }));
+    const raw = (logsData as any)?.data;
+    // getAllAuditLogs returns { snapshot, nextPageToken }; getAuditLogsByAction returns array
+    const entries = Array.isArray(raw) ? raw : (raw?.snapshot ?? []);
+    if (!Array.isArray(entries) || entries.length === 0) return [];
+    const resolveDate = (ts: any): Date | null => {
+      if (!ts) return null;
+      // Firestore Timestamp serialized as { _seconds, _nanoseconds }
+      if (typeof ts === 'object' && '_seconds' in ts) return new Date(ts._seconds * 1000);
+      const d = new Date(ts);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    return entries.map((log: any) => {
+      const d = resolveDate(log.timestamp);
+      return {
+        date: d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A',
+        time: d ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+        description: `${log.action || 'Unknown Action'}: ${log.description || 'No description'}`,
+      };
+    });
   }, [logsData]);
 
   const handleMycoSubmit = (data: any) => {
