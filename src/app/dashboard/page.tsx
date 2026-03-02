@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -12,35 +12,22 @@ import CaseTable from '@/components/tables/case_table';
 import AuthDebug from '@/components/auth-debug';
 import NotificationsPanel, { type NotificationItem } from '@/components/notifications_panel';
 import DonutChart from '@/components/charts/donut-chart';
-import { envOptions } from '@/configs/envOptions';
-import { endpoints } from '@/services/endpoints';
-import { getAuthToken } from '@/utils/auth';
+import {
+  useUserRoleCounts,
+  useMoldCaseCountsMetadata,
+  useMoldReportMonthlyCounts,
+  useMoldReportPriorityCounts,
+  useUnassignedReports,
+  useAssignedReports,
+  useMoldipediaList,
+  useReportCount,
+} from '@/hooks/swr';
 
 const userRole = "Administrator";
 
 export default function Home() {
     // Get authenticated user data from centralized auth hook
     const { user: authUser, loading: authLoading } = useAuth();
-    
-    // State for fetched data
-    const [totalUsers, setTotalUsers] = useState(0);
-    const [totalCases, setTotalCases] = useState(0);
-    const [totalReports, setTotalReports] = useState(0);
-    const [totalMoldGenus, setTotalMoldGenus] = useState(0);
-    const [inProgressCases, setInProgressCases] = useState(0);
-    const [wikimoldCount, setWikimoldCount] = useState(0);
-    const [chartData, setChartData] = useState<any[]>([]);
-    const [priorityData, setPriorityData] = useState({ high: 0, medium: 0, low: 0 });
-    const [cases, setCases] = useState<any[]>([]);
-    const [unassignedCases, setUnassignedCases] = useState<any[]>([]);
-    const [statusBreakDown, setStatusBreakDown] = useState<any[]>([]);
-    
-    const [loadingStats, setLoadingStats] = useState(true);
-    const hasFetchedRef = useRef(false);
-    const updatedRef = useRef(false);
-    const cacheKey = 'dash:cache';
-    const lastFetchKey = 'dash:lastFetchAt';
-    const cacheTtlMs = 60000;
     
     // Fallback mock data for initial UI
     const fallbackChartData = [
@@ -56,18 +43,6 @@ export default function Home() {
       { month: "Oct", cases: 8 },
       { month: "Nov", cases: 14 },
       { month: "Dec", cases: 17 },
-    ];
-    
-    const fallbackCases = [
-      {
-        caseName: "Tomato Mold",
-        cropName: "Kamatis Tagalog",
-        location: "Ilocos Region",
-        submittedBy: "Faith Gabrielle Gamboa",
-        dateSubmitted: "2023-09-01",
-        priority: "Low",
-        status: "In Progress",
-      },
     ];
     
     // Map auth user data - backend returns nested structure: {id, details, user: {...}}
@@ -90,15 +65,102 @@ export default function Home() {
     };
 
     // Determine dashboard content based on user role (backend uses lowercase 'admin' and 'mycologist')
-    const isAdministrator = user.role === "admin" || user.role === "Administrator";
-    const isMycologist = user.role === "mycologist" || user.role === "Mycologist";
-    
-    console.log('🔍 ROLE DETECTION:');
-    console.log('  user.role:', user.role);
-    console.log('  isAdministrator:', isAdministrator);
-    console.log('  isMycologist:', isMycologist);
-    console.log('  authUser?.user?.role:', authUser?.user?.role);
-    console.log('  authUser?.role:', authUser?.role);
+    const resolvedRole = (authUser?.user?.role || authUser?.role || '').toLowerCase();
+    const isAdministrator = !authLoading && resolvedRole === 'admin';
+    const isMycologist = !authLoading && resolvedRole === 'mycologist';
+    const canLoadDashboardData = !authLoading && (isAdministrator || isMycologist);
+
+    /* ─── SWR data hooks (called unconditionally – conditional keys inside) ── */
+    // User counts (admin only)
+    const { data: roleCountsRes } = useUserRoleCounts(isAdministrator);
+    const totalUsers = useMemo(() => {
+      if (!isAdministrator || !roleCountsRes?.data) return 0;
+      const d = roleCountsRes.data;
+      return (d.farmer || 0) + (d.mycologist || 0) + (d.admin || 0);
+    }, [isAdministrator, roleCountsRes]);
+
+    // Mold-case total count (admin)
+    const { data: caseCountRes } = useMoldCaseCountsMetadata(isAdministrator);
+    const totalCasesAdmin = caseCountRes?.data?.count ?? 0;
+
+    // Report count (admin)
+    const { data: reportsCountRes } = useReportCount(isAdministrator);
+    const totalReports = reportsCountRes?.data?.snapshot?.length ?? 0;
+
+    // Monthly chart data
+    const { data: monthlyRes } = useMoldReportMonthlyCounts(undefined, canLoadDashboardData);
+    const chartData = useMemo(() => {
+      if (!monthlyRes?.data || !Array.isArray(monthlyRes.data)) return fallbackChartData;
+      return monthlyRes.data.map((item: any) => {
+        const monthPart = (item.month || '').split(' ')[0];
+        return { month: monthPart ? monthPart.slice(0, 3) : '', cases: item.total };
+      });
+    }, [monthlyRes]);
+
+    // Priority breakdown (admin)
+    const { data: priorityRes } = useMoldReportPriorityCounts(canLoadDashboardData);
+    const priorityData = priorityRes?.data ?? { high: 0, medium: 0, low: 0 };
+
+    // Unassigned mold reports (admin dashboard table)
+        const { data: unassignedRes } = useUnassignedReports(50, isAdministrator);
+
+    // Assigned mold reports (mycologist dashboard table)
+        const { data: assignedRes } = useAssignedReports({ limit: 50 }, isMycologist);
+
+    // Moldipedia count (admin)
+        const { data: moldipediaRes } = useMoldipediaList(1000, isMycologist);
+    const wikimoldCount = moldipediaRes?.data?.snapshot?.length ?? 0;
+
+    /* ─── Derived dashboard values ─── */
+    const transformCasesForTable = (snapshot: any[]) =>
+      snapshot
+        .filter((item: any) => (item.status || '').toLowerCase() !== 'rejected')
+        .map((item: any) => {
+          const timestamp = item.date_observed?._seconds
+            ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
+            : 'N/A';
+          const pri = item.mold_case?.priority;
+          return {
+            id: item.id,
+            caseName: item.case_name || 'N/A',
+            cropName: item.host || 'N/A',
+            location: item.host || 'N/A',
+            submittedBy: item.user_id || 'N/A',
+            dateSubmitted: timestamp,
+            priority: pri ? pri.charAt(0).toUpperCase() + pri.slice(1) : 'Unassigned',
+            status: item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Pending',
+          };
+        });
+
+    // Admin: unassigned cases for table
+    const unassignedCases = useMemo(
+      () => transformCasesForTable(unassignedRes?.data?.snapshot ?? []),
+      [unassignedRes],
+    );
+
+    // Mycologist: assigned cases for table + derived stats
+    const assignedCases = useMemo(
+      () => transformCasesForTable(assignedRes?.data?.snapshot ?? []),
+      [assignedRes],
+    );
+
+    const totalCases = isAdministrator ? totalCasesAdmin : assignedCases.length;
+    const inProgressCases = assignedCases.filter((c: any) => (c.status || '').toLowerCase() === 'in progress').length;
+
+    const statusBreakDown = useMemo(() => {
+      if (!isMycologist || assignedCases.length === 0) return [];
+      const ip = assignedCases.filter((c: any) => (c.status || '').toLowerCase() === 'in progress').length;
+      const res = assignedCases.filter((c: any) => (c.status || '').toLowerCase() === 'resolved').length;
+      return [
+        { name: 'In Progress', value: ip, color: 'var(--moldify-blue)' },
+        { name: 'Resolved', value: res, color: 'var(--primary-color)' },
+      ];
+    }, [isMycologist, assignedCases]);
+
+    const fallbackStatusBreakDown = [
+        { name: "In Progress", value: 10, color: "var(--moldify-blue)" },
+        { name: "Resolved", value: 30, color: "var(--primary-color)" },
+    ];
 
     const notifications: NotificationItem[] = [
         {
@@ -115,11 +177,6 @@ export default function Home() {
         },
     ];
 
-    const fallbackStatusBreakDown = [
-        { name: "In Progress", value: 10, color: "var(--moldify-blue)" },
-        { name: "Resolved", value: 30, color: "var(--primary-color)" },
-    ];
-
     const notificationCount = notifications.length;
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
@@ -127,390 +184,6 @@ export default function Home() {
     const [profileImageSrc, setProfileImageSrc] = useState(
         user?.profileImageUrl || fallbackProfileImage
     );
-
-    const shouldFetch = (key: string, ttlMs = cacheTtlMs) => {
-      if (typeof window === 'undefined') return true;
-      const now = Date.now();
-      const lastFetch = Number(sessionStorage.getItem(lastFetchKey) || 0);
-      const hasCache = Boolean(sessionStorage.getItem(cacheKey));
-      if (hasCache && lastFetch && now - lastFetch < ttlMs) return false;
-      const stamp = sessionStorage.getItem(key);
-      if (stamp && now - Number(stamp) < ttlMs) return false;
-      return true;
-    };
-
-    const markFetched = (key: string) => {
-      if (typeof window === 'undefined') return;
-      updatedRef.current = true;
-      sessionStorage.setItem(key, String(Date.now()));
-    };
-
-    useEffect(() => {
-      if (typeof window === 'undefined') return;
-      const raw = sessionStorage.getItem(cacheKey);
-      if (!raw) return;
-      try {
-        const cached = JSON.parse(raw);
-        if (cached.totalUsers !== undefined) setTotalUsers(cached.totalUsers);
-        if (cached.totalCases !== undefined) setTotalCases(cached.totalCases);
-        if (cached.totalReports !== undefined) setTotalReports(cached.totalReports);
-        if (cached.totalMoldGenus !== undefined) setTotalMoldGenus(cached.totalMoldGenus);
-        if (cached.inProgressCases !== undefined) setInProgressCases(cached.inProgressCases);
-        if (cached.wikimoldCount !== undefined) setWikimoldCount(cached.wikimoldCount);
-        if (cached.chartData) setChartData(cached.chartData);
-        if (cached.priorityData) setPriorityData(cached.priorityData);
-        if (cached.cases) setCases(cached.cases);
-        if (cached.unassignedCases) setUnassignedCases(cached.unassignedCases);
-        if (cached.statusBreakDown) setStatusBreakDown(cached.statusBreakDown);
-      } catch {
-        // ignore cache parse errors
-      }
-    }, []);
-
-    useEffect(() => {
-      if (typeof window === 'undefined') return;
-      if (loadingStats) return;
-      if (!updatedRef.current) return;
-      const payload = {
-        totalUsers,
-        totalCases,
-        totalReports,
-        totalMoldGenus,
-        inProgressCases,
-        wikimoldCount,
-        chartData,
-        priorityData,
-        cases,
-        unassignedCases,
-        statusBreakDown,
-      };
-      sessionStorage.setItem(cacheKey, JSON.stringify(payload));
-      sessionStorage.setItem(lastFetchKey, String(Date.now()));
-      updatedRef.current = false;
-    }, [
-      loadingStats,
-      totalUsers,
-      totalCases,
-      totalReports,
-      totalMoldGenus,
-      inProgressCases,
-      wikimoldCount,
-      chartData,
-      priorityData,
-      cases,
-      unassignedCases,
-      statusBreakDown,
-    ]);
-
-    // Fetch dashboard data - MUST be before early return to follow Rules of Hooks
-    useEffect(() => {
-      if (authLoading) return; // Wait for auth to load
-      console.log('🔍 useEffect check:', { hasFetched: hasFetchedRef.current, authLoading, isMycologist, isAdministrator });
-      if (hasFetchedRef.current) {
-        console.log('🔍 Fetch blocked by hasFetchedRef');
-        return;
-      }
-      hasFetchedRef.current = true;
-      console.log('🔍 Starting fetchDashboardData...');
-      
-      const fetchDashboardData = async () => {
-        setLoadingStats(true);
-        const token = getAuthToken();
-        const headers: any = {
-          'Content-Type': 'application/json',
-        };
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-
-        try {
-          // Fetch total users using role counts
-          const usersCountKey = 'dash:users-count';
-          if (isAdministrator && shouldFetch(usersCountKey)) {
-            console.log('📊 Fetching total users...');
-            try {
-              const rolesRes = await fetch('/api/v1/users/counts/roles', { cache: 'default' });
-              console.log('📊 Users role counts response status:', rolesRes.status);
-              if (rolesRes.ok) {
-                const rolesData = await rolesRes.json();
-                console.log('📊 Users role counts received:', rolesData);
-                if (rolesData.success && rolesData.data) {
-                  const totalCount = (rolesData.data.farmer || 0) + (rolesData.data.mycologist || 0) + (rolesData.data.admin || 0);
-                  console.log('📊 Setting totalUsers to:', totalCount);
-                  setTotalUsers(totalCount);
-                  markFetched(usersCountKey);
-                } else {
-                  console.log('📊 Unexpected users data structure:', rolesData);
-                }
-              } else {
-                console.error('📊 Users fetch failed with status:', rolesRes.status);
-              }
-            } catch (err) {
-              console.error('📊 Failed to fetch total users:', err);
-            }
-          } else {
-            console.log('📊 Not an administrator, skipping user fetch');
-          }
-
-          // Fetch total mold cases using metadata (admin only)
-          const casesCountKey = 'dash:cases-count';
-          if (isAdministrator && shouldFetch(casesCountKey)) {
-            try {
-              const casesCountRes = await fetch('/api/v1/mold-cases/counts/metadata', { cache: 'default' });
-              if (casesCountRes.ok) {
-                const casesCountData = await casesCountRes.json();
-                if (casesCountData.success && casesCountData.data) {
-                  const totalCaseCount = casesCountData.data.count;
-                  setTotalCases(totalCaseCount);
-                  console.log('📊 Mold cases count fetched:', {
-                    count: totalCaseCount,
-                    createdAt: casesCountData.data.createdAt
-                  });
-                  markFetched(casesCountKey);
-                }
-              }
-            } catch (err) {
-              console.error('📊 Failed to fetch total cases:', err);
-            }
-          }
-
-          // Fetch total reports (admin only)
-          const reportsCountKey = 'dash:reports-count';
-          if (isAdministrator && shouldFetch(reportsCountKey)) {
-            try {
-              const reportsRes = await fetch('/api/v1/reports?limit=1000', { cache: 'default' });
-              if (reportsRes.ok) {
-                const reportsData = await reportsRes.json();
-                if (reportsData.success && reportsData.data?.snapshot) {
-                  const totalReportCount = reportsData.data?.snapshot?.length || 0;
-                  setTotalReports(totalReportCount);
-                  markFetched(reportsCountKey);
-                }
-              }
-            } catch (err) {
-              console.error('📊 Failed to fetch total reports:', err);
-            }
-          }
-
-          // Fetch case data for table (admin only fallback list)
-          const casesListKey = 'dash:cases-list';
-          if (isAdministrator && shouldFetch(casesListKey)) {
-            try {
-              const casesRes = await fetch(`/api/v1/mold-reports?limit=10`, { cache: 'default' });
-              if (casesRes.ok) {
-                const casesData = await casesRes.json();
-                if (casesData.data && Array.isArray(casesData.data.snapshot)) {
-                  setCases(casesData.data.snapshot);
-                  markFetched(casesListKey);
-                }
-              }
-            } catch (err) {
-              console.error('📊 Failed to fetch case data:', err);
-            }
-          }
-
-          
-          
-          if (isAdministrator) {
-           
-            try {
-              // Only fetch first page to reduce requests
-              const unassignedKey = 'dash:unassigned-cases';
-              if (shouldFetch(unassignedKey)) {
-                // Clear previous data only when we intend to refetch
-                setUnassignedCases([]);
-                const url = '/api/v1/mold-reports/unassigned?limit=50';
-                const unassignedRes = await fetch(url, { cache: 'no-store' });
-                
-                if (unassignedRes.ok) {
-                  const unassignedData = await unassignedRes.json();
-                  if (unassignedData.data?.snapshot) {
-                    // Filter out rejected cases and map the data
-                    const transformedCases = unassignedData.data.snapshot
-                      .filter((item: any) => {
-                        const status = (item.status || '').toLowerCase();
-                        return status !== 'rejected'; // Exclude rejected cases
-                      })
-                      .map((item: any) => {
-                        const timestamp = item.date_observed?._seconds 
-                          ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
-                          : 'N/A';
-                        
-                        return {
-                          id: item.id,
-                          caseName: item.case_name || 'N/A',
-                          cropName: item.host || 'N/A',
-                          location: item.host || 'N/A',
-                          submittedBy: item.user_id || 'N/A',
-                          dateSubmitted: timestamp,
-                          priority: item.mold_case?.priority?.charAt(0).toUpperCase() + item.mold_case?.priority?.slice(1) || 'Unassigned',
-                          status: item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'Pending',
-                        };
-                      });
-                    
-                    console.log('✅ Filtered unassigned cases (excluding rejected):', transformedCases.length, 'of', unassignedData.data.snapshot.length);
-                    setUnassignedCases(transformedCases);
-                    markFetched(unassignedKey);
-                  }
-                }
-              }
-            } catch (err) {
-              console.error('📊 Failed to fetch unassigned cases:', err);
-            }
-          } else if (isMycologist) {
-            console.log('🔍 MYCOLOGIST BRANCH: Fetching assigned cases...');
-            try {
-              // Only fetch first page to reduce requests
-              const assignedKey = 'dash:assigned-cases';
-              // Temporarily disable cache to see console logs
-              if (true || shouldFetch(assignedKey)) {
-                console.log('🔍 Cache check passed, making API call...');
-                // Clear previous data only when we intend to refetch
-                setUnassignedCases([]);
-                const url = '/api/v1/mold-reports/assigned?limit=50';
-                console.log('🔍 Fetching from URL:', url);
-                const assignedRes = await fetch(url, { cache: 'no-store' });
-                console.log('🔍 API response status:', assignedRes.status);
-                
-                if (assignedRes.ok) {
-                  const assignedData = await assignedRes.json();
-                  console.log('🔍 API response body:', assignedData);
-                  console.log('🔍 Snapshot length:', assignedData.data?.snapshot?.length);
-                  if (assignedData.data?.snapshot) {
-                    // Filter out rejected cases and map the data
-                    const transformedCases = assignedData.data.snapshot
-                      .filter((item: any) => {
-                        const status = (item.status || '').toLowerCase();
-                        return status !== 'rejected'; // Exclude rejected cases
-                      })
-                      .map((item: any) => {
-                        const timestamp = item.date_observed?._seconds 
-                          ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
-                          : 'N/A';
-                        
-                        const priority = item.mold_case?.priority 
-                          ? (item.mold_case.priority.charAt(0).toUpperCase() + item.mold_case.priority.slice(1))
-                          : 'Unassigned';
-                        
-                        
-                        return {
-                          id: item.id,
-                          caseName: item.case_name || 'N/A',
-                          cropName: item.host || 'N/A',
-                          location: item.host || 'N/A',
-                          submittedBy: item.user_id || 'N/A',
-                          dateSubmitted: timestamp,
-                          priority: priority,
-                          status: item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'Pending',
-                        };
-                      });
-                    
-                    console.log('✅ Filtered cases (excluding rejected):', transformedCases.length, 'of', assignedData.data.snapshot.length);
-                    
-                    const inProgressCount = transformedCases.filter(
-                      (c: any) => (c.status || '').toLowerCase() === 'in progress'
-                    ).length;
-                    const resolvedCount = transformedCases.filter(
-                      (c: any) => (c.status || '').toLowerCase() === 'resolved'
-                    ).length;
-                    setUnassignedCases(transformedCases);
-                    setTotalCases(transformedCases.length);
-                    setInProgressCases(inProgressCount);
-                    setStatusBreakDown([
-                      { name: 'In Progress', value: inProgressCount, color: 'var(--moldify-blue)' },
-                      { name: 'Resolved', value: resolvedCount, color: 'var(--primary-color)' },
-                    ]);
-                    markFetched(assignedKey);
-                  }
-                }
-              }
-            } catch (err) {
-              console.error('Failed to fetch assigned cases:', err);
-            }
-          } else {
-            console.log('\nNO VALID ROLE DETECTED');
-            console.log('User role not recognized - neither admin nor mycologist');
-          }
-
-          // Fetch wikimold count (admin only to reduce requests)
-          if (isAdministrator) {
-            try {
-              const moldipediaKey = 'dash:moldipedia';
-              if (shouldFetch(moldipediaKey)) {
-                const moldRes = await fetch(`${envOptions.apiUrl}${endpoints.moldipedia.list}`, { headers });
-                if (moldRes.ok) {
-                  const moldData = await moldRes.json();
-                  if (Array.isArray(moldData.data)) {
-                    setWikimoldCount(moldData.data.length);
-                    markFetched(moldipediaKey);
-                  }
-                }
-              }
-            } catch (err) {
-              console.error('Failed to fetch wikimold count:', err);
-            }
-          }
-
-          // Fetch dashboard statistics (monthly totals)
-          if (isAdministrator || isMycologist) {
-            try {
-              const monthlyKey = 'dash:monthly';
-              if (shouldFetch(monthlyKey)) {
-                const monthlyRes = await fetch('/api/v1/mold-reports/count/monthly', { cache: 'default' });
-                console.log('📊 Monthly totals response status:', monthlyRes.status);
-                if (monthlyRes.ok) {
-                  const monthlyData = await monthlyRes.json();
-                  console.log('📊 Monthly totals received:', monthlyData);
-                  if (monthlyData.success && Array.isArray(monthlyData.data)) {
-                    // Transform the data for the chart
-                    const chartData = monthlyData.data.map((item: any) => {
-                      const monthPart = (item.month || "").split(' ')[0];
-                      const abbrev = monthPart ? monthPart.slice(0, 3) : "";
-                      return {
-                        month: abbrev,
-                        cases: item.total,
-                      };
-                    });
-                    console.log('📊 Setting chart data:', chartData);
-                    setChartData(chartData);
-                    markFetched(monthlyKey);
-                  } else {
-                    setChartData(fallbackChartData);
-                  }
-                } else {
-                  setChartData(fallbackChartData);
-                }
-              }
-            } catch (err) {
-              console.error('📊 Failed to fetch monthly totals:', err);
-              setChartData(fallbackChartData);
-            }
-          }
-
-          // Fetch priority breakdown (admin only to reduce requests)
-          const priorityKey = 'dash:priority';
-          if (isAdministrator && shouldFetch(priorityKey)) {
-            try {
-              const priorityRes = await fetch('/api/v1/mold-reports/count/priorities', { cache: 'default' });
-              if (priorityRes.ok) {
-                const priorityData = await priorityRes.json();
-                if (priorityData.success && priorityData.data) {
-                  setPriorityData(priorityData.data);
-                  markFetched(priorityKey);
-                }
-              }
-            } catch (err) {
-              console.error('📊 Failed to fetch priority breakdown:', err);
-            }
-          }
-
-        } finally {
-          setLoadingStats(false);
-        }
-      };
-
-      fetchDashboardData();
-    }, [authLoading]);
 
     // Show loading state while checking authentication
     if (authLoading) {
@@ -630,7 +303,7 @@ export default function Home() {
                     {isAdministrator ? 'Unassigned Mold Cases' : 'Assigned Mold Cases'}
                 </h2>
                 <CaseTable 
-                    cases={unassignedCases.length > 0 ? unassignedCases : (isAdministrator ? [] : cases)} 
+                    cases={isAdministrator ? unassignedCases : assignedCases} 
                     showPriority={isMycologist}
                     showStatus={isMycologist}
                     showAction={true}

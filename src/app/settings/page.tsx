@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import TabBar from "@/components/tab_bar";
 import { faLock, faUser, faBoxArchive, faHistory, faFlag } from "@fortawesome/free-solid-svg-icons";
@@ -12,6 +12,8 @@ import Archive from "./tab_contents/archive";
 import CaseHistory from "./tab_contents/case-history";
 import FlagHistory from "./tab_contents/flag-history";
 import type { FlaggedHistory } from "@/components/tables/flagged_history_table";
+import { useFlagReports } from '@/hooks/swr';
+import { apiMutate, ApiError } from '@/lib/api';
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
@@ -40,53 +42,19 @@ export default function Settings() {
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [pendingPasswordData, setPendingPasswordData] = useState<PasswordData | null>(null);
 
-  // ✅ Flag history state — now correctly inside the component
-  const [flaggedHistory, setFlaggedHistory] = useState<FlaggedHistory[]>([]);
-  const [flagHistoryLoading, setFlagHistoryLoading] = useState(false);
-  const [flagHistoryError, setFlagHistoryError] = useState<string | null>(null);
-
-  // Fetch flag history
-  useEffect(() => {
-    const fetchFlagReports = async () => {
-      setFlagHistoryLoading(true);
-      setFlagHistoryError(null);
-      try {
-        const res = await fetch('/api/v1/flag-report?limit=20', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-        });
-        const text = await res.text();
-        console.log('[flag-reports] status:', res.status);
-console.log('[flag-reports] response:', text);
-        let json: any = {};
-        try { json = text ? JSON.parse(text) : {}; } catch { json = {}; }
-
-        if (!res.ok) {
-          setFlagHistoryError(json?.error || 'Failed to load flag reports');
-          setFlaggedHistory([]);
-          return;
-        }
-
-        if (json.success && json.data?.snapshot) {
-          setFlaggedHistory(json.data.snapshot.map((item: any) => ({
-            flagId: item.content_id || '',
-            systemPredicted: item.content_type || '',
-            correctedGenus: item.details || '',
-            dateFlagged: item.dateFlagged || '',
-          })));
-        } else {
-          setFlaggedHistory([]);
-        }
-      } catch (err) {
-        setFlagHistoryError('Failed to load flag reports');
-        setFlaggedHistory([]);
-      } finally {
-        setFlagHistoryLoading(false);
-      }
-    };
-    fetchFlagReports();
-  }, []);
+  // ✅ Flag history via SWR
+  const { data: flagRes, isLoading: flagHistoryLoading, error: flagSwrError } = useFlagReports();
+  const flagHistoryError = flagSwrError ? 'Failed to load flag reports' : null;
+  const flaggedHistory: FlaggedHistory[] = useMemo(() => {
+    const snapshot = flagRes?.data?.snapshot;
+    if (!Array.isArray(snapshot)) return [];
+    return snapshot.map((item: any) => ({
+      flagId: item.content_id || '',
+      systemPredicted: item.content_type || '',
+      correctedGenus: item.details || '',
+      dateFlagged: item.dateFlagged || '',
+    }));
+  }, [flagRes]);
 
   const formatRole = (value: string) => {
     const trimmed = value?.trim();
@@ -183,33 +151,16 @@ console.log('[flag-reports] response:', text);
         formData.append('photo', profileFile);
       }
 
-      console.log('📤 Sending PATCH with FormData:', {
-        details,
-        hasFile: !!profileFile,
-        fileName: profileFile?.name
-      });
-
-      const res = await fetch('/api/v1/user/profile', {
+      await apiMutate('/api/v1/user/profile', {
         method: 'PATCH',
-        body: formData,
-        credentials: 'include'
+        formData,
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        console.log('❌ PATCH error response:', res.status, text);
-        let json;
-        try { json = JSON.parse(text); } catch { json = { error: text }; }
-        alert('Failed to save profile: ' + (json?.message || json?.error || res.statusText));
-      } else {
-        const data = await res.json();
-        console.log('Profile updated', data);
-        setSuccessMessage('Profile updated successfully');
-        try { await refreshUser(); setProfileFile(null); } catch (e) { /* ignore */ }
-      }
+      setSuccessMessage('Profile updated successfully');
+      try { await refreshUser(); setProfileFile(null); } catch { /* ignore */ }
     } catch (err) {
-      console.error('Failed to update profile', err);
-      alert('Internal error while updating profile.');
+      const message = err instanceof ApiError ? err.message : 'Internal error while updating profile.';
+      alert('Failed to save profile: ' + message);
     } finally {
       setProfileSaving(false);
       setSaveModalOpen(false);
@@ -264,25 +215,15 @@ console.log('[flag-reports] response:', text);
         newPassword: pendingPasswordData.newPassword,
       };
 
-      const res = await fetch('/api/v1/auth/change-password', {
+      const res = await apiMutate<any>('/api/v1/auth/change-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        credentials: 'include',
+        body,
       });
 
-      const text = await res.text();
-      let json;
-      try { json = text ? JSON.parse(text) : {}; } catch { json = { error: text }; }
-
-      if (!res.ok) {
-        setError(`Failed to change password: ${json?.message || json?.error || res.statusText}`);
-      } else {
-        setSuccessMessage(json?.data || json?.message || 'Password updated successfully');
-      }
+      setSuccessMessage(res?.data || res?.message || 'Password updated successfully');
     } catch (err) {
-      console.error('Change password error', err);
-      setError('Internal error while changing password.');
+      const message = err instanceof ApiError ? err.message : 'Internal error while changing password.';
+      setError(`Failed to change password: ${message}`);
     } finally {
       setPasswordSaving(false);
       setPasswordSaveModalOpen(false);

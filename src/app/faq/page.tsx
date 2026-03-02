@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, Variants, AnimatePresence } from 'framer-motion';
 import Footer from '@/components/footer';
 import { Navbar } from '@/components/navbar';
@@ -7,8 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faInbox, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import FAQTile from '@/components/tiles/faq_tile';
 import EmptyState from '@/components/empty_state';
-import { envOptions } from '@/configs/envOptions';
-import { endpoints } from '@/services/endpoints';
+import { useFaqs } from '@/hooks/swr';
 
 const mockFaqs = [
   { id: 1, q: "What is Moldify?", a: "Moldify is an AI-powered investigation system designed for early detection and analysis of agricultural mold to protect crops." },
@@ -42,78 +41,30 @@ const itemVariants: Variants = {
 
 export default function FAQ() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [faqs, setFaqs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-  const hasFetchedRef = useRef(false);
 
-  // Fetch FAQs from API
-  useEffect(() => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
+  // SWR: fetch FAQs through proxy
+  const { data: faqData, isLoading: loading } = useFaqs();
 
-    const fetchFaqs = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching FAQs from:', envOptions.apiUrl + endpoints.faq.list);
-        
-        const response = await fetch(`${envOptions.apiUrl}${endpoints.faq.list}`, { 
-          cache: 'default' 
-        });
-        
-        console.log('📡 Response status:', response.status);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch FAQs (Status: ${response.status})`);
-        }
-        
-        let data: any;
-        try {
-          data = await response.json();
-        } catch (parseError) {
-          // Response is not JSON (e.g., plain text error message like 429)
-          console.error('Failed to parse response as JSON:', parseError);
-          console.log('Using mock data as fallback');
-          setFaqs(mockFaqs);
-          setError(null);
-          return;
-        }
-        
-        console.log('Full API response:', data);
-        
-        if (data.success && data.data) {
-          const faqsData = data.data.data || data.data;
-          setFaqs(Array.isArray(faqsData) ? faqsData : []);
-          setNextPageToken(data.data.nextPageToken || null);
-        } else if (data.success && Array.isArray(data.data)) {
-          console.log('FAQs loaded:', data.data.length);
-          setFaqs(data.data);
-        } else {
-          console.warn('No FAQ data found, using mock data');
-          setFaqs(mockFaqs);
-        }
-        setError(null);
-      } catch (err) {
-        console.error('Failed to fetch FAQs:', err);
-        console.log('Using mock data as fallback');
-        setFaqs(mockFaqs);
-        setError(null); 
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFaqs();
-  }, []);
+  // Defensively extract FAQ array from various response shapes
+  const faqs: typeof mockFaqs = (() => {
+    const d = faqData?.data;
+    if (!d) return mockFaqs;
+    // data.data (double-nested)
+    if (d && typeof d === 'object' && 'data' in d && Array.isArray((d as any).data)) return (d as any).data;
+    // data.snapshot
+    if (d && typeof d === 'object' && 'snapshot' in d && Array.isArray((d as any).snapshot)) return (d as any).snapshot;
+    // plain array
+    if (Array.isArray(d)) return d;
+    return mockFaqs;
+  })();
 
   const filteredFaqs = useMemo(() => {
     const cleanQuery = searchQuery.toLowerCase().trim();
     if (!cleanQuery) return faqs;
 
     return faqs.filter(faq => 
-      (faq.q || faq.question || '').toLowerCase().includes(cleanQuery) || 
-      (faq.a || faq.answer || '').toLowerCase().includes(cleanQuery)
+      ((faq as any).q || (faq as any).question || '').toLowerCase().includes(cleanQuery) || 
+      ((faq as any).a || (faq as any).answer || '').toLowerCase().includes(cleanQuery)
     );
   }, [searchQuery, faqs]);
 
@@ -214,7 +165,7 @@ export default function FAQ() {
                 >
                   {filteredFaqs.map((faq) => (
                     <motion.div key={faq.id} variants={itemVariants} layout>
-                      <FAQTile question={faq.q || faq.question} answer={faq.a || faq.answer} />
+                      <FAQTile question={(faq as any).q || (faq as any).question} answer={(faq as any).a || (faq as any).answer} />
                     </motion.div>
                   ))}
                 </motion.div>

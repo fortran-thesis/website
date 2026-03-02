@@ -6,7 +6,7 @@ import Footer from '@/components/footer';
 import { useState, useEffect } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDownLong } from '@fortawesome/free-solid-svg-icons';
-import { envOptions } from '@/configs/envOptions';
+import { useResolvedCount } from '@/hooks/swr';
 
 /// Pictures Used
 const caseSub = '/assets/agr.png'; 
@@ -51,56 +51,13 @@ const Counter = ({ value }: { value: number }) => {
 
 export default function Home() {
   const [index, setIndex] = useState(0);
-  const [totalCasesResolved, setTotalCasesResolved] = useState(0);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const baseUrl = envOptions.apiUrl.replace('/api/v1', '');
-        const response = await fetch(`${baseUrl}/api/v1/mold-report/public/resolved-count`, { 
-          cache: 'default',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        let data: any;
-        try {
-          const responseText = await response.text();
-          data = responseText ? JSON.parse(responseText) : {};
-        } catch (parseError) {
-          // Response is not JSON (e.g., plain text error message)
-          console.error('Failed to parse response as JSON:', parseError);
-          data = { success: false, error: parseError instanceof SyntaxError ? 'Invalid JSON response' : String(parseError) };
-        }
-        
-        if (!response.ok) {
-          console.error(`API Error (Status: ${response.status}):`, data.error || data);
-          return;
-        }
-        
-        console.log('Resolved cases response:', data);
-        
-        // Extract the resolved count - handle different response formats
-        let count = 0;
-        if (typeof data === 'number') {
-          count = data;
-        } else if (data.success && data.data?.resolved_count !== undefined) {
-          count = data.data.resolved_count;
-        } else if (data.success && data.data?.resolvedCount !== undefined) {
-          count = data.data.resolvedCount;
-        } else if (data.data?.resolved_count !== undefined) {
-          count = data.data.resolved_count;
-        }
-        
-        if (count > 0) {
-          setTotalCasesResolved(count);
-          console.log('Set total resolved to:', count);
-        }
-      } catch (err) {
-        console.error('Failed to fetch case statistics:', err);
-      }
-    };
-    fetchStats();
-  }, []);
+  // SWR: resolved case count (public, no-auth)
+  const { data: resolvedData } = useResolvedCount();
+  const totalCasesResolved =
+    (resolvedData as any)?.data?.resolved_count ??
+    (resolvedData as any)?.data?.resolvedCount ??
+    0;
 
   // Auto-play logic
   useEffect(() => {
