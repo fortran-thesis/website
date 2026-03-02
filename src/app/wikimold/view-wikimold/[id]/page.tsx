@@ -1,12 +1,11 @@
 "use client";
-import { useState, useEffect } from 'react'; 
+import { useState, useEffect, useMemo } from 'react'; 
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Navbar } from '@/components/navbar';
 import Footer from '@/components/footer';
-import { envOptions } from '@/configs/envOptions';
-import { endpoints } from '@/services/endpoints';
+import { useMoldipediaArticle } from '@/hooks/swr';
 
 // --- Default Placeholders ---
 const DEFAULT_BANNER = "/assets/mold.jpg";
@@ -15,174 +14,46 @@ const DEFAULT_AUTHOR = "/assets/default-fallback.png";
 export default function ViewWikiMold() {
   const { id } = useParams();
   
-  const [article, setArticle] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // SWR: fetch article
+  const { data: articleRes, isLoading: loading, error: swrError } = useMoldipediaArticle(id as string | undefined);
+  const error = swrError ? (swrError instanceof Error ? swrError.message : 'Failed to load article') : null;
 
   // --- Image States ---
   const [bannerSrc, setBannerSrc] = useState(DEFAULT_BANNER);
   const [authorSrc, setAuthorSrc] = useState(DEFAULT_AUTHOR);
 
-  const slugify = (value: string) =>
-    value
-      .toString()
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
+  const article = useMemo(() => {
+    const data = articleRes?.data;
+    if (!data) return null;
 
-  const extractArticles = (data: any): { list: any[]; nextToken: string | null } => {
-    let articlesData: any[] | null = null;
-    if (data?.success) {
-      const candidates = [
-        data.data?.data,
-        data.data?.snapshot,
-        data.data?.snapshot?.docs,
-        data.data?.items,
-        data.data?.records,
-        data.data?.articles,
-        data.data,
-      ];
-
-      const normalizedCandidates = candidates
-        .map((value) => {
-          if (Array.isArray(value)) return value;
-          if (value && typeof value === "object") return Object.values(value);
-          return null;
-        })
-        .filter((value): value is any[] => Array.isArray(value));
-
-      articlesData = normalizedCandidates.reduce<any[] | null>((best, current) => {
-        if (!best || current.length > best.length) return current;
-        return best;
-      }, null);
+    let formattedDate = 'Date not available';
+    if (data.metadata) {
+      const dateSource = data.metadata.created_at;
+      if (dateSource) {
+        try {
+          let dateObj;
+          if (typeof dateSource === 'object' && '_seconds' in dateSource) {
+            dateObj = new Date(dateSource._seconds * 1000);
+          } else {
+            dateObj = new Date(dateSource as string);
+          }
+          if (!isNaN(dateObj.getTime())) {
+            formattedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+          }
+        } catch { /* keep default */ }
+      }
     }
 
     return {
-      list: articlesData && Array.isArray(articlesData) ? articlesData : [],
-      nextToken: data?.data?.nextPageToken || null,
+      id: data.id,
+      title: data.title || 'Untitled Article',
+      author: data.author || 'Unknown Author',
+      date: formattedDate,
+      bannerImage: data.cover_photo || DEFAULT_BANNER,
+      authorImage: data.author_photo || DEFAULT_AUTHOR,
+      content: data.body || data.description || data.content || 'No content available',
     };
-  };
-
-  // Fetch article data from API
-  useEffect(() => {
-    const fetchArticle = async () => {
-      try {
-        setLoading(true);
-        console.log('Fetching article with id:', id);
-        
-        const response = await fetch(`${envOptions.apiUrl}${endpoints.moldipedia.getById(id as string)}`, { 
-          cache: 'no-store' 
-        });
-        
-        console.log('Response status:', response.status);
-        
-        let data: any;
-        try {
-          const responseText = await response.text();
-          data = responseText ? JSON.parse(responseText) : {};
-        } catch (parseError) {
-          // Response is not JSON (e.g., plain text error message like 429)
-          console.error('Failed to parse response as JSON:', parseError);
-          data = { success: false, error: parseError instanceof SyntaxError ? 'Invalid JSON response' : String(parseError) };
-        }
-        
-        if (response.ok && data.success && data.data) {
-          const articleData = data.data;
-          if (articleData.metadata) {
-            Object.entries(articleData.metadata).forEach(([key, value]) => {
-              console.log(`  ${key}:`, value, 'Type:', typeof value);
-            });
-          }
-          
-          // Parse date from metadata field
-          let formattedDate = 'Date not available';
-          if (articleData.metadata) {
-            const dateSource = articleData.metadata.created_at || articleData.metadata.timestamp || articleData.metadata.date;
-            console.log('📅 Date source from metadata:', dateSource);
-            if (dateSource) {
-              try {
-                let dateObj;
-                // Handle Firebase Timestamp object with _seconds property
-                if (dateSource && typeof dateSource === 'object' && '_seconds' in dateSource) {
-                  console.log('🔥 Firebase Timestamp detected, _seconds:', dateSource._seconds);
-                  dateObj = new Date(dateSource._seconds * 1000); // Convert seconds to milliseconds
-                } else {
-                  dateObj = new Date(dateSource);
-                }
-                if (!isNaN(dateObj.getTime())) {
-                  formattedDate = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                }
-              } catch (err) {
-                console.warn('ailed to parse date:', dateSource, err);
-              } 
-            }
-          } else {
-            console.warn('No metadata field in response');
-          }
-          
-          const formattedArticle = {
-            id: articleData.id,
-            title: articleData.title || 'Untitled Article',
-            author: articleData.author || 'Unknown Author',
-            date: formattedDate,
-            bannerImage: articleData.cover_photo || DEFAULT_BANNER,
-            authorImage: articleData.author_photo || DEFAULT_AUTHOR,
-            content: articleData.body || articleData.description || articleData.content || 'No content available'
-          };
-          setArticle(formattedArticle);
-          return;
-        }
-
-        console.warn('Direct fetch failed, attempting slug fallback...');
-
-        // Fallback: try to find by slug from list endpoint
-        const targetSlug = slugify(String(id));
-        let pageToken: string | null = null;
-        let found: any | null = null;
-        let page = 0;
-
-        do {
-          let url = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
-          if (pageToken) url += `&pageToken=${encodeURIComponent(pageToken)}`;
-
-          const listRes = await fetch(url, { cache: 'no-store' });
-          const listData = await listRes.json();
-          const { list, nextToken } = extractArticles(listData);
-
-          found = list.find((item: any) => slugify(item?.title || "") === targetSlug) || null;
-          pageToken = nextToken;
-          page += 1;
-        } while (!found && pageToken && page < 10);
-
-        if (found) {
-          const formattedArticle = {
-            id: found.id || found._id || found.metadata?.id || found.metadata?.docId || id,
-            title: found.title || 'Untitled Article',
-            author: found.author || found.author_id || 'Unknown Author',
-            date: 'Date not available',
-            bannerImage: found.cover_photo || DEFAULT_BANNER,
-            authorImage: found.author_photo || DEFAULT_AUTHOR,
-            content: found.body || found.description || found.content || 'No content available'
-          };
-          setArticle(formattedArticle);
-          return;
-        }
-
-        console.error(`API Error (Status: ${response.status}):`, data.error || data);
-        throw new Error('Article not found');
-      } catch (err) {
-        console.error('Failed to fetch wikimold article:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load article');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) {
-      fetchArticle();
-    }
-  }, [id]);
+  }, [articleRes]);
 
   // Update image sources when article changes
   useEffect(() => {

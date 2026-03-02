@@ -6,21 +6,15 @@ import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import DonutChart from '@/components/charts/donut-chart';
 import UserTable from '@/components/tables/user_table';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUserRoleCounts, useUserDisabledCounts, useUsersInfinite } from '@/hooks/swr';
 
 
 export default function Users() {
 
     const userRole = "Administrator";
     const router = useRouter();
-
-    // UI state
-    const [users, setUsers] = useState<any[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [nextPageToken, setNextPageToken] = useState<string | null>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     // Search and filter state
@@ -28,9 +22,12 @@ export default function Users() {
     const [roleFilter, setRoleFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
-    // Stats from API endpoints
-    const [roleCounts, setRoleCounts] = useState({ farmer: 0, mycologist: 0, admin: 0 });
-    const [disabledCounts, setDisabledCounts] = useState({ active: 0, inactive: 0 });
+    // SWR: counts
+    const { data: rolesData } = useUserRoleCounts();
+    const { data: disabledData } = useUserDisabledCounts();
+
+    const roleCounts = (rolesData as any)?.data ?? { farmer: 0, mycologist: 0, admin: 0 };
+    const disabledCounts = (disabledData as any)?.data ?? { active: 0, inactive: 0 };
 
     const totalUsers = roleCounts.farmer + roleCounts.mycologist + roleCounts.admin;
     const totalFarmers = roleCounts.farmer;
@@ -44,9 +41,25 @@ export default function Users() {
         { name: "Active", value: activeCount, color: "var(--primary-color)" },
     ];
 
+    // SWR: paginated users
+    const {
+      data: usersPages,
+      size,
+      setSize,
+      isLoading: loading,
+      isValidating: isLoadingMore,
+    } = useUsersInfinite(100);
+
+    const users = useMemo(
+      () => usersPages?.flatMap((p: any) => p.data?.snapshot ?? []) ?? [],
+      [usersPages],
+    );
+    const hasMore = usersPages?.[usersPages.length - 1]?.data?.nextPageToken;
+    const error: string | null = null;
+
     // Client-side filter function
-    const getFilteredUsers = () => {
-        return users.filter(user => {
+    const filteredUsers = useMemo(() => {
+        return users.filter((user: any) => {
             const searchLower = searchQuery.toLowerCase();
             const roleValue = (user.user?.role || '').toLowerCase();
             const normalizedRole = roleValue === 'user'
@@ -71,120 +84,16 @@ export default function Users() {
 
             return matchesSearch && matchesRole && matchesStatus;
         });
-    };
+    }, [users, searchQuery, roleFilter, statusFilter]);
 
-    const filteredUsers = getFilteredUsers();
-
-    // Fetch initial users and stats on mount
+    // Infinite scroll via IntersectionObserver → load next SWR page
     useEffect(() => {
-        let mounted = true;
-        
-        const fetchCountsAndUsers = async () => {
-            setLoading(true);
-            setError(null);
-            
-            try {
-                // Fetch role and disabled counts
-                const [rolesRes, disabledRes, usersRes] = await Promise.all([
-                    fetch('/api/v1/users/counts/roles', { cache: 'default' }),
-                    fetch('/api/v1/users/counts/disabled', { cache: 'default' }),
-                    fetch('/api/v1/users?limit=100', { cache: 'no-store' })
-                ]);
-                
-                if (mounted) {
-                    if (rolesRes.ok) {
-                        const rolesBody = await rolesRes.json();
-                        if (rolesBody.success && rolesBody.data) setRoleCounts(rolesBody.data);
-                    }
-                    if (disabledRes.ok) {
-                        const disabledBody = await disabledRes.json();
-                        if (disabledBody.success && disabledBody.data) setDisabledCounts(disabledBody.data);
-                    }
-                    if (usersRes.ok) {
-                        const usersBody = await usersRes.json();
-                        const data = Array.isArray(usersBody.data?.snapshot) ? usersBody.data.snapshot : [];
-                        console.log('📊 Users API response:', {
-                          statusCode: usersRes.status,
-                          snapshotLength: data.length,
-                          firstUserStructure: data[0] ? { keys: Object.keys(data[0]), id: data[0].id } : 'EMPTY'
-                        });
-                        setUsers(data);
-                        setNextPageToken(usersBody.data?.nextPageToken || null);
-                    } else {
-                        const errorBody = await usersRes.json().catch(() => ({}));
-                        throw new Error(errorBody?.error || 'Failed to load users');
-                    }
-                }
-            } catch (e: any) {
-                console.error('Failed to load data:', e);
-                if (mounted) setError(e?.message || 'Failed to load data');
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        };
-        
-        fetchCountsAndUsers();
-        
-        return () => {
-            mounted = false;
-        };
-    }, []);
-
-    // Infinite scroll - load more users without filters
-    useEffect(() => {
-        if (!nextPageToken || isLoadingMore) return;
-
-        const handleLoadMore = async () => {
-            setIsLoadingMore(true);
-            try {
-                const params = new URLSearchParams();
-                params.set('limit', '100');
-                params.set('pageToken', nextPageToken);
-                const url = `/api/v1/users?${params.toString()}`;
-                
-                const res = await fetch(url, { cache: 'no-store' });
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    throw new Error(body?.error || 'Failed to load more users');
-                }
-                const body = await res.json();
-                const newData = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
-
-                // Stop pagination if no new data
-                if (newData.length === 0) {
-                    console.warn('⚠️ No more users returned - stopping pagination');
-                    setNextPageToken(null);
-                    setIsLoadingMore(false);
-                    return;
-                }
-
-                console.log('📊 Load more users response:', {
-                  newDataLength: newData.length,
-                  firstUserStructure: newData[0] ? { keys: Object.keys(newData[0]), id: newData[0].id } : 'EMPTY'
-                });
-
-                // Safety check: if token didn't change, stop loading
-                const newToken = body.data?.nextPageToken || null;
-                if (!newToken || newToken === nextPageToken) {
-                    console.warn('⚠️ Backend returned same token - stopping pagination');
-                    setNextPageToken(null);
-                    setIsLoadingMore(false);
-                    return;
-                }
-
-                setUsers(prev => [...prev, ...newData]);
-                setNextPageToken(newToken);
-            } catch (err) {
-                console.error('Failed to load more users:', err);
-            } finally {
-                setIsLoadingMore(false);
-            }
-        };
+        if (!hasMore || isLoadingMore) return;
 
         const observer = new IntersectionObserver(
             entries => {
                 if (entries[0].isIntersecting) {
-                    handleLoadMore();
+                    setSize(s => s + 1);
                 }
             },
             { threshold: 0.1 }
@@ -199,7 +108,7 @@ export default function Users() {
                 observer.unobserve(loadMoreRef.current);
             }
         };
-    }, [nextPageToken, isLoadingMore]);
+    }, [hasMore, isLoadingMore, setSize]);
 
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
@@ -259,7 +168,6 @@ export default function Users() {
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
-                            setNextPageToken(null); // Reset pagination
                         }}
                         className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--background-color)] py-2 px-4 rounded-full border-2 border-[var(--primary-color)] focus:outline-none w-full pr-10"
                     />
@@ -281,7 +189,6 @@ export default function Users() {
                         ]}
                         onSelect={(value) => {
                             setRoleFilter(value);
-                            setNextPageToken(null);
                         }}
                     />
 
@@ -297,7 +204,6 @@ export default function Users() {
                         ]}
                         onSelect={(value) => {
                             setStatusFilter(value);
-                            setNextPageToken(null);
                         }}
                     />
                 </div>

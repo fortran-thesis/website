@@ -2,12 +2,13 @@
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import StatusBox from "@/components/tiles/status_tile";
 import UserLogTile, { UserLogTileEntry } from "@/components/tiles/user_log_tile";
 import EmptyState from "@/components/empty_state";
 import { faClipboard } from "@fortawesome/free-solid-svg-icons";
+import { useUser, useAuditLogs } from '@/hooks/swr';
 
 
 type UserRole = "Farmer" | "Administrator" | "Mycologist";
@@ -31,122 +32,52 @@ export default function ViewUser() {
   console.log('👤 ViewUser page loaded:', { userId, isUndefined: userId === "undefined", isNull: userId === null });
 
   const [isEditMycoModal, setShowEditMycoModal] = useState(false);
-  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<UserRole>("Farmer");
-  const [userLogs, setUserLogs] = useState<UserLogTileEntry[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
+
+  // SWR: user details
+  const { data: userSwr, isLoading: loading, error: userError } = useUser(userId ?? undefined);
+  const error = userError ? (userError instanceof Error ? userError.message : 'Failed to load user') : null;
+
+  const userDetails = useMemo(() => {
+    const body = userSwr as any;
+    const user = body?.data?.user || body?.user || {};
+    const details = body?.data?.details || body?.details || {};
+    if (!user?.username) return null;
+    return {
+      id: userId || '',
+      username: user.username || '',
+      firstName: user.first_name || '',
+      lastName: user.last_name || '',
+      email: details.email || '',
+      phone: details.phone_number || '',
+      address: user.address || '',
+      role: user.role || 'Farmer',
+      is_active: !details.disabled && !user.is_banned,
+    } as UserDetails;
+  }, [userSwr, userId]);
+
+  const normalizedRole = (userDetails?.role || 'Farmer').toLowerCase();
+  const userRole: UserRole =
+    normalizedRole === 'admin' || normalizedRole === 'administrator'
+      ? 'Administrator'
+      : normalizedRole === 'mycologist'
+      ? 'Mycologist'
+      : 'Farmer';
+
+  // SWR: audit logs
+  const { data: logsData, isLoading: logsLoading } = useAuditLogs({ limit: 10 });
+  const userLogs: UserLogTileEntry[] = useMemo(() => {
+    const entries = (logsData as any)?.data;
+    if (!Array.isArray(entries)) return [];
+    return entries.map((log: any) => ({
+      date: log.timestamp ? new Date(log.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A',
+      time: log.timestamp ? new Date(log.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+      description: `${log.action || 'Unknown Action'}: ${log.description || 'No description'}`,
+    }));
+  }, [logsData]);
 
   const handleMycoSubmit = (data: any) => {
     setShowEditMycoModal(false);
   };
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (!userId) {
-        setError("Missing user id");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-
-        const res = await fetch(`/api/v1/user/${userId}`, { cache: "no-store" });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body?.error || "Failed to load user");
-        }
-
-        const body = await res.json();
-        const user = body?.data?.user || body?.user || {};
-        const details = body?.data?.details || body?.details || {};
-        
-        if (!user?.username) {
-          throw new Error("User data not found");
-        }
-
-        setUserDetails({
-          id: userId,
-          username: user.username || "",
-          firstName: user.first_name || "",
-          lastName: user.last_name || "",
-          email: details.email || "",
-          phone: details.phone_number || "",
-          address: user.address || "",
-          role: user.role || "Farmer",
-          is_active: !details.disabled && !user.is_banned,
-        });
-
-        const normalizedRole = (user.role || "Farmer").toLowerCase();
-        if (normalizedRole === "admin" || normalizedRole === "administrator") {
-          setUserRole("Administrator");
-        } else if (normalizedRole === "mycologist") {
-          setUserRole("Mycologist");
-        } else {
-          setUserRole("Farmer");
-        }
-
-        // Fetch audit logs for this user
-        try {
-          setLogsLoading(true);
-          // Try fetching audit logs - may need to filter by actor_id
-          const logsUrl = `/api/v1/audit-logs?limit=10`;
-          console.log('📋 Fetching audit logs from:', logsUrl);
-          
-          const logsRes = await fetch(logsUrl, { cache: 'no-store' });
-          console.log('📋 Audit logs fetch status:', logsRes.status);
-          
-          if (logsRes.ok) {
-            const logsBody = await logsRes.json();
-            console.log('📋 Audit logs response:', logsBody);
-
-            if (logsBody.success && Array.isArray(logsBody.data)) {
-              // Map audit logs to UserLogTileEntry format
-              const mappedLogs: UserLogTileEntry[] = logsBody.data.map((log: any) => ({
-                date: log.timestamp ? new Date(log.timestamp).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A',
-                time: log.timestamp ? new Date(log.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-                description: `${log.action || 'Unknown Action'}: ${log.description || 'No description'}`,
-              }));
-              setUserLogs(mappedLogs);
-              console.log('📋 Audit logs loaded:', mappedLogs.length);
-            }
-          } else if (logsRes.status === 404) {
-            // No audit logs found - set empty array for empty state
-            const errorText = await logsRes.text();
-            const errorJson = JSON.parse(errorText);
-            console.log('📋 No audit logs found:', errorJson.error);
-            setUserLogs([]);
-          } else {
-            const errorText = await logsRes.text();
-            console.error('📋 Failed to fetch audit logs - Status:', logsRes.status);
-            console.error('📋 Error response:', errorText);
-            
-            try {
-              const errorJson = JSON.parse(errorText);
-              console.error('📋 Error JSON:', errorJson);
-            } catch {
-              // Not JSON
-            }
-          }
-        } catch (logsErr) {
-          console.error('📋 Caught error fetching audit logs:', logsErr);
-          // Keep using default mock data if fetch fails
-        } finally {
-          setLogsLoading(false);
-        }
-      } catch (err) {
-        console.error("Failed to fetch user:", err);
-        setError(err instanceof Error ? err.message : "Failed to load user");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, [userId]);
 
   //User Data Variables
   const userName = userDetails ? `${userDetails.firstName} ${userDetails.lastName}`.trim() || userDetails.username : "Unknown User";

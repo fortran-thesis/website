@@ -6,6 +6,7 @@ import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import ConfirmModal from "@/components/modals/confirmation_modal";
+import { apiMutate, ApiError } from '@/lib/api';
 
 export interface MycoFormData {
   firstName: string;
@@ -113,47 +114,30 @@ export default function CreateMycologist() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/v1/mycologists", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      await apiMutate('/api/v1/mycologists', {
+        method: 'POST',
+        body: {
           first_name: formData.firstName,
           last_name: formData.lastName,
           username: formData.username,
           email: formData.email,
           password: formData.password,
-        }),
-        credentials: "include",
+        },
       });
-
-      let result;
-      const responseText = await response.text();
-      
-      try {
-        result = JSON.parse(responseText);
-      } catch (jsonError) {
-        console.error('Failed to parse response:', responseText);
-        result = { error: 'Invalid response from server' };
-      }
-
-      if (!response.ok) {
-        const errorMessage = result?.error || result?.message || "Failed to create account";
-        
-        // Check for email already exists error
-        if (errorMessage.toLowerCase().includes('email') && errorMessage.toLowerCase().includes('already')) {
-          setError("Email already exists");
-        } else {
-          setError(errorMessage);
-        }
-        return;
-      }
 
       // Success - redirect back to user management page
       router.push('/user');
     } catch (err: any) {
-      setError(err?.message || "An error occurred while creating the account");
+      const message =
+        err instanceof ApiError
+          ? err.info?.error ?? err.info?.message ?? err.message
+          : err?.message ?? 'An error occurred while creating the account';
+
+      if (message.toLowerCase().includes('email') && message.toLowerCase().includes('already')) {
+        setError('Email already exists');
+      } else {
+        setError(message);
+      }
     } finally {
       setIsLoading(false);
     }

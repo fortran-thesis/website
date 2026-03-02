@@ -8,9 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faInbox, faPlusCircle } from '@fortawesome/free-solid-svg-icons';
 import WikimoldTile from '@/components/tiles/wikimold_tile';
 import EmptyState from '@/components/empty_state';
-import { envOptions } from '@/configs/envOptions';
-import { endpoints } from '@/services/endpoints';
-import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { useMoldipediaInfinite, extractArticles } from '@/hooks/swr';
 
 const mockArticles = [
   { id: 1, title: "The Rise of Molds: Dive into the Fungal Kingdom", author: "Dr. Aris Mendoza", image: "/assets/mold.jpg" },
@@ -52,13 +50,34 @@ const itemVariants: Variants = {
 export default function WikiMold() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [articles, setArticles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
-  const hasFetchedRef = useRef(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // SWR: paginated moldipedia articles
+  const {
+    data: articlePages,
+    size,
+    setSize,
+    isLoading: loading,
+    isValidating: isLoadingMore,
+    error: swrError,
+  } = useMoldipediaInfinite(50);
+
+  const error = swrError ? 'Failed to load articles' : null;
+
+  const articles = useMemo(() => {
+    if (!articlePages) return [];
+    const all = articlePages.flatMap((page: any) => extractArticles(page.data));
+    // deduplicate
+    const seen = new Set<string>();
+    return all.filter((a) => {
+      if (seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
+  }, [articlePages]);
+
+  const hasMore = articlePages?.[articlePages.length - 1]?.data?.nextPageToken;
 
   // Listen for route changes to show loading bar when navigating to article details
   useEffect(() => {
@@ -85,143 +104,31 @@ export default function WikiMold() {
     };
   }, []);
 
-  // Fetch articles from API
+  // Infinite scroll: load next SWR page
   useEffect(() => {
-    if (hasFetchedRef.current) return;
-    hasFetchedRef.current = true;
+    if (!hasMore || isLoadingMore || searchQuery) return;
 
-    const fetchArticles = async (pageToken?: string) => {
-      try {
-        if (!pageToken) setLoading(true);
-        else setIsLoadingMore(true);
-        
-        let url: string = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
-        if (pageToken) {
-          url += `&pageToken=${encodeURIComponent(pageToken)}`;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setSize((s) => s + 1);
         }
-        
-        console.log('🔍 Fetching from:', url);
-        const response = await fetch(url, { cache: 'no-store' });
-        console.log('📡 Response status:', response.status);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch articles (Status: ${response.status})`);
-        }
-        
-        let data: any;
-        try {
-          data = await response.json();
-        } catch (parseError) {
-          // Response is not JSON (e.g., plain text error message like 429)
-          console.error('Failed to parse response as JSON:', parseError);
-          console.error('ailed to fetch wikimold articles:', parseError);
-          setError('Failed to load articles');
-          if (!pageToken) setArticles([]);
-          return;
-        }
-        
-        console.log('Full API response:', data);
-        
-        // Handle different possible response structures
-        let articlesData = null;
-        if (data.success) {
-          if (data.data?.data) {
-            // Handle double-nested data.data structure
-            articlesData = data.data.data;
-          } else if (data.data?.snapshot) {
-            articlesData = data.data.snapshot;
-          } else if (data.data?.items) {
-            articlesData = data.data.items;
-          } else if (data.data?.records) {
-            articlesData = data.data.records;
-          } else if (data.data?.articles) {
-            articlesData = data.data.articles;
-          } else if (Array.isArray(data.data)) {
-            articlesData = data.data;
-          }
-        }
-        
-        if (articlesData && Array.isArray(articlesData)) {
-          console.log('Found articles:', articlesData.length);
-          if (pageToken) {
-            setArticles(prev => {
-              const idSet = new Set(prev.map(a => a.id));
-              const newArticles = articlesData.filter(a => !idSet.has(a.id));
-              return [...prev, ...newArticles];
-            });
-          } else {
-            // Remove duplicates from initial fetch
-            const uniqueIds = new Set<string>();
-            const uniqueArticles = articlesData.filter(a => {
-              if (uniqueIds.has(a.id)) return false;
-              uniqueIds.add(a.id);
-              return true;
-            });
-            setArticles(uniqueArticles);
-          }
-          setNextPageToken(data.data?.nextPageToken || null);
-        } else {
-          console.error('No articles data found in response');
-          if (!pageToken) setArticles([]);
-        }
-        setError(null);
-      } catch (err) {
-        console.error('ailed to fetch wikimold articles:', err);
-        setError('Failed to load articles');
-        if (!pageToken) setArticles([]);
-      } finally {
-        setLoading(false);
-        setIsLoadingMore(false);
-      }
+      },
+      { threshold: 0.1 },
+    );
+
+    if (loadMoreRef.current) observer.observe(loadMoreRef.current);
+    return () => {
+      if (loadMoreRef.current) observer.unobserve(loadMoreRef.current);
     };
-    
-    fetchArticles();
-  }, []);
-
-  // Fetch more articles callback for infinite scroll
-  const handleLoadMore = async () => {
-    if (!nextPageToken || searchQuery) return;
-    
-    setIsLoadingMore(true);
-    try {
-      let url = `${envOptions.apiUrl}${endpoints.moldipedia.list}?limit=50`;
-      url += `&pageToken=${encodeURIComponent(nextPageToken)}`;
-      
-      const response = await fetch(url, { cache: 'no-store' });
-      const data = await response.json();
-      
-      if (data.success && data.data?.snapshot && data.data.snapshot.length > 0) {
-        setArticles(prev => {
-          const idSet = new Set(prev.map(a => a.id));
-          const newArticles = data.data.snapshot.filter((a: any) => !idSet.has(a.id));
-          return [...prev, ...newArticles];
-        });
-        setNextPageToken(data.data.nextPageToken || null);
-        console.log('✅ Loaded', data.data.snapshot.length, 'more articles');
-      } else {
-        setNextPageToken(null);
-      }
-    } catch (err) {
-      console.error('Failed to load more articles:', err);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
-
-  // Use infinite scroll hook to handle pagination
-  const { triggerRef } = useInfiniteScroll({
-    onLoadMore: handleLoadMore,
-    isLoading: isLoadingMore,
-    hasMore: !!nextPageToken && !searchQuery,
-    threshold: 0.1,
-  });
+  }, [hasMore, isLoadingMore, searchQuery, setSize]);
 
   const filteredArticles = useMemo(() => {
     const cleanQuery = searchQuery.toLowerCase().trim();
     if (!cleanQuery) return articles;
     
     return articles.filter(art => 
-      art.title.toLowerCase().includes(cleanQuery) || 
+      (art.title || '').toLowerCase().includes(cleanQuery) || 
       (art.author && art.author.toLowerCase().includes(cleanQuery)) ||
       (art.author_id && art.author_id.toLowerCase().includes(cleanQuery))
     );
@@ -328,7 +235,7 @@ export default function WikiMold() {
                       <motion.div key={article.id} variants={itemVariants} layout>
                         <WikimoldTile 
                           id={article.id} 
-                          title={article.title}
+                          title={article.title || 'Untitled'}
                           author={article.author || article.author_id || 'Unknown'}
                           image={article.cover_photo || '/assets/mold.jpg'}
                         />
@@ -336,10 +243,10 @@ export default function WikiMold() {
                     ))}
                   </div>
 
-                  {/* Infinite scroll trigger - appears when user scrolls near bottom */}
+                  {/* Infinite scroll trigger */}
                   {!searchQuery && (
                     <div 
-                      ref={triggerRef} 
+                      ref={loadMoreRef} 
                       className="h-10 flex items-center justify-center mt-12"
                     >
                       {isLoadingMore && (
