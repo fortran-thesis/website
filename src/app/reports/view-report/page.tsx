@@ -6,8 +6,9 @@ import {
   faImage,
 } from "@fortawesome/free-solid-svg-icons";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import { useReport } from '@/hooks/swr';
 import BackButton from "@/components/buttons/back_button";
 import Image from "next/image";
 import StatusBox from "@/components/tiles/status_tile";
@@ -18,21 +19,31 @@ export default function ViewReport() {
   const searchParams = useSearchParams();
   const reportId = searchParams.get("id");
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Report data
-  const [reportData, setReportData] = useState<any>(null);
-  const [reportedUserId, setReportedUserId] = useState("");
-  const [reporterId, setReporterId] = useState("");
-  const [dateReported, setDateReported] = useState("");
-  const [userIssue, setUserIssue] = useState("Inappropriate Content Posted");
-  const [reasonDescription, setReasonDescription] = useState(
-    "The user has posted content that violates the community guidelines by sharing offensive images and language."
-  );
-  const [additionalInfo, setAdditionalInfo] = useState(
-    "The user has posted content that violates the community guidelines by sharing offensive images and language. This behavior has been reported multiple times by other users, and it is affecting the overall experience of the platform. Immediate action is required to address this issue and ensure a safe environment for all users."
-  );
+  // SWR: fetch report
+  const { data: reportRes, isLoading: loading, error: swrError } = useReport(reportId ?? undefined);
+  const reportData = reportRes?.data ?? null;
+  const error = swrError ? (swrError instanceof Error ? swrError.message : 'Failed to load report') : null;
+
+  const reportedUserId = useMemo(() => {
+    const v = reportData?.reported_user_id?.trim();
+    return v || '(N/A)';
+  }, [reportData]);
+
+  const reporterId = useMemo(() => {
+    const v = reportData?.reporter_id?.trim();
+    return v || 'N/A';
+  }, [reportData]);
+
+  const dateReported = useMemo(() => {
+    if (reportData?.created_at) return new Date(reportData.created_at as string).toLocaleDateString();
+    const metaDate = reportData?.metadata?.created_at;
+    if (metaDate && typeof metaDate === 'object' && 'seconds' in metaDate) return new Date(metaDate.seconds * 1000).toLocaleDateString();
+    return 'N/A';
+  }, [reportData]);
+
+  const userIssue = reportData?.title || reportData?.reason || 'Inappropriate Content Posted';
+  const reasonDescription = reportData?.description || reportData?.details || 'The user has posted content that violates the community guidelines by sharing offensive images and language.';
+  const additionalInfo = reportData?.description || reportData?.details || 'The user has posted content that violates the community guidelines by sharing offensive images and language. This behavior has been reported multiple times by other users, and it is affecting the overall experience of the platform. Immediate action is required to address this issue and ensure a safe environment for all users.';
 
   const userProfileImage = "/assets/sdssdsd.jpg";
   const title =
@@ -40,71 +51,6 @@ export default function ViewReport() {
   const content =
     "Molds are a fascinating group of fungi that thrive in diverse environments, from damp basements to decaying organic matter. These microscopic organisms play a crucial role in ecosystems by breaking down complex organic materials, recycling nutrients, and contributing to soil health...";
   const userRole = "Administrator";
-
-  // Fetch report data
-  useEffect(() => {
-    if (!reportId) {
-      console.log('📋 No report ID available yet');
-      return;
-    }
-
-    console.log('📋 Starting to fetch report with ID:', reportId);
-
-    const fetchReport = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(`/api/v1/reports/${reportId}`, { cache: 'no-store' });
-        console.log('📋 Report fetch status:', res.status);
-        
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          console.error('📋 Report error response:', body);
-          throw new Error(body?.error || `Failed to load report (Status: ${res.status})`);
-        }
-
-        const body = await res.json();
-        console.log('📋 Full API Response:', JSON.stringify(body, null, 2));
-        console.log('📋 Report data received:', body.data);
-        console.log('📋 reported_user_id value:', body.data?.reported_user_id);
-        console.log('📋 reporter_id value:', body.data?.reporter_id);
-        console.log('📋 created_at value:', body.data?.created_at);
-        console.log('📋 All data keys:', body.data ? Object.keys(body.data) : 'No data');
-
-        if (body.success && body.data) {
-          setReportData(body.data);
-          // Use title instead of reason, description instead of details
-          setUserIssue(body.data.title || body.data.reason || 'Unknown Issue');
-          setAdditionalInfo(body.data.description || body.data.details || 'No additional details provided');
-          
-          // Set report metadata - handle empty strings as well
-          const reportedUserIdValue = body.data.reported_user_id?.trim();
-          const reporterIdValue = body.data.reporter_id?.trim();
-          
-          console.log('📋 After trim - reportedUserId:', reportedUserIdValue, 'reporterId:', reporterIdValue);
-          
-          setReportedUserId(reportedUserIdValue || '(N/A)');
-          setReporterId(reporterIdValue || 'N/A');
-          setDateReported(
-            body.data.created_at 
-              ? new Date(body.data.created_at).toLocaleDateString() 
-              : body.data.metadata?.created_at
-              ? new Date(body.data.metadata.created_at.seconds * 1000).toLocaleDateString()
-              : 'N/A'
-          );
-        } else {
-          console.error('📋 Report response not successful');
-        }
-      } catch (err) {
-        console.error('📋 Failed to fetch report:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load report');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReport();
-  }, [reportId]);
 
   const [imgSrc, setImgSrc] = useState(userProfileImage);
   const [hasImage, setHasImage] = useState(true);

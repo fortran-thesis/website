@@ -6,26 +6,15 @@ import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import ReportsTable, { Report } from '@/components/tables/report_table';
 import { useEffect, useState, useRef, useMemo } from 'react';
+import { useReportsInfinite } from '@/hooks/swr';
 
 export default function Reports() {
        
     const userRole = "Administrator";
-
-    const [reports, setReports] = useState<Report[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [nextPageToken, setNextPageToken] = useState<string | null>(null);
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
-
-    const [stats, setStats] = useState({
-      total: 0,
-      unresolved: 0,
-      resolved: 0,
-    });
 
     const normalizeStatus = (rawStatus?: string) => {
       const status = (rawStatus || '').toString().trim().toLowerCase();
@@ -34,146 +23,51 @@ export default function Reports() {
       return rawStatus ? rawStatus : 'Unresolved';
     };
 
-    // Build search with active filters
-    const buildSearchUrl = (token?: string | null) => {
-      const params = new URLSearchParams();
-      params.set('limit', '10');
-      if (token) params.set('pageToken', token);
-      return `/api/v1/reports?${params.toString()}`;
-    };
+    // SWR: paginated reports
+    const {
+      data: reportPages,
+      size,
+      setSize,
+      isLoading: loading,
+      isValidating: isLoadingMore,
+    } = useReportsInfinite(10);
 
-    // Fetch reports
-    useEffect(() => {
-      let mounted = true;
-
-      const fetchReports = async () => {
-        setLoading(true);
-        setError(null);
-        try {
-          const url = buildSearchUrl();
-          console.log('📊 Fetching reports from:', url);
-          const res = await fetch(url, { cache: 'no-store' });
-          console.log('📊 Reports response status:', res.status);
-          
-          if (!res.ok) {
-            const body = await res.json().catch(() => ({}));
-            console.error('📊 Reports error response:', body);
-            throw new Error(body?.error || `Failed to load reports (Status: ${res.status})`);
-          }
-
-          const body = await res.json();
-          console.log('Reports body:', body);
-          console.log('First report RAW data:', JSON.stringify(body.data?.snapshot?.[0], null, 2));
-          
-          if (body.success && body.data?.snapshot) {
-            const reportsData = body.data.snapshot.map((r: any) => {
-              // Check for status in metadata or root level
-              const rawStatus = r.status || r.report_status || r.resolution_status || r.metadata?.status || r.metadata?.report_status;
-              const status = normalizeStatus(rawStatus);
-              console.log('📊 Report status mapping:', { 
-                id: r.id, 
-                rawStatus, 
-                normalized: status, 
-                hasMetadata: !!r.metadata,
-                allRootFields: Object.keys(r),
-                metadataFields: r.metadata ? Object.keys(r.metadata) : []
-              });
-              
-              return {
-                id: r.id,
-                issue: r.reason || 'Unknown Issue',
-                reportedUser: r.reported_user_id || 'Unknown',
-                reportedBy: r.reporter_id || 'Unknown',
-                dateReported: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'N/A',
-                status: status,
-              };
-            });
-            if (mounted) {
-              setReports(reportsData);
-              setNextPageToken(body.data.nextPageToken || null);
-            }
-          } else {
-            console.log('📊 Unexpected response structure:', body);
-            if (mounted) {
-              setReports([]);
-              setStats({ total: 0, unresolved: 0, resolved: 0 });
-            }
-          }
-        } catch (err) {
-          console.error('📊 Failed to fetch reports:', err);
-          if (mounted) setError(err instanceof Error ? err.message : 'Failed to load reports');
-        } finally {
-          if (mounted) setLoading(false);
-        }
-      };
-
-      fetchReports();
-      return () => { mounted = false; };
-    }, []);
-
-    // Recalculate stats whenever reports array changes
-    useEffect(() => {
-      const unresolvedData = reports.filter((r: Report) => r.status === 'Unresolved');
-      const resolvedData = reports.filter((r: Report) => r.status === 'Resolved');
-      
-      setStats({
-        total: reports.length,
-        unresolved: unresolvedData.length,
-        resolved: resolvedData.length,
-      });
-      
-      console.log('📊 Stats updated:', { total: reports.length, unresolved: unresolvedData.length, resolved: resolvedData.length });
-    }, [reports]);
-
-    // Infinite scroll
-    useEffect(() => {
-      if (!nextPageToken || isLoadingMore) return;
-
-      const handleLoadMore = async () => {
-        setIsLoadingMore(true);
-        try {
-          const url = buildSearchUrl(nextPageToken);
-          const res = await fetch(url, { cache: 'no-store' });
-          if (!res.ok) throw new Error('Failed to load more reports');
-
-          const body = await res.json();
-          if (body.success && body.data?.snapshot) {
-            const newReportsData = body.data.snapshot.map((r: any) => ({
+    const reports: Report[] = useMemo(
+      () =>
+        (reportPages ?? []).flatMap((page: any) =>
+          (page.data?.snapshot ?? []).map((r: any) => {
+            const rawStatus = r.status || r.report_status || r.resolution_status || r.metadata?.status || r.metadata?.report_status;
+            return {
               id: r.id,
               issue: r.reason || 'Unknown Issue',
               reportedUser: r.reported_user_id || 'Unknown',
               reportedBy: r.reporter_id || 'Unknown',
               dateReported: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'N/A',
-              status: normalizeStatus(r.status || r.report_status || r.resolution_status),
-            }));
+              status: normalizeStatus(rawStatus),
+            };
+          }),
+        ),
+      [reportPages],
+    );
 
-            if (newReportsData.length === 0) {
-              setNextPageToken(null);
-              setIsLoadingMore(false);
-              return;
-            }
+    const hasMore = reportPages?.[reportPages.length - 1]?.data?.nextPageToken;
+    const error: string | null = null;
 
-            const newToken = body.data.nextPageToken || null;
-            if (!newToken || newToken === nextPageToken) {
-              setNextPageToken(null);
-              setIsLoadingMore(false);
-              return;
-            }
+    // Derive stats from loaded data
+    const stats = useMemo(() => {
+      const unresolvedData = reports.filter((r) => r.status === 'Unresolved');
+      const resolvedData = reports.filter((r) => r.status === 'Resolved');
+      return { total: reports.length, unresolved: unresolvedData.length, resolved: resolvedData.length };
+    }, [reports]);
 
-            setReports(prev => [...prev, ...newReportsData]);
-            setNextPageToken(newToken);
-          }
-        } catch (err) {
-          console.error('Failed to load more reports:', err);
-        } finally {
-          setIsLoadingMore(false);
-        }
-      };
+    // Infinite scroll: load next SWR page
+    useEffect(() => {
+      if (!hasMore || isLoadingMore) return;
 
       const observer = new IntersectionObserver(
         entries => {
           if (entries[0].isIntersecting) {
-            handleLoadMore();
+            setSize(s => s + 1);
           }
         },
         { threshold: 0.1 }
@@ -188,7 +82,7 @@ export default function Reports() {
           observer.unobserve(loadMoreRef.current);
         }
       };
-    }, [nextPageToken, isLoadingMore]);
+    }, [hasMore, isLoadingMore, setSize]);
 
     const filteredReports = useMemo(() => {
       const query = searchQuery.trim().toLowerCase();

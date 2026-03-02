@@ -1,5 +1,5 @@
   "use client";
-  import { useMemo, useState, useEffect } from 'react';
+  import { useMemo, useState } from 'react';
   import { useRouter } from 'next/navigation';
   import Breadcrumbs from '@/components/breadcrumbs_nav';
   import TabBar from '@/components/tab_bar';
@@ -10,6 +10,7 @@
   import WikiMoldManagement from './tab-content/wikimold/page';
   import ConfirmModal from '@/components/modals/confirmation_modal';
   import { useAuth } from '@/hooks/useAuth';
+  import { useMoldList, useMoldipediaList } from '@/hooks/swr';
 
   export default function ContentManagement() {
       console.log('🚀 ContentManagement component rendering');
@@ -41,103 +42,60 @@
     console.log('  isMycologist:', isMycologist);
     console.log('  userRole:', userRole);
     
-    const [moldData, setMoldData] = useState<MoldGenus[]>([]);
-    const [isMoldLoading, setIsMoldLoading] = useState(true);
-        // Fetch all molds from API (requires curator/admin role)
-        useEffect(() => {
-          if (authLoading) return;
-          setIsMoldLoading(true);
-          fetch('/api/v1/mold?limit=1000', {
-            cache: 'no-store',
-            credentials: 'include'
-          })
-            .then(async (response) => {
-              if (!response.ok) {
-                setIsMoldLoading(false);
-                return;
-              }
-              const result = await response.json();
-              if (!result.success || !result.data?.snapshot) {
-                setIsMoldLoading(false);
-                return;
-              }
-              const allMolds = result.data.snapshot;
-              const mapped: MoldGenus[] = allMolds.map((m: any) => ({
-                id: m.id || '',
-                genusName: m.name || 'Unknown',
-                reviewedBy: 'N/A',
-                dateReviewed: 'N/A',
-              }));
-              setMoldData(mapped);
-              console.log('Fetched moldData for table:', mapped);
-              setIsMoldLoading(false);
-            })
-            .catch(() => {
-              setIsMoldLoading(false);
-            });
-        }, [authLoading]);
-    // State for WikiMold data and loading
-    const [wikimoldData, setWikiMoldData] = useState<WikiMold[]>([]);
-    const [isWikiMoldLoading, setIsWikiMoldLoading] = useState(true);
-    const [wikiMoldCount, setWikiMoldCount] = useState(0);
+    // SWR: fetch mold list
+    const { data: moldRes, isLoading: isMoldLoading } = useMoldList();
+    const moldData: MoldGenus[] = useMemo(() => {
+      const snapshot = moldRes?.data?.snapshot;
+      if (!Array.isArray(snapshot)) return [];
+      return snapshot.map((m: any) => ({
+        id: m.id || '',
+        genusName: m.name || 'Unknown',
+        reviewedBy: 'N/A',
+        dateReviewed: 'N/A',
+      }));
+    }, [moldRes]);
 
-    // Fetch all moldipedia articles for WikiMold table
-    useEffect(() => {
-      setIsWikiMoldLoading(true);
-      fetch('/api/v1/moldipedia?limit=1000', {
-        cache: 'no-store',
-        credentials: 'include',
-        headers: {
-          'Accept': 'application/json',
-        },
-      })
-        .then(async (response) => {
-          if (!response.ok) {
-            setIsWikiMoldLoading(false);
-            return;
-          }
-          const result = await response.json();
-          if (!result.data?.snapshot) {
-            setIsWikiMoldLoading(false);
-            return;
-          }
-          // Map API data to WikiMold type
-          const mapped: WikiMold[] = result.data.snapshot.map((item: any) => {
-            let datePublished = 'N/A';
-            // Try metadata first, then fallback to created_at
-            const metadata = item.metadata || {};
-            const dateSource = metadata.created_at || metadata.timestamp || metadata.date || item.created_at;
-            if (dateSource) {
-              try {
-                let dateObj;
-                if (typeof dateSource === 'object' && '_seconds' in dateSource) {
-                  dateObj = new Date(dateSource._seconds * 1000);
-                } else {
-                  dateObj = new Date(dateSource);
-                }
-                if (!isNaN(dateObj.getTime())) {
-                  datePublished = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                }
-              } catch (err) {
-                datePublished = String(dateSource);
-              }
+    // SWR: fetch moldipedia articles
+    const { data: wikiRes, isLoading: isWikiMoldLoading } = useMoldipediaList();
+    const wikimoldDataFromApi: WikiMold[] = useMemo(() => {
+      const snapshot = wikiRes?.data?.snapshot;
+      if (!Array.isArray(snapshot)) return [];
+      return snapshot.map((item: any) => {
+        let datePublished = 'N/A';
+        const metadata = item.metadata || {};
+        const dateSource = metadata.created_at || metadata.timestamp || metadata.date || item.created_at;
+        if (dateSource) {
+          try {
+            let dateObj;
+            if (typeof dateSource === 'object' && '_seconds' in dateSource) {
+              dateObj = new Date(dateSource._seconds * 1000);
+            } else {
+              dateObj = new Date(dateSource);
             }
-            return {
-              id: item.id || '',
-              title: item.title || 'Untitled',
-              coverImage: item.cover_photo || '',
-              datePublished,
-              // Add more fields if needed for your WikiMold type
-            };
-          });
-          setWikiMoldData(mapped);
-          setWikiMoldCount(mapped.length);
-          setIsWikiMoldLoading(false);
-        })
-        .catch(() => {
-          setIsWikiMoldLoading(false);
-        });
-    }, []);
+            if (!isNaN(dateObj.getTime())) {
+              datePublished = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            }
+          } catch {
+            datePublished = String(dateSource);
+          }
+        }
+        return {
+          id: item.id || '',
+          title: item.title || 'Untitled',
+          coverImage: item.cover_photo || '',
+          datePublished,
+        };
+      });
+    }, [wikiRes]);
+
+    // Local state for wikimold (allows client-side archive removal)
+    const [wikimoldData, setWikiMoldData] = useState<WikiMold[]>([]);
+    // Sync SWR data into local state when it arrives
+    useMemo(() => {
+      if (wikimoldDataFromApi.length > 0 && wikimoldData.length === 0) {
+        setWikiMoldData(wikimoldDataFromApi);
+      }
+    }, [wikimoldDataFromApi]);
     const [showArchiveModal, setShowArchiveModal] = useState(false);
     const [selectedWikiMold, setSelectedWikiMold] = useState<WikiMold | null>(null);
       
@@ -187,7 +145,7 @@
             onAddWikiMold={handleAddWikiMold} 
           />,
         },
-      ], [moldData, setMoldData, wikimoldData, setWikiMoldData, isWikiMoldLoading, wikiMoldCount]);
+      ], [moldData, wikimoldData, setWikiMoldData, isWikiMoldLoading]);
 
       // Show loading state while checking authentication
       if (authLoading) {

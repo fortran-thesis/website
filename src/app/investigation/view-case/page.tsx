@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import TabBar from "@/components/tab_bar";
-import StatusBox from "@/components/tiles/status_tile";
 import CaseStatusCard from "@/components/CaseStatusCard";
 import AssignCaseModal from "@/components/modals/assign_case_modal";
 import ConfirmModal from "@/components/modals/confirmation_modal";
@@ -17,6 +16,9 @@ import InVitroTab from "../investigation-tabs/in_vitro";
 import InVivoTab from "../investigation-tabs/in_vivo";
 import AddTreatmentModal from "@/components/modals/add_treatment_modal";
 import { useAuth } from "@/hooks/useAuth";
+import { useMoldReport } from "@/hooks/swr";
+import { useMoldCaseByReport } from "@/hooks/swr";
+import { apiMutate } from "@/lib/api";
 
 type Mycologist = {
   name: string;
@@ -30,11 +32,16 @@ function ViewCaseContent() {
   const caseId = searchParams.get('id');
   const priorityFromQuery = searchParams.get('priority');
   
-  const [caseData, setCaseData] = useState<any>(null);
-  const [moldCase, setMoldCase] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  
+  /* ── SWR: mold report + mold case ── */
+  const { data: reportRes, isLoading: reportLoading, mutate: mutateReport } = useMoldReport(caseId ?? undefined);
+  const { data: moldCaseRes, isLoading: moldCaseLoading, mutate: mutateMoldCase } = useMoldCaseByReport(caseId ?? undefined);
+
+  const caseData = reportRes?.data ?? null;
+  const moldCase = moldCaseRes?.data ?? null;
+  const loading = reportLoading || moldCaseLoading;
+  const error = !caseId ? 'No case ID provided' : null;
+
+  /* ── UI modal state ── */
   const [isAssignModalOpen, setAssignModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isConfirmAssignOpen, setConfirmAssignOpen] = useState(false);
@@ -42,180 +49,97 @@ function ViewCaseContent() {
 
   const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; priority: string; endDate: Date | null } | null>(null);
 
-  // Fetch case data by ID
-  useEffect(() => {
-    if (!caseId) {
-      setError('No case ID provided');
-      setLoading(false);
-      return;
-    }
-
-    const fetchCase = async () => {
-      try {
-        const res = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
-        if (!res.ok) {
-          throw new Error('Failed to load case details');
-        }
-        const body = await res.json();
-
-        console.log("Fetched case data:", body.data);
-
-        if (body.success && body.data) {
-          setCaseData(body.data);
-          console.log("Full case data:", body.data); // Log the entire case data
-          console.log("Priority from case data:", body.data.priority); // Log the priority specifically
-          console.log("Mold case from report:", body.data.mold_case);
-          console.log("Priority from report mold_case:", body.data.mold_case?.priority);
-
-          // Always attempt to fetch the mold-case so priority can be shown
-          try {
-            const moldCaseRes = await fetch(`/api/v1/mold-cases/by-report/${caseId}`, { cache: 'no-store' });
-            if (moldCaseRes.ok) {
-              const moldCaseBody = await moldCaseRes.json();
-              if (moldCaseBody.success && moldCaseBody.data) {
-                setMoldCase(moldCaseBody.data);
-              } else {
-                setMoldCase(null);
-              }
-            } else {
-              setMoldCase(null);
-            }
-          } catch (err: any) {
-            setMoldCase(null);
-            console.error('Failed to fetch mold-case:', err);
-          }
-        } else {
-          throw new Error(body.error || 'Failed to load case');
-        }
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load case');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCase();
-  }, [caseId]);
-
   // Called from AssignCaseModal -> opens confirmation modal
   const handleAssignClick = (mycologist: Mycologist, priority: string, endDate: Date | null) => {
-    console.log("🔍 Page - Received priority:", priority);
-    console.log("🔍 Page - Received mycologist:", mycologist);
-    console.log("🔍 Page - Received endDate:", endDate);
     setPendingAssign({ mycologist, priority, endDate });
     setConfirmAssignOpen(true);
   };
 
   // Called from confirmation modal -> finalize assignment
-  const handleConfirmAssign = async () => {
+  const handleConfirmAssign = useCallback(async () => {
     if (!pendingAssign || !caseId || !caseData) return;
 
     try {
       // Step 1: PATCH to assign mycologist to the mold-report
-      const assignRes = await fetch(`/api/v1/mold-reports/${caseId}/assign`, {
+      await apiMutate(`/api/v1/mold-reports/${caseId}/assign`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assigned_mycologist_id: pendingAssign.mycologist.id,
-        }),
+        body: { assigned_mycologist_id: pendingAssign.mycologist.id },
       });
-
-      if (!assignRes.ok) {
-        throw new Error('Failed to assign mycologist');
-      }
 
       // Step 2: POST to create a mold-case
-      const moldCasePayload = {
-        mycologist_id: pendingAssign.mycologist.id,
-        name: caseData.case_name,
-        mold_report_id: caseId,
-        photo_url: caseData.case_details?.[0]?.cover_photo || "",
-        priority: pendingAssign.priority,
-        start_date: new Date().toISOString(),
-        end_date: pendingAssign.endDate
-          ? pendingAssign.endDate.toISOString()
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        cultivation_details: {
-          in_vivo_details: {},
-          in_vitro_details: {},
-        },
-        cultivation_logs: [],
-        is_archived: false,
-      };
-
-      const caseRes = await fetch('/api/v1/mold-cases', {
+      await apiMutate('/api/v1/mold-cases', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(moldCasePayload),
+        body: {
+          mycologist_id: pendingAssign.mycologist.id,
+          name: caseData.case_name,
+          mold_report_id: caseId,
+          photo_url: caseData.case_details?.[0]?.cover_photo || "",
+          priority: pendingAssign.priority,
+          start_date: new Date().toISOString(),
+          end_date: pendingAssign.endDate
+            ? pendingAssign.endDate.toISOString()
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          cultivation_details: {
+            in_vivo_details: {},
+            in_vitro_details: {},
+          },
+          cultivation_logs: [],
+          is_archived: false,
+        },
       });
 
-      if (!caseRes.ok) {
-        throw new Error('Failed to create mold case');
-      }
-
-      console.log("Assignment complete:", pendingAssign.mycologist, pendingAssign.priority, pendingAssign.endDate);
       setPendingAssign(null);
       setConfirmAssignOpen(false);
       setAssignModalOpen(false);
 
-      // Refresh case data to update UI
-      const refreshRes = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
-      if (refreshRes.ok) {
-        const body = await refreshRes.json();
-        if (body.success && body.data) {
-          setCaseData(body.data);
-        }
-      }
+      // Revalidate SWR caches to refresh UI
+      await Promise.all([mutateReport(), mutateMoldCase()]);
     } catch (err: any) {
       console.error('Assignment failed:', err);
       alert(err?.message || 'Failed to assign case');
     }
-  };
+  }, [pendingAssign, caseId, caseData, mutateReport, mutateMoldCase]);
 
-  const handleReject = async () => {
+  const handleReject = useCallback(async () => {
     if (!caseId) return;
 
     try {
-      const rejectRes = await fetch(`/api/v1/mold-reports/${caseId}/reject`, {
+      await apiMutate(`/api/v1/mold-reports/${caseId}/reject`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: {},
       });
 
-      if (!rejectRes.ok) {
-        throw new Error('Failed to reject case');
-      }
-
-      console.log("Case rejected!");
       setRejectModalOpen(false);
 
-      // Refresh case data to update UI
-      const refreshRes = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
-      if (refreshRes.ok) {
-        const body = await refreshRes.json();
-        if (body.success && body.data) {
-          setCaseData(body.data);
-        }
-      }
+      // Revalidate SWR cache to refresh UI
+      await mutateReport();
     } catch (err: any) {
       console.error('Rejection failed:', err);
       alert(err?.message || 'Failed to reject case');
     }
-  };
+  }, [caseId, mutateReport]);
 
   type UserRole = "Administrator" | "Mycologist";
   const { user: authUser } = useAuth();
 
   const rawRole = (authUser?.user?.role || authUser?.role || "").toLowerCase();
   const userRole: UserRole = rawRole === "mycologist" ? "Mycologist" : "Administrator";
-  
+
+  /** Convert Firestore timestamp or ISO string to Date */
+  const toDate = (v: string | { _seconds: number } | undefined): Date | null => {
+    if (!v) return null;
+    if (typeof v === 'string') return new Date(v);
+    return new Date(v._seconds * 1000);
+  };
+
   // Use data from API
   const caseName = caseData?.case_name || "Loading...";
   const cropName = caseData?.host || "Loading...";
   const location = caseData?.location || "Loading...";
-  const dateObserved = caseData?.date_observed 
-    ? new Date(caseData.date_observed).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    : "Loading...";
+  const dateObserved = (() => {
+    const d = toDate(caseData?.date_observed);
+    return d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "Loading...";
+  })();
   const status = caseData?.status ? caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1) : "Pending";
   const priorityValue = caseData?.mold_case?.priority || caseData?.priority || moldCase?.priority || priorityFromQuery || "";
   const priority = priorityValue
@@ -241,10 +165,10 @@ function ViewCaseContent() {
   };
   
   // Reporter info
-  const reporterName = caseData?.reporter?.details.displayName || "Loading...";
-  const reporterEmail = caseData?.reporter?.details.email || "N/A";
-  const reporterPhone = caseData?.reporter?.details.phone_number || "N/A";
-  const imageUrl = caseData?.reporter?.details.photo_url || "/profile-placeholder.png";
+  const reporterName = caseData?.reporter?.details?.displayName || "Loading...";
+  const reporterEmail = caseData?.reporter?.details?.email || "N/A";
+  const reporterPhone = caseData?.reporter?.details?.phone_number || "N/A";
+  const imageUrl = caseData?.reporter?.details?.photo_url || "/profile-placeholder.png";
 
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
@@ -302,7 +226,7 @@ function ViewCaseContent() {
     
     return (
       <InVitroTab
-        dateTime={moldCase.start_date ? `Started: ${new Date(moldCase.start_date).toLocaleString()}` : ""}
+        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
         growthMedium={moldCase.cultivation_details?.in_vitro_details?.growthMedium || ""}
         incubationTemperature={moldCase.cultivation_details?.in_vitro_details?.incubationTemperature || ""}
         inVitroEntries={vitroEntries}
@@ -345,7 +269,7 @@ function ViewCaseContent() {
     
     return (
       <InVivoTab
-        dateTime={moldCase.start_date ? `Started: ${new Date(moldCase.start_date).toLocaleString()}` : ""}
+        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
         environmentalTemperature={moldCase.cultivation_details?.in_vivo_details?.environmentalTemperature || ""}
         inVivoEntries={vivoEntries}
       />
