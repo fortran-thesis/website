@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { envOptions } from '@/configs/envOptions';
 
-const protectedRoutes = ['/dashboard', '/investigation', '/user', '/support', '/api/v1'];
+const protectedRoutes = ['/dashboard', '/investigation', '/user', '/support'];
 const publicRoutes = ['/auth/log-in', '/auth/sign-up', '/auth', '/auth/account-recovery'];
-// Public API routes (auth endpoints that don't require session)
-const publicApiRoutes = ['/api/v1/auth/send-verification', '/api/v1/auth/check-verification', '/api/v1/auth/verified-change-password', '/api/v1/auth/verified-forget-username'];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -16,16 +14,13 @@ export function proxy(request: NextRequest) {
   
   const normalizedPath = pathname.replace(/\/$/, '').toLowerCase();
   
-  // Check if it's a public API route first
-  const isPublicApi = publicApiRoutes.some(route => normalizedPath.startsWith(route));
   const isPublic = publicRoutes.some(route => normalizedPath.startsWith(route));
-  const isProtected = protectedRoutes.some(route => normalizedPath.startsWith(route)) && !isPublicApi;
+  const isProtected = protectedRoutes.some(route => normalizedPath.startsWith(route));
   const authToken = request.cookies.get('session')?.value;
 
   console.log('Auth Status:', {
     isProtected,
     isPublic,
-    isPublicApi,
     hasAuth: !!authToken,
   });
   console.log('Session cookie value:', authToken ? '***EXISTS***' : 'MISSING');
@@ -59,7 +54,6 @@ export const config = {
     '/investigation/:path*',
     '/user/:path*',
     '/support/:path*',
-    '/auth/:path*',
-    '/api/v1/:path*'
+    '/auth/:path*'
   ],
 };

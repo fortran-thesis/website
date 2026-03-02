@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "@/components/sidebar";
 import Footer from "@/components/footer";
 import { useAuth } from "@/hooks/useAuth";
+import SwrProvider from "@/providers/swr-provider";
 
 export default function LayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -49,11 +50,13 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
     setIsMounted(true);
   }, []);
 
-  return hideLayout ? (
-    <main>{children}</main>
-  ) : (
-    <>
-        {/* Top Loading Bar */}
+  return (
+    <SwrProvider>
+      {hideLayout ? (
+        <main>{children}</main>
+      ) : (
+        <>
+            {/* Top Loading Bar */}
         {isNavigating && (
           <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
             <div 
@@ -79,6 +82,8 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
                 <Footer />
             </div>
         </div> 
-    </>
+        </>
+      )}
+    </SwrProvider>
   );
 }
