@@ -7,6 +7,7 @@ import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import { apiMutate, ApiError } from '@/lib/api';
+import { mutate } from 'swr';
 
 export interface MycoFormData {
   firstName: string;
@@ -124,6 +125,18 @@ export default function CreateMycologist() {
           password: formData.password,
         },
       });
+
+      // Revalidate SWR caches for user management - use exact cache keys
+      await Promise.all([
+        mutate('/api/v1/users/counts/roles', undefined, { revalidate: true }),
+        mutate('/api/v1/users/mycologists', undefined, { revalidate: true }),
+        mutate('/api/v1/users/counts/disabled', undefined, { revalidate: true }),
+        mutate(
+          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/users'),
+          undefined,
+          { revalidate: true },
+        ),
+      ]);
 
       // Success - redirect back to user management page
       router.push('/user');

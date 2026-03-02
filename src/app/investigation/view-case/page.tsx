@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMoldReport } from "@/hooks/swr";
 import { useMoldCaseByReport } from "@/hooks/swr";
 import { apiMutate } from "@/lib/api";
+import { mutate } from 'swr';
 
 type Mycologist = {
   name: string;
@@ -92,8 +93,22 @@ function ViewCaseContent() {
       setConfirmAssignOpen(false);
       setAssignModalOpen(false);
 
-      // Revalidate SWR caches to refresh UI
-      await Promise.all([mutateReport(), mutateMoldCase()]);
+      // Revalidate SWR caches to refresh UI with fresh data
+      await Promise.all([
+        mutateReport(undefined, { revalidate: true }),
+        mutateMoldCase(undefined, { revalidate: true }),
+        // Revalidate list-level caches so dashboards / lists reflect changes
+        mutate(
+          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/mold-reports'),
+          undefined,
+          { revalidate: true },
+        ),
+        mutate(
+          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/mold-cases'),
+          undefined,
+          { revalidate: true },
+        ),
+      ]);
     } catch (err: any) {
       console.error('Assignment failed:', err);
       alert(err?.message || 'Failed to assign case');
@@ -111,8 +126,15 @@ function ViewCaseContent() {
 
       setRejectModalOpen(false);
 
-      // Revalidate SWR cache to refresh UI
-      await mutateReport();
+      // Revalidate SWR cache to refresh UI with fresh data
+      await Promise.all([
+        mutateReport(undefined, { revalidate: true }),
+        mutate(
+          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/mold-reports'),
+          undefined,
+          { revalidate: true },
+        ),
+      ]);
     } catch (err: any) {
       console.error('Rejection failed:', err);
       alert(err?.message || 'Failed to reject case');
@@ -168,7 +190,7 @@ function ViewCaseContent() {
   const reporterName = caseData?.reporter?.details?.displayName || "Loading...";
   const reporterEmail = caseData?.reporter?.details?.email || "N/A";
   const reporterPhone = caseData?.reporter?.details?.phone_number || "N/A";
-  const imageUrl = caseData?.reporter?.details?.photo_url || "/profile-placeholder.png";
+  const imageUrl = caseData?.reporter?.details?.photo_url || "/profile-placeholder.svg";
 
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
@@ -218,7 +240,7 @@ function ViewCaseContent() {
     const vitroLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vitro");
     const vitroEntries = vitroLogs.map((log: any) => ({
       date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.jpg",
+      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
       sizeValue: log.characteristics?.size || "N/A",
       colorValue: log.characteristics?.color || "N/A",
       notes: log.additional_info || "",
@@ -261,7 +283,7 @@ function ViewCaseContent() {
     const vivoLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vivo");
     const vivoEntries = vivoLogs.map((log: any) => ({
       date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.jpg",
+      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
       sizeValue: log.characteristics?.size || "N/A",
       colorValue: log.characteristics?.color || "N/A",
       notes: log.additional_info || "",

@@ -138,7 +138,15 @@ console.log("[handlePublish] author_id:", author_id);
       titleEditedRef.current = false;
 
       // Revalidate SWR cache so the form shows fresh server data
-      await mutate(`/api/v1/moldipedia/${articleId}`);
+      await Promise.all([
+        mutate(`/api/v1/moldipedia/${articleId}`),
+        // Revalidate list-level caches so moldipedia lists reflect the update
+        mutate(
+          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/moldipedia'),
+          undefined,
+          { revalidate: true },
+        ),
+      ]);
 
       alert("WikiMold article updated successfully!");
     } catch (err) {

@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { apiMutate } from '@/lib/api';
+import { mutate } from 'swr';
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
@@ -108,6 +109,13 @@ export default function AddWikiMold() {
         method: 'POST',
         formData,
       });
+
+      // Revalidate SWR caches so moldipedia lists reflect the new article
+      await mutate(
+        (key: string) => typeof key === 'string' && key.startsWith('/api/v1/moldipedia'),
+        undefined,
+        { revalidate: true },
+      );
 
       alert("WikiMold article created successfully!");
       setWikiMoldData({ title: "", coverImage: "", content: "" });
