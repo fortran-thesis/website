@@ -8,6 +8,9 @@ import Breadcrumbs from "@/components/breadcrumbs_nav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
+import { useMoldipediaArticle } from '@/hooks/swr';
+import { apiMutate, ApiError } from '@/lib/api';
+import { mutate } from 'swr';
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
@@ -42,51 +45,36 @@ export default function ViewWikiMold() {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
 
   const [isPublishing, setIsPublishing] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   const titleEditedRef = useRef(false);
 
-  // Fetch article from API
+  // SWR: fetch article
+  const { data: articleRes, isLoading: loading } = useMoldipediaArticle(wikimoldId || undefined);
+
+  // Sync SWR data into editable local state
   useEffect(() => {
-    titleEditedRef.current = false;
+    const data = articleRes?.data;
+    if (!data) return;
 
-    async function fetchWikiMold() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/v1/moldipedia/${wikimoldId}`);
-        if (!res.ok) throw new Error("Failed to fetch article");
-        const json = await res.json();
-        const data = json.data;
+    const mapped: WikiMoldDetail = {
+      id: data.id ?? "",
+      title: typeof data.title === "string" ? data.title : "Untitled Article",
+      coverImage: typeof data.cover_photo === "string" ? data.cover_photo : "",
+      content: typeof data.body === "string" ? data.body : "",
+      datePublished: data.created_at ? (data.created_at as string).split("T")[0] : "",
+      author: typeof data.author === "string" ? data.author : "",
+      tags: Array.isArray(data.tags) ? data.tags : [],
+    };
 
-        const mapped: WikiMoldDetail = {
-          id: data.id ?? "",
-          title: typeof data.title === "string" ? data.title : "Untitled Article",
-          coverImage: typeof data.cover_photo === "string" ? data.cover_photo : "",
-          content: typeof data.body === "string" ? data.body : "",
-          datePublished: data.created_at ? data.created_at.split("T")[0] : "",
-          author: typeof data.author === "string" ? data.author : "",
-          tags: Array.isArray(data.tags) ? data.tags : [],
-        };
+    setWikiMoldInfo((prev) => ({
+      ...mapped,
+      title: titleEditedRef.current ? prev.title : mapped.title,
+    }));
 
-        setWikiMoldInfo((prev) => ({
-          ...mapped,
-          title: titleEditedRef.current ? prev.title : mapped.title,
-        }));
-
-        // Only reset preview if user hasn't picked a new image
-        if (!coverImageFile) {
-          setCoverImagePreview(mapped.coverImage || fallbackImage);
-        }
-      } catch (err) {
-        console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
+    if (!coverImageFile) {
+      setCoverImagePreview(mapped.coverImage || fallbackImage);
     }
-
-    fetchWikiMold();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wikimoldId]);
+  }, [articleRes]);
 
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -134,67 +122,28 @@ console.log("[handlePublish] author_id:", author_id);
         tags: wikiMoldInfo.tags ?? [],
       };
 
-      console.log("[handlePublish] articleId:", articleId);
-      console.log("[handlePublish] details:", JSON.stringify(details));
-
       const formData = new FormData();
       formData.append("details", JSON.stringify(details));
       if (coverImageFile) {
         formData.append("cover_photo", coverImageFile);
       }
 
-      const res = await fetch(`/api/v1/moldipedia/${articleId}`, {
-        method: "PATCH",
-        headers: {
-          Accept: "application/json",
-          // DO NOT set Content-Type — browser sets it with the correct boundary
-        },
-        body: formData,
-        credentials: "include",
+      await apiMutate(`/api/v1/moldipedia/${articleId}`, {
+        method: 'PATCH',
+        formData,
       });
-
-      const responseText = await res.text();
-      console.log("[handlePublish] PATCH response status:", res.status);
-      console.log("[handlePublish] PATCH response body:", responseText);
-
-      if (!res.ok) {
-        let parsed: any = {};
-        try { parsed = JSON.parse(responseText); } catch {}
-        throw new Error(`Failed to update article: ${res.status} ${parsed?.error || responseText}`);
-      }
 
       // Reset image state
       setCoverImageFile(null);
       titleEditedRef.current = false;
 
-      // Refetch to sync latest server state
-      setLoading(true);
-      try {
-        const refetch = await fetch(`/api/v1/moldipedia/${articleId}`);
-        if (refetch.ok) {
-          const json = await refetch.json();
-          const data = json.data;
-          setWikiMoldInfo((prev) => ({
-            ...prev,
-            title: typeof data.title === "string" ? data.title : prev.title,
-            coverImage: typeof data.cover_photo === "string" ? data.cover_photo : prev.coverImage,
-            content: typeof data.body === "string" ? data.body : prev.content,
-            datePublished: data.created_at ? data.created_at.split("T")[0] : prev.datePublished,
-            author: typeof data.author === "string" ? data.author : prev.author,
-            tags: Array.isArray(data.tags) ? data.tags : prev.tags,
-          }));
-          setCoverImagePreview(data.cover_photo || fallbackImage);
-        }
-      } catch (refetchErr) {
-        console.error("Refetch error after save:", refetchErr);
-      } finally {
-        setLoading(false);
-      }
+      // Revalidate SWR cache so the form shows fresh server data
+      await mutate(`/api/v1/moldipedia/${articleId}`);
 
       alert("WikiMold article updated successfully!");
     } catch (err) {
-      console.error("Save error:", err);
-      alert(`Failed to update article. ${err instanceof Error ? err.message : "Please try again."}`);
+      const message = err instanceof ApiError ? err.message : (err instanceof Error ? err.message : 'Please try again.');
+      alert(`Failed to update article. ${message}`);
     } finally {
       setIsPublishing(false);
     }

@@ -6,6 +6,8 @@ import BackButton from '@/components/buttons/back_button';
 import TabBar from '@/components/tab_bar';
 import ConfirmModal from '@/components/modals/confirmation_modal';
 import { faInfoCircle, faLeaf } from '@fortawesome/free-solid-svg-icons';
+import { useMoldById } from '@/hooks/swr';
+import { apiMutate, ApiError } from '@/lib/api';
 
 interface MoldInfoFormData {
   moldName: string;
@@ -57,49 +59,37 @@ export default function ViewMoldInfo() {
     });
 
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch mold data from API when editing existing mold
+    // SWR: fetch mold data
+    const { data: moldSwr, isLoading } = useMoldById(moldId ?? undefined);
+
+    // Sync SWR data → form state when data first arrives
     useEffect(() => {
-      if (!moldId) return;
-      const fetchMoldData = async () => {
-        try {
-          const response = await fetch(`/api/v1/mold/${moldId}`);
-          if (!response.ok) return;
-          const result = await response.json();
-          console.log('Fetched mold result:', result); // Debug log
-          if (!result.success || !result.data) return;
-          const mold = result.data;
-          const apiTax = mold.mold_details?.info?.taxonomy || {};
-          setMoldInfo(prev => ({
-            ...prev,
-            moldName: mold.name || '',
-            description: mold.mold_details?.info?.description || '',
-            taxonomy: {
-              kingdom: apiTax.kingdom ?? prev.taxonomy.kingdom ?? '',
-              phylum: apiTax.phylum ?? prev.taxonomy.phylum ?? '',
-              class: apiTax.class ?? prev.taxonomy.class ?? '',
-              order: apiTax.order ?? prev.taxonomy.order ?? '',
-              family: apiTax.family ?? prev.taxonomy.family ?? '',
-              genus: mold.name || apiTax.genus || prev.taxonomy.genus || ''
-            }
-          }));
-          // Optionally, set management fields if needed from prevention
-          if (mold.mold_details?.prevention) {
-            setMoldManagement(prev => ({
-              ...prev,
-              chemicalControl: (mold.mold_details.prevention.fungicide || []).join(', '),
-              // Add more mappings if API provides them
-            }));
-          }
-        } catch (error) {
-          console.error('Error fetching mold:', error);
+      const mold = (moldSwr as any)?.data;
+      if (!mold) return;
+      const apiTax = mold.mold_details?.info?.taxonomy || {};
+      setMoldInfo(prev => ({
+        ...prev,
+        moldName: mold.name || '',
+        description: mold.mold_details?.info?.description || '',
+        taxonomy: {
+          kingdom: apiTax.kingdom ?? prev.taxonomy.kingdom ?? '',
+          phylum: apiTax.phylum ?? prev.taxonomy.phylum ?? '',
+          class: apiTax.class ?? prev.taxonomy.class ?? '',
+          order: apiTax.order ?? prev.taxonomy.order ?? '',
+          family: apiTax.family ?? prev.taxonomy.family ?? '',
+          genus: mold.name || apiTax.genus || prev.taxonomy.genus || ''
         }
-      };
-      fetchMoldData();
-    }, [moldId]);
+      }));
+      if (mold.mold_details?.prevention) {
+        setMoldManagement(prev => ({
+          ...prev,
+          chemicalControl: (mold.mold_details.prevention.fungicide || []).join(', '),
+        }));
+      }
+    }, [moldSwr]);
 
     // Update taxonomy field
     const handleTaxonomyChange = (field: keyof MoldInfoFormData['taxonomy'], value: string) => {
@@ -144,19 +134,14 @@ export default function ViewMoldInfo() {
         };
         const method = moldId ? 'PATCH' : 'POST';
         const url = moldId ? `/api/v1/mold/${moldId}` : '/api/v1/mold';
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({}));
-          throw new Error(errBody.error || errBody.message || `Failed to save (${res.status})`);
-        }
+        await apiMutate(url, { method: method as 'POST' | 'PATCH', body: payload });
         alert(moldId ? 'Mold information updated successfully!' : 'Mold information published successfully!');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to save mold information');
+        setError(
+          err instanceof ApiError ? err.message :
+          err instanceof Error ? err.message :
+          'Failed to save mold information'
+        );
       } finally {
         setIsSaving(false);
       }

@@ -8,6 +8,7 @@ import Breadcrumbs from "@/components/breadcrumbs_nav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
+import { apiMutate } from '@/lib/api';
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
@@ -103,27 +104,10 @@ export default function AddWikiMold() {
       formData.append("details", JSON.stringify(details));
       formData.append("cover_photo", coverImageFile);
 
-      const response = await fetch("/api/v1/moldipedia", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-        },
-        body: formData,
-        credentials: "include",
+      await apiMutate('/api/v1/moldipedia', {
+        method: 'POST',
+        formData,
       });
-
-      let result: any = {};
-      const text = await response.text();
-      try {
-        result = text ? JSON.parse(text) : {};
-      } catch {
-        result = {};
-      }
-
-      if (!response.ok || !result?.success) {
-        console.error("Backend response:", text);
-        throw new Error(result?.error || `Failed to create WikiMold article. Backend response: ${text}`);
-      }
 
       alert("WikiMold article created successfully!");
       setWikiMoldData({ title: "", coverImage: "", content: "" });
