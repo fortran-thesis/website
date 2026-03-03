@@ -18,3 +18,4 @@ export * from './use-mold';
 export * from './use-audit-logs';
 export * from './use-faq';
 export * from './use-flag-reports';
+export * from './use-dashboard';
