@@ -13,14 +13,9 @@ import AuthDebug from '@/components/auth-debug';
 import NotificationsPanel, { type NotificationItem } from '@/components/notifications_panel';
 import DonutChart from '@/components/charts/donut-chart';
 import {
-  useUserRoleCounts,
-  useMoldCaseCountsMetadata,
-  useMoldReportMonthlyCounts,
-  useMoldReportPriorityCounts,
   useUnassignedReports,
   useAssignedReports,
-  useMoldipediaList,
-  useReportCount,
+  useDashboardSummary,
 } from '@/hooks/swr';
 
 const userRole = "Administrator";
@@ -70,36 +65,32 @@ export default function Home() {
     const isMycologist = !authLoading && resolvedRole === 'mycologist';
     const canLoadDashboardData = !authLoading && (isAdministrator || isMycologist);
 
-    /* ─── SWR data hooks (called unconditionally – conditional keys inside) ── */
-    // User counts (admin only)
-    const { data: roleCountsRes } = useUserRoleCounts(isAdministrator);
+    /* ─── SWR data hooks ─── */
+    // Single batch call for all dashboard counts + chart data (replaces 6 hooks)
+    const { data: summaryRes } = useDashboardSummary(canLoadDashboardData);
+    const summary = summaryRes?.data;
+
+    // Derived count values from batch response
     const totalUsers = useMemo(() => {
-      if (!isAdministrator || !roleCountsRes?.data) return 0;
-      const d = roleCountsRes.data;
+      if (!isAdministrator || !summary?.roleCounts) return 0;
+      const d = summary.roleCounts;
       return (d.farmer || 0) + (d.mycologist || 0) + (d.admin || 0);
-    }, [isAdministrator, roleCountsRes]);
+    }, [isAdministrator, summary]);
 
-    // Mold-case total count (admin)
-    const { data: caseCountRes } = useMoldCaseCountsMetadata(isAdministrator);
-    const totalCasesAdmin = caseCountRes?.data?.count ?? 0;
+    const totalCasesAdmin = summary?.caseCount ?? 0;
+    const totalReports = summary?.reportCount ?? 0;
 
-    // Report count (admin)
-    const { data: reportsCountRes } = useReportCount(isAdministrator);
-    const totalReports = reportsCountRes?.data?.snapshot?.length ?? 0;
-
-    // Monthly chart data
-    const { data: monthlyRes } = useMoldReportMonthlyCounts(undefined, canLoadDashboardData);
+    // Monthly chart data (from batch)
     const chartData = useMemo(() => {
-      if (!monthlyRes?.data || !Array.isArray(monthlyRes.data)) return fallbackChartData;
-      return monthlyRes.data.map((item: any) => {
+      if (!summary?.monthlyCounts || !Array.isArray(summary.monthlyCounts)) return fallbackChartData;
+      return summary.monthlyCounts.map((item: any) => {
         const monthPart = (item.month || '').split(' ')[0];
         return { month: monthPart ? monthPart.slice(0, 3) : '', cases: item.total };
       });
-    }, [monthlyRes]);
+    }, [summary]);
 
-    // Priority breakdown (admin)
-    const { data: priorityRes } = useMoldReportPriorityCounts(canLoadDashboardData);
-    const priorityData = priorityRes?.data ?? { high: 0, medium: 0, low: 0 };
+    // Priority breakdown (from batch)
+    const priorityData = summary?.priorityCounts ?? { high: 0, medium: 0, low: 0 };
 
     // Unassigned mold reports (admin dashboard table)
         const { data: unassignedRes } = useUnassignedReports(50, isAdministrator);
@@ -107,9 +98,8 @@ export default function Home() {
     // Assigned mold reports (mycologist dashboard table)
         const { data: assignedRes } = useAssignedReports({ limit: 50 }, isMycologist);
 
-    // Moldipedia count (admin)
-        const { data: moldipediaRes } = useMoldipediaList(1000, isMycologist);
-    const wikimoldCount = moldipediaRes?.data?.snapshot?.length ?? 0;
+    // Moldipedia count (from batch)
+    const wikimoldCount = summary?.moldipediaCount ?? 0;
 
     /* ─── Derived dashboard values ─── */
     const transformCasesForTable = (snapshot: any[]) =>
