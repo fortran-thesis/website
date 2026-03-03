@@ -18,12 +18,13 @@ importScripts('https://www.gstatic.com/firebasejs/11.8.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/11.8.1/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey:            'REPLACE_WITH_FIREBASE_API_KEY',
-  authDomain:        'REPLACE_WITH_FIREBASE_AUTH_DOMAIN',
+  apiKey:            'AIzaSyALLixtCRzZYHtnsaCF74Z_PDzj51zN6SY',
+  authDomain:        'thesis-2e701.firebaseapp.com',
   projectId:         'thesis-2e701',
   storageBucket:     'thesis-2e701.firebasestorage.app',
   messagingSenderId: '873645479511',
-  appId:             'REPLACE_WITH_FIREBASE_APP_ID',
+  appId:             '1:873645479511:web:ae12879882c87aec587512',
+  measurementId:     'G-84YNXZKY63',
 });
 
 const messaging = firebase.messaging();
