@@ -1,15 +1,28 @@
-"use client";
-import { useState, useMemo } from 'react';
-import { motion, Variants, AnimatePresence } from 'framer-motion';
-import Footer from '@/components/footer';
-import { Navbar } from '@/components/navbar';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faInbox, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
-import FAQTile from '@/components/tiles/faq_tile';
-import EmptyState from '@/components/empty_state';
-import { useFaqs } from '@/hooks/swr';
+/**
+ * FAQ Page — React Server Component
+ *
+ * Fetches FAQs directly from the backend at build/ISR time (revalidates
+ * every 5 minutes), then passes the data to the client component for
+ * search filtering and animations.
+ *
+ * Benefits over the previous "use client" + SWR approach:
+ *   - Zero client-side fetch on initial load (no loading spinner)
+ *   - ISR cache shared across all visitors
+ *   - Smaller client JS bundle (no SWR overhead for this page)
+ */
 
-const mockFaqs = [
+import { serverFetch } from '@/lib/server-fetch';
+import { endpoints } from '@/services/endpoints';
+import FaqClient, { type FaqEntry } from './faq-client';
+
+/* ISR: regenerate this page at most every 5 minutes */
+export const revalidate = 300;
+
+/* ------------------------------------------------------------------ */
+/*  Fallback data (used when the backend is unreachable)               */
+/* ------------------------------------------------------------------ */
+
+const fallbackFaqs: FaqEntry[] = [
   { id: 1, q: "What is Moldify?", a: "Moldify is an AI-powered investigation system designed for early detection and analysis of agricultural mold to protect crops." },
   { id: 2, q: "How does the detection work?", a: "We use machine learning models trained on thousands of crop images to identify mold patterns before they are visible to the naked eye." },
   { id: 3, q: "Is it applicable for all crops?", a: "Currently, we specialize in high-value crops like rice, corn, and cacao, but we are expanding our database to include more varieties." },
@@ -19,163 +32,46 @@ const mockFaqs = [
   { id: 7, q: "Is an internet connection required?", a: "An internet connection is needed to sync data and run the heavy AI analysis, but we are developing an 'Offline Lite' version for remote areas." },
   { id: 8, q: "How fast are the results generated?", a: "Once an image is uploaded, the analysis typically takes between 3 to 10 seconds depending on your connection speed." },
   { id: 9, q: "What kind of molds can the system identify?", a: "We currently identify common agricultural threats such as Aflatoxin-producing molds, Downy Mildew, and Powdery Mildew." },
-  { id: 10, q: "How do I sign up for an account?", a: "You can click the 'Log In' button in the navbar and select 'Register' to start your journey with Moldify." }
+  { id: 10, q: "How do I sign up for an account?", a: "You can click the 'Log In' button in the navbar and select 'Register' to start your journey with Moldify." },
 ];
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.08, delayChildren: 0.2 }
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+/** Defensively extract FAQ array from the backend's various response shapes. */
+function extractFaqs(data: unknown): FaqEntry[] {
+  if (!data || typeof data !== 'object') return [];
+  const d = data as Record<string, unknown>;
+  // data.data (double-nested)
+  if ('data' in d && Array.isArray(d.data)) return d.data;
+  // data.snapshot (paginated)
+  if ('snapshot' in d && Array.isArray(d.snapshot)) return d.snapshot;
+  // plain array
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page (Server Component)                                            */
+/* ------------------------------------------------------------------ */
+
+export default async function FaqPage() {
+  let faqs: FaqEntry[] = fallbackFaqs;
+
+  try {
+    const res = await serverFetch<Record<string, unknown>>(endpoints.faq.list, {
+      revalidate: 300,
+      tags: ['faqs'],
+    });
+
+    if (res?.data) {
+      const extracted = extractFaqs(res.data);
+      if (extracted.length > 0) faqs = extracted;
+    }
+  } catch {
+    // Fallback data is already set
   }
-};
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } 
-  }
-};
-
-export default function FAQ() {
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // SWR: fetch FAQs through proxy
-  const { data: faqData, isLoading: loading } = useFaqs();
-
-  // Defensively extract FAQ array from various response shapes
-  const faqs: typeof mockFaqs = (() => {
-    const d = faqData?.data;
-    if (!d) return mockFaqs;
-    // data.data (double-nested)
-    if (d && typeof d === 'object' && 'data' in d && Array.isArray((d as any).data)) return (d as any).data;
-    // data.snapshot
-    if (d && typeof d === 'object' && 'snapshot' in d && Array.isArray((d as any).snapshot)) return (d as any).snapshot;
-    // plain array
-    if (Array.isArray(d)) return d;
-    return mockFaqs;
-  })();
-
-  const filteredFaqs = useMemo(() => {
-    const cleanQuery = searchQuery.toLowerCase().trim();
-    if (!cleanQuery) return faqs;
-
-    return faqs.filter(faq => 
-      ((faq as any).q || (faq as any).question || '').toLowerCase().includes(cleanQuery) || 
-      ((faq as any).a || (faq as any).answer || '').toLowerCase().includes(cleanQuery)
-    );
-  }, [searchQuery, faqs]);
-
-  // Logic for different empty states
-  const hasNoFaqsAtAll = faqs.length === 0 && !loading;
-  const hasNoSearchResults = filteredFaqs.length === 0 && searchQuery.length > 0;
-
-  return (
-    <motion.div 
-      initial="hidden" 
-      animate="visible" 
-      variants={containerVariants}
-      className="relative w-full bg-[var(--background-color)]"
-    >
-      {/* Top Loading Bar */}
-      {loading && (
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div 
-            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
-            style={{ width: '30%' }}
-          />
-        </div>
-      )}
-      
-      <Navbar />
-
-      <header className="relative h-[60vh] min-h-[500px] w-full flex items-center justify-center overflow-hidden">
-        <div 
-          className="absolute inset-0 z-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/assets/farm.jpg')" }}
-        >
-          <div className="absolute inset-0 bg-black/45" />
-        </div>
-
-        <div className="relative z-10 w-full max-w-4xl px-6 text-center text-[var(--background-color)]">
-          <motion.h1 variants={itemVariants} className="text-5xl md:text-6xl lg:text-7xl font-black font-[family-name:var(--font-montserrat)] uppercase tracking-tight mb-2">
-            FAQs
-          </motion.h1>
-          <motion.p 
-            variants={itemVariants}
-            className="text-sm md:text-base font-[family-name:var(--font-bricolage-grotesque)] max-w-2xl mx-auto mb-10 leading-relaxed opacity-90"
-          >
-            Find answers to common questions about Moldify&apos;s AI technology, 
-            crop protection, and how we help farmers secure their harvest.
-          </motion.p>
-          <motion.div variants={itemVariants} className="relative max-w-xl mx-auto mt-8">
-            <input 
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for answers..."
-              className="w-full py-3 px-8 rounded-full bg-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] shadow-xl focus:outline-none"
-              disabled={hasNoFaqsAtAll} // Disabled kung walang data
-            />
-            <FontAwesomeIcon icon={faSearch} className="absolute right-6 top-1/2 -translate-y-1/2 text-[var(--primary-color)]" />
-          </motion.div>
-        </div>
-      </header>
-
-      <section className="bg-[var(--background-color)] py-20 px-4 min-h-[60vh]">
-        <div className="max-w-5xl mx-auto">
-          {loading ? (
-            <div className="flex items-center justify-center py-20">
-              <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }}>
-                <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">Loading FAQs...</p>
-              </motion.div>
-            </div>
-          ) : (
-            <AnimatePresence mode="wait">
-              {/* SCENARIO 1: TOTAL EMPTY DATABASE */}
-              {hasNoFaqsAtAll ? (
-                <motion.div key="no-faqs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <EmptyState 
-                    icon={faQuestionCircle} 
-                    title="No Questions Yet" 
-                    message="The FAQ section is currently being updated. Please check back soon for more information." 
-                  />
-                </motion.div>
-              ) : 
-              /* SCENARIO 2: NO SEARCH RESULTS */
-              hasNoSearchResults ? (
-                <motion.div key="no-results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                  <EmptyState 
-                    icon={faInbox} 
-                    title="No Matches Found" 
-                    message={`We couldn't find any FAQs matching "${searchQuery}".`} 
-                  />
-                </motion.div>
-              ) : (
-                /* SCENARIO 3: SHOW FAQS */
-                <motion.div 
-                  key={searchQuery === "" ? "full-list" : "filtered-list"}
-                  className="space-y-4"
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit={{ opacity: 0 }}
-                >
-                  {filteredFaqs.map((faq) => (
-                    <motion.div key={faq.id} variants={itemVariants} layout>
-                      <FAQTile question={(faq as any).q || (faq as any).question} answer={(faq as any).a || (faq as any).answer} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
-        </div>
-      </section>
-
-      <Footer />
-    </motion.div>
-  );
+  return <FaqClient initialFaqs={faqs} />;
 }
