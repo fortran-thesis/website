@@ -52,7 +52,7 @@ export default function Reports() {
         try {
           const url = buildSearchUrl();
           console.log('📊 Fetching reports from:', url);
-          const res = await fetch(url, { cache: 'no-store' });
+          const res = await fetch(url, { cache: 'no-store', credentials: 'include' });
           console.log('📊 Reports response status:', res.status);
           
           if (!res.ok) {

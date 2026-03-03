@@ -29,7 +29,12 @@
       };
 
       // Determine user role
-      const isAdministrator = user.role === "admin" || user.role === "Administrator";
+      const normalizedRole = (role: string): string => {
+        if (!role) return "Mycologist";
+        const lowerRole = role.toLowerCase();
+        return lowerRole === "admin" || lowerRole === "administrator" ? "Administrator" : "Mycologist";
+      };
+      const isAdministrator = normalizedRole(user.role) === "Administrator";
       const isMycologist = user.role === "mycologist" || user.role === "Mycologist";
       const userRole = user.role === "admin" ? "Administrator" : user.role === "mycologist" ? "Mycologist" : "User";
       

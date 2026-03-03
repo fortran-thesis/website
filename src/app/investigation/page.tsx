@@ -26,9 +26,14 @@ export default function Investigation() {
         };
 
         // Determine user role
-        const isAdministrator = user.role === "admin" || user.role === "Administrator";
-        const isMycologist = user.role === "mycologist" || user.role === "Mycologist";
-        const userRole = user.role === "admin" ? "Administrator" : user.role === "mycologist" ? "Mycologist" : "User";
+        const normalizedRole = (role: string): string => {
+            if (!role) return "Mycologist";
+            const lowerRole = role.toLowerCase();
+            return lowerRole === "admin" || lowerRole === "administrator" ? "Administrator" : lowerRole === "mycologist" ? "Mycologist" : "User";
+        };
+        const isAdministrator = normalizedRole(user.role) === "Administrator";
+        const isMycologist = normalizedRole(user.role) === "Mycologist";
+        const userRole = normalizedRole(user.role);
         
         console.log('🔍 INVESTIGATION ROLE DETECTION:');
         console.log('  authUser:', authUser);
@@ -211,7 +216,7 @@ export default function Investigation() {
                 console.log('🔍 Investigation - Fetching from:', endpoint);
                 
                 // Load first page with higher limit to try to get all cases at once
-                const firstRes = await fetch(endpoint, { cache: 'no-store' });
+                const firstRes = await fetch(endpoint, { cache: 'no-store', credentials: 'include' });
                 if (!firstRes.ok) {
                     throw new Error('Failed to load cases');
                 }
@@ -235,7 +240,7 @@ export default function Investigation() {
                     const url = `${baseUrl}?${params.toString()}`;
                     
                     console.log(`📄 Fetching page ${pageCount + 1} with token:`, currentToken);
-                    const res = await fetch(url, { cache: 'no-store' });
+                    const res = await fetch(url, { cache: 'no-store', credentials: 'include' });
                     if (!res.ok) break;
                     
                     const body = await res.json();

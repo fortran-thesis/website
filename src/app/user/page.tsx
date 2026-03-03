@@ -86,9 +86,9 @@ export default function Users() {
             try {
                 // Fetch role and disabled counts
                 const [rolesRes, disabledRes, usersRes] = await Promise.all([
-                    fetch('/api/v1/users/counts/roles', { cache: 'default' }),
-                    fetch('/api/v1/users/counts/disabled', { cache: 'default' }),
-                    fetch('/api/v1/users?limit=100', { cache: 'no-store' })
+                    fetch('/api/v1/users/counts/roles', { cache: 'default', credentials: 'include' }),
+                    fetch('/api/v1/users/counts/disabled', { cache: 'default', credentials: 'include' }),
+                    fetch('/api/v1/users?limit=100', { cache: 'no-store', credentials: 'include' })
                 ]);
                 
                 if (mounted) {
@@ -142,7 +142,7 @@ export default function Users() {
                 params.set('pageToken', nextPageToken);
                 const url = `/api/v1/users?${params.toString()}`;
                 
-                const res = await fetch(url, { cache: 'no-store' });
+                const res = await fetch(url, { cache: 'no-store', credentials: 'include' });
                 if (!res.ok) {
                     const body = await res.json().catch(() => ({}));
                     throw new Error(body?.error || 'Failed to load more users');

@@ -90,7 +90,12 @@ export default function Home() {
     };
 
     // Determine dashboard content based on user role (backend uses lowercase 'admin' and 'mycologist')
-    const isAdministrator = user.role === "admin" || user.role === "Administrator";
+    const normalizedRole = (role: string): string => {
+        if (!role) return "Mycologist";
+        const lowerRole = role.toLowerCase();
+        return lowerRole === "admin" || lowerRole === "administrator" ? "Administrator" : "Mycologist";
+    };
+    const isAdministrator = normalizedRole(user.role) === "Administrator";
     const isMycologist = user.role === "mycologist" || user.role === "Mycologist";
     
     console.log('🔍 ROLE DETECTION:');
@@ -229,7 +234,7 @@ export default function Home() {
           if (isAdministrator && shouldFetch(usersCountKey)) {
             console.log('📊 Fetching total users...');
             try {
-              const rolesRes = await fetch('/api/v1/users/counts/roles', { cache: 'default' });
+              const rolesRes = await fetch('/api/v1/users/counts/roles', { cache: 'default', credentials: 'include' });
               console.log('📊 Users role counts response status:', rolesRes.status);
               if (rolesRes.ok) {
                 const rolesData = await rolesRes.json();
@@ -256,7 +261,7 @@ export default function Home() {
           const casesCountKey = 'dash:cases-count';
           if (isAdministrator && shouldFetch(casesCountKey)) {
             try {
-              const casesCountRes = await fetch('/api/v1/mold-cases/counts/metadata', { cache: 'default' });
+              const casesCountRes = await fetch('/api/v1/mold-cases/counts/metadata', { cache: 'default', credentials: 'include' });
               if (casesCountRes.ok) {
                 const casesCountData = await casesCountRes.json();
                 if (casesCountData.success && casesCountData.data) {
@@ -278,7 +283,7 @@ export default function Home() {
           const reportsCountKey = 'dash:reports-count';
           if (isAdministrator && shouldFetch(reportsCountKey)) {
             try {
-              const reportsRes = await fetch('/api/v1/reports?limit=1000', { cache: 'default' });
+              const reportsRes = await fetch('/api/v1/reports?limit=1000', { cache: 'default', credentials: 'include' });
               if (reportsRes.ok) {
                 const reportsData = await reportsRes.json();
                 if (reportsData.success && reportsData.data?.snapshot) {
@@ -296,7 +301,7 @@ export default function Home() {
           const casesListKey = 'dash:cases-list';
           if (isAdministrator && shouldFetch(casesListKey)) {
             try {
-              const casesRes = await fetch(`/api/v1/mold-reports?limit=10`, { cache: 'default' });
+              const casesRes = await fetch(`/api/v1/mold-reports?limit=10`, { cache: 'default', credentials: 'include' });
               if (casesRes.ok) {
                 const casesData = await casesRes.json();
                 if (casesData.data && Array.isArray(casesData.data.snapshot)) {
@@ -320,7 +325,7 @@ export default function Home() {
                 // Clear previous data only when we intend to refetch
                 setUnassignedCases([]);
                 const url = '/api/v1/mold-reports/unassigned?limit=50';
-                const unassignedRes = await fetch(url, { cache: 'no-store' });
+                const unassignedRes = await fetch(url, { cache: 'no-store', credentials: 'include' });
                 
                 if (unassignedRes.ok) {
                   const unassignedData = await unassignedRes.json();
@@ -369,7 +374,7 @@ export default function Home() {
                 setUnassignedCases([]);
                 const url = '/api/v1/mold-reports/assigned?limit=50';
                 console.log('🔍 Fetching from URL:', url);
-                const assignedRes = await fetch(url, { cache: 'no-store' });
+                const assignedRes = await fetch(url, { cache: 'no-store', credentials: 'include' });
                 console.log('🔍 API response status:', assignedRes.status);
                 
                 if (assignedRes.ok) {
@@ -456,7 +461,7 @@ export default function Home() {
             try {
               const monthlyKey = 'dash:monthly';
               if (shouldFetch(monthlyKey)) {
-                const monthlyRes = await fetch('/api/v1/mold-reports/count/monthly', { cache: 'default' });
+                const monthlyRes = await fetch('/api/v1/mold-reports/count/monthly', { cache: 'default', credentials: 'include' });
                 console.log('📊 Monthly totals response status:', monthlyRes.status);
                 if (monthlyRes.ok) {
                   const monthlyData = await monthlyRes.json();
@@ -491,7 +496,7 @@ export default function Home() {
           const priorityKey = 'dash:priority';
           if (isAdministrator && shouldFetch(priorityKey)) {
             try {
-              const priorityRes = await fetch('/api/v1/mold-reports/count/priorities', { cache: 'default' });
+              const priorityRes = await fetch('/api/v1/mold-reports/count/priorities', { cache: 'default', credentials: 'include' });
               if (priorityRes.ok) {
                 const priorityData = await priorityRes.json();
                 if (priorityData.success && priorityData.data) {
