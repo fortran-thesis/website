@@ -14,6 +14,7 @@ import FlagHistory from "./tab_contents/flag-history";
 import type { FlaggedHistory } from "@/components/tables/flagged_history_table";
 import { useFlagReports } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
+import { mutate } from 'swr';
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
@@ -157,6 +158,19 @@ export default function Settings() {
       });
 
       setSuccessMessage('Profile updated successfully');
+
+      // Revalidate SWR caches so user management lists reflect the updated profile
+      await Promise.all([
+        mutate('/api/v1/users/counts/roles', undefined, { revalidate: true }),
+        mutate('/api/v1/users/mycologists', undefined, { revalidate: true }),
+        mutate('/api/v1/users/counts/disabled', undefined, { revalidate: true }),
+        mutate(
+          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/users'),
+          undefined,
+          { revalidate: true },
+        ),
+      ]);
+
       try { await refreshUser(); setProfileFile(null); } catch { /* ignore */ }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Internal error while updating profile.';

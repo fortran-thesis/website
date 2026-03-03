@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "@/components/sidebar";
 import Footer from "@/components/footer";
 import { useAuth } from "@/hooks/useAuth";
+import { useFCM } from "@/hooks/useFCM";
 import SwrProvider from "@/providers/swr-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 
@@ -28,6 +29,15 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
 
   // Determine user role - backend returns lowercase 'admin' or 'mycologist'
   const userRole = authUser?.user?.role ? authUser.user.role.charAt(0).toUpperCase() + authUser.user.role.slice(1).toLowerCase() : "Mycologist";
+
+  // ── FCM: initialise web push when the user is logged in ──
+  const { requestPermission } = useFCM();
+
+  useEffect(() => {
+    if (authUser) {
+      requestPermission();
+    }
+  }, [authUser, requestPermission]);
 
   // Listen for navigation clicks and pathname changes
   useEffect(() => {
