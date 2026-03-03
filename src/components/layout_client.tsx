@@ -5,9 +5,22 @@ import Sidebar from "@/components/sidebar";
 import Footer from "@/components/footer";
 import { useAuth } from "@/hooks/useAuth";
 import SwrProvider from "@/providers/swr-provider";
+import { AuthProvider } from "@/providers/auth-provider";
 
 export default function LayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  
+  return (
+    <AuthProvider>
+      <SwrProvider>
+        <LayoutInner pathname={pathname}>{children}</LayoutInner>
+      </SwrProvider>
+    </AuthProvider>
+  );
+}
+
+/** Inner component that consumes useAuth (now backed by the shared AuthProvider) */
+function LayoutInner({ children, pathname }: { children: React.ReactNode; pathname: string }) {
   const { user: authUser } = useAuth();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -51,7 +64,7 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
   }, []);
 
   return (
-    <SwrProvider>
+    <>
       {hideLayout ? (
         <main>{children}</main>
       ) : (
@@ -84,6 +97,6 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
         </div> 
         </>
       )}
-    </SwrProvider>
+    </>
   );
 }
