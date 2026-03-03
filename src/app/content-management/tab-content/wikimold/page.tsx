@@ -14,7 +14,7 @@ interface WikiMoldManagementProps {
   onAddWikiMold?: () => void;
 }
 
-export default function WikiMoldManagement({ wikimoldData, setWikiMoldData, onEditWikiMold, onArchiveWikiMold, onAddWikiMold }: WikiMoldManagementProps) {
+export default function WikiMoldManagement({ wikimoldData = [], setWikiMoldData, onEditWikiMold, onArchiveWikiMold, onAddWikiMold }: WikiMoldManagementProps) {
   const [search, setSearch] = useState("");
 
   // Unified client-side search: title and datePublished

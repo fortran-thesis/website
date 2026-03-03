@@ -14,7 +14,7 @@ interface MoldInfoProps {
   onEditMold?: (mold: MoldGenus) => void;
 }
 
-export default function MoldInfo({ moldData, isLoading, onEditMold }: MoldInfoProps) {
+export default function MoldInfo({ moldData = [], isLoading, onEditMold }: MoldInfoProps) {
   const [search, setSearch] = useState("");
 
   // Unified client-side search: genusName, reviewedBy, dateReviewed
