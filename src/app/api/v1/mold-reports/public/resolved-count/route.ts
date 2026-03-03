@@ -5,7 +5,8 @@ import { endpoints } from '@/services/endpoints';
 const FALLBACK = { success: false, data: { resolvedCount: 0 } };
 const RESOLVED_COUNT_REVALIDATE_SECONDS = 600;
 
-export const revalidate = RESOLVED_COUNT_REVALIDATE_SECONDS;
+/* Segment config: must be a static literal for Next.js static analysis */
+export const revalidate = 600;
 
 /**
  * GET /api/v1/mold-reports/public/resolved-count
