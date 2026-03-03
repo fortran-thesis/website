@@ -10,12 +10,17 @@ import MonthlyCasesChart from '@/components/charts/monthly-chart';
 import PriorityBreakdown from '@/components/tiles/priority_breakdown_tile';
 import CaseTable from '@/components/tables/case_table';
 import AuthDebug from '@/components/auth-debug';
-import NotificationsPanel, { type NotificationItem } from '@/components/notifications_panel';
+import NotificationsPanel from '@/components/notifications_panel';
 import DonutChart from '@/components/charts/donut-chart';
 import {
   useUnassignedReports,
   useAssignedReports,
   useDashboardSummary,
+  useNotifications,
+  useUnreadNotificationCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+  deleteNotification as deleteNotificationMutation,
 } from '@/hooks/swr';
 
 const userRole = "Administrator";
@@ -152,23 +157,36 @@ export default function Home() {
         { name: "Resolved", value: 30, color: "var(--primary-color)" },
     ];
 
-    const notifications: NotificationItem[] = [
-        {
-            id: 1,
-            title: "New mold case assigned",
-            body: "Case #MC-1023 has been assigned to you.",
-            time: "2 min ago",
-        },
-        {
-            id: 2,
-            title: "Report updated",
-            body: "Monthly report has been updated by Admin.",
-            time: "1 hr ago",
-        },
-    ];
-
-    const notificationCount = notifications.length;
+    /* ─── Notification hooks ─── */
+    const { data: notifRes, mutate: mutateNotifications } = useNotifications(20, undefined, !authLoading);
+    const { data: unreadRes, mutate: mutateUnread } = useUnreadNotificationCount(!authLoading);
+    const notifications = notifRes?.data?.snapshot ?? [];
+    const notificationCount = unreadRes?.data?.count ?? 0;
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
+    const handleMarkRead = async (id: string) => {
+      try {
+        await markNotificationRead(id);
+        mutateNotifications();
+        mutateUnread();
+      } catch { /* swallow */ }
+    };
+
+    const handleMarkAllRead = async () => {
+      try {
+        await markAllNotificationsRead();
+        mutateNotifications();
+        mutateUnread();
+      } catch { /* swallow */ }
+    };
+
+    const handleDeleteNotification = async (id: string) => {
+      try {
+        await deleteNotificationMutation(id);
+        mutateNotifications();
+        mutateUnread();
+      } catch { /* swallow */ }
+    };
 
     const fallbackProfileImage = "/assets/default-fallback.png";
     const [profileImageSrc, setProfileImageSrc] = useState(
@@ -196,6 +214,9 @@ export default function Home() {
                 isOpen={isNotificationsOpen}
                 onClose={() => setIsNotificationsOpen(false)}
                 notifications={notifications}
+                onMarkRead={handleMarkRead}
+                onMarkAllRead={handleMarkAllRead}
+                onDelete={handleDeleteNotification}
             />
             
             {/* Header Section */}

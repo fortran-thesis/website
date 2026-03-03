@@ -1,27 +1,55 @@
 "use client";
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBell } from '@fortawesome/free-solid-svg-icons';
+import { faBell, faCheck, faCheckDouble, faTrash } from '@fortawesome/free-solid-svg-icons';
 import EmptyState from './empty_state';
+import type { Notification } from '@/hooks/swr/use-notifications';
 
-export type NotificationItem = {
-  id: number | string;
-  title: string;
-  body: string;
-  time: string;
-};
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function formatTimeAgo(metadata?: Notification['metadata']): string {
+  if (!metadata?.created_at) return '';
+  let ms: number;
+  if (typeof metadata.created_at === 'object' && '_seconds' in metadata.created_at) {
+    ms = metadata.created_at._seconds * 1000;
+  } else {
+    ms = new Date(metadata.created_at as string).getTime();
+  }
+  const diff = Date.now() - ms;
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} hr ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Component                                                          */
+/* ------------------------------------------------------------------ */
 
 type NotificationsPanelProps = {
   isOpen: boolean;
   onClose: () => void;
-  notifications: NotificationItem[];
+  notifications: Notification[];
+  onMarkRead?: (id: string) => void;
+  onMarkAllRead?: () => void;
+  onDelete?: (id: string) => void;
 };
 
 export default function NotificationsPanel({
   isOpen,
   onClose,
   notifications,
+  onMarkRead,
+  onMarkAllRead,
+  onDelete,
 }: NotificationsPanelProps) {
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
   return (
     <div
       className={`fixed inset-0 z-50 transition-opacity duration-300 ${
@@ -39,21 +67,33 @@ export default function NotificationsPanel({
         ${isOpen ? "translate-x-0" : "translate-x-full"}`}
         role="dialog"
         aria-modal="true"
-        aria-label="Reminders"
+        aria-label="Notifications"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4">
           <h2 className="font-black text-lg text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-            Reminders
+            Notifications
           </h2>
 
-          <button
-            onClick={onClose}
-            className="text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
-            aria-label="Close"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-3">
+            {unreadCount > 0 && onMarkAllRead && (
+              <button
+                onClick={onMarkAllRead}
+                className="text-xs font-bold text-[var(--moldify-blue)] hover:underline cursor-pointer font-[family-name:var(--font-bricolage-grotesque)]"
+                aria-label="Mark all as read"
+              >
+                <FontAwesomeIcon icon={faCheckDouble} className="mr-1" />
+                Mark all read
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
+              aria-label="Close"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -61,33 +101,62 @@ export default function NotificationsPanel({
           {notifications.length === 0 ? (
             <EmptyState
               icon={faBell}
-              title="No Reminders"
+              title="No Notifications"
               message="You're all caught up! Check back later for updates."
             />
           ) : (
             notifications.map((item) => (
               <div
                 key={item.id}
-                className="flex items-start gap-3 bg-[var(--taupe)] rounded-xl px-4 py-3 shadow-sm"
+                className={`flex items-start gap-3 rounded-xl px-4 py-3 shadow-sm transition ${
+                  item.is_read
+                    ? 'bg-[var(--taupe)]'
+                    : 'bg-[var(--moldify-blue)]/10 border-l-4 border-[var(--moldify-blue)]'
+                }`}
               >
                 {/* Icon */}
                 <div className="flex-shrink-0 mt-1">
-                  <FontAwesomeIcon icon={faBell} className="text-[var(--accent-color)]" />
+                  <FontAwesomeIcon
+                    icon={faBell}
+                    className={item.is_read ? 'text-[var(--accent-color)]' : 'text-[var(--moldify-blue)]'}
+                  />
                 </div>
 
                 {/* Text */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-sm font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
                     {item.title}
                   </p>
                   <p className="text-xs text-[var(--moldify-black)] mt-0.5 font-[family-name:var(--font-bricolage-grotesque)]">
                     {item.body}
                   </p>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-3 mt-2">
+                    {!item.is_read && onMarkRead && (
+                      <button
+                        onClick={() => onMarkRead(item.id)}
+                        className="text-[10px] font-bold text-[var(--moldify-blue)] hover:underline cursor-pointer font-[family-name:var(--font-bricolage-grotesque)]"
+                      >
+                        <FontAwesomeIcon icon={faCheck} className="mr-0.5" />
+                        Mark read
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(item.id)}
+                        className="text-[10px] font-bold text-[var(--moldify-red)] hover:underline cursor-pointer font-[family-name:var(--font-bricolage-grotesque)]"
+                      >
+                        <FontAwesomeIcon icon={faTrash} className="mr-0.5" />
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Time */}
                 <span className="text-[10px] text-[var(--moldify-grey)] whitespace-nowrap mt-1 font-[family-name:var(--font-bricolage-grotesque)]">
-                  {item.time}
+                  {formatTimeAgo(item.metadata)}
                 </span>
               </div>
             ))

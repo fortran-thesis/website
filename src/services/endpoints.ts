@@ -143,4 +143,16 @@ export const endpoints = {
     list: `${API_PREFIX}/audit-log`,
     byAction: (action: string) => `${API_PREFIX}/audit-log/${action}`,
   },
+
+  // Notifications
+  notification: {
+    list: `${API_PREFIX}/notification`,
+    getById: (id: string) => `${API_PREFIX}/notification/${id}`,
+    unreadCount: `${API_PREFIX}/notification/unread-count`,
+    markRead: (id: string) => `${API_PREFIX}/notification/${id}/read`,
+    markAllRead: `${API_PREFIX}/notification/read-all`,
+    delete: (id: string) => `${API_PREFIX}/notification/${id}`,
+    deviceToken: `${API_PREFIX}/notification/device-token`,
+    removeDeviceToken: (id: string) => `${API_PREFIX}/notification/device-token/${id}`,
+  },
 } as const;
