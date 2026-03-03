@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import BackButton from '@/components/buttons/back_button';
@@ -32,6 +32,14 @@ interface MoldManagementFormData {
 }
 
 export default function ViewMoldInfo() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+      <ViewMoldInfoContent />
+    </Suspense>
+  );
+}
+
+function ViewMoldInfoContent() {
     const userRole = "Mycologist";
     const searchParams = useSearchParams();
     const moldId = searchParams.get('id');

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
@@ -26,6 +26,14 @@ type WikiMoldDetail = {
 };
 
 export default function ViewWikiMold() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+      <ViewWikiMoldContent />
+    </Suspense>
+  );
+}
+
+function ViewWikiMoldContent() {
   const searchParams = useSearchParams();
   const wikimoldId = searchParams.get("id") ?? '';
   const userRole = "Mycologist";

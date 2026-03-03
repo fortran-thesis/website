@@ -2,7 +2,7 @@
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import StatusBox from "@/components/tiles/status_tile";
 import UserLogTile, { UserLogTileEntry } from "@/components/tiles/user_log_tile";
@@ -27,6 +27,14 @@ type UserDetails = {
 
 
 export default function ViewUser() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+      <ViewUserContent />
+    </Suspense>
+  );
+}
+
+function ViewUserContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("id");
   console.log('👤 ViewUser page loaded:', { userId, isUndefined: userId === "undefined", isNull: userId === null });

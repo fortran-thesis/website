@@ -6,7 +6,7 @@ import {
   faImage,
 } from "@fortawesome/free-solid-svg-icons";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
-import { useState, useMemo } from "react";
+import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useReport } from '@/hooks/swr';
 import BackButton from "@/components/buttons/back_button";
@@ -16,6 +16,14 @@ import ConfirmModal from "@/components/modals/confirmation_modal";
 import RequestRevisionModal from "@/components/modals/request_revision_modal";
 
 export default function ViewReport() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+      <ViewReportContent />
+    </Suspense>
+  );
+}
+
+function ViewReportContent() {
   const searchParams = useSearchParams();
   const reportId = searchParams.get("id");
 
