@@ -116,6 +116,37 @@ export function useAssignedReports(
   );
 }
 
+/** Closed mold reports (includes rejected). */
+export function useClosedReports(
+  params?: { limit?: number; pageToken?: string },
+  enabled = true,
+) {
+  return useSWR<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
+    enabled
+      ? apiUrl('/api/v1/mold-reports/closed', {
+          limit: params?.limit ?? 10,
+          pageToken: params?.pageToken,
+        })
+      : null,
+  );
+}
+
+/** Paginated closed mold reports with infinite scroll. */
+export function useClosedReportsInfinite(limit = 50, enabled = true) {
+  return useSWRInfinite<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
+    (pageIndex, prev) => {
+      if (!enabled) return null;
+      if (prev && !prev.data?.nextPageToken) return null;
+      if (pageIndex === 0) return apiUrl('/api/v1/mold-reports/closed', { limit });
+      return apiUrl('/api/v1/mold-reports/closed', {
+        limit,
+        pageToken: prev!.data!.nextPageToken!,
+      });
+    },
+    { revalidateFirstPage: false },
+  );
+}
+
 /** Paginated assigned mold reports with infinite scroll. */
 export function useAssignedReportsInfinite(limit = 100) {
   return useSWRInfinite<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(

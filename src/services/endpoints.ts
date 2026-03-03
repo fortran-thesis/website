@@ -83,6 +83,7 @@ export const endpoints = {
     getById: (id: string) => `${API_PREFIX}/mold-report/${id}`,
     unassigned: `${API_PREFIX}/mold-report/unassigned`,
     assigned: `${API_PREFIX}/mold-report/assigned`,
+    closed: `${API_PREFIX}/mold-report/closed`,
     search: `${API_PREFIX}/mold-report/search`,
     assign: (id: string) => `${API_PREFIX}/mold-report/${id}/assign`,
     reject: (id: string) => `${API_PREFIX}/mold-report/${id}/reject`,
@@ -127,6 +128,7 @@ export const endpoints = {
     getById: (id: string) => `${API_PREFIX}/moldipedia/${id}`,
     create: `${API_PREFIX}/moldipedia`,
     update: (id: string) => `${API_PREFIX}/moldipedia/${id}`,
+    archive: (id: string) => `${API_PREFIX}/moldipedia/${id}/archive`,
   },
 
   // Flag Reports

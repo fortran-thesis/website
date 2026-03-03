@@ -1,26 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import FlaggedHistoryTable, { type FlaggedHistory } from "@/components/tables/flagged_history_table";
-import EmptyState from "@/components/empty_state";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch, faFlag } from "@fortawesome/free-solid-svg-icons";
-
-/**
- * Dummy data for flagged history
- * This is used for development/testing purposes
- * TODO: Remove this and use actual API responses when backend is ready
- */
-import { endpoints } from '@/services/endpoints';
-
-// Map API response to FlaggedHistoryTable format
-function mapApiFlagReport(item: any): FlaggedHistory {
-  return {
-    flagId: item.content_id || '',
-    systemPredicted: item.content_type || '',
-    correctedGenus: item.details || '',
-    dateFlagged: item.dateFlagged || '',
-  };
-}
+import { faSearch } from "@fortawesome/free-solid-svg-icons";
 /**
  * Flag History Component
  * Displays a table of flagged mold genus predictions
@@ -103,14 +85,6 @@ export default function FlagHistory({ flaggedHistory, isLoading, error }: FlagHi
       {isLoading ? (
         <div className="p-6 text-center text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
           Loading flagged history...
-        </div>
-      ) : filteredHistory.length === 0 ? (
-        <div className="mt-6">
-          <EmptyState
-            icon={faFlag}
-            title="No Flagged History"
-            message="You haven't flagged any predictions yet. Flagged corrections will appear here."
-          />
         </div>
       ) : (
         <FlaggedHistoryTable 

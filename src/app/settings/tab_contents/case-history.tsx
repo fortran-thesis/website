@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CaseTable from "@/components/tables/case_table";
-import EmptyState from "@/components/empty_state";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSearch, faFolderOpen } from "@fortawesome/free-solid-svg-icons";
+import { faSearch } from "@fortawesome/free-solid-svg-icons";
+import { useClosedReportsInfinite, type MoldReportSnapshot } from "@/hooks/swr";
 
 interface CaseData {
   caseName: string;
@@ -16,78 +16,103 @@ interface CaseData {
 }
 
 /**
- * Dummy data for closed cases
- * This is used for development/testing purposes
- * TODO: Remove this and use actual API responses when backend is ready
- */
-const DUMMY_CLOSED_CASES: CaseData[] = [
-  {
-    caseName: "CASE-2024-001",
-    cropName: "Rice",
-    location: "Nueva Ecija",
-    submittedBy: "Juan Dela Cruz",
-    dateSubmitted: "2024-01-15",
-    priority: "High",
-    status: "Closed",
-  },
-  {
-    caseName: "CASE-2024-002",
-    cropName: "Corn",
-    location: "Isabela",
-    submittedBy: "Maria Santos",
-    dateSubmitted: "2024-01-10",
-    priority: "Medium",
-    status: "Closed",
-  },
-  {
-    caseName: "CASE-2024-003",
-    cropName: "Tomato",
-    location: "Benguet",
-    submittedBy: "Pedro Garcia",
-    dateSubmitted: "2024-01-08",
-    priority: "Low",
-    status: "Closed",
-  },
-];
-
-/**
  * Case History Component
  * Displays a table of closed mold investigation cases
  * Only shows cases with status "Closed"
  */
 export default function CaseHistory() {
-  const [closedCases, setClosedCases] = useState<CaseData[]>(DUMMY_CLOSED_CASES);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: casePages,
+    setSize,
+    isLoading,
+    isValidating,
+    error,
+  } = useClosedReportsInfinite(50);
 
-  /**
-   * Fetch closed cases from backend
-   * Currently loads dummy data
-   * TODO: Replace with actual API call when backend server is ready
-   * Example API endpoint: GET /api/v1/cases?status=closed
-   */
+  const hasMore = !!casePages?.[casePages.length - 1]?.data?.nextPageToken;
+
   useEffect(() => {
-    // Dummy data is already loaded in initial state
-    setIsLoading(false);
+    if (!hasMore || isValidating) return;
 
-    // TODO: Uncomment when backend API is ready
-    // const fetchClosedCases = async () => {
-    //   try {
-    //     setIsLoading(true);
-    //     const response = await apiClient.get(endpoints.cases.getByStatus('closed'));
-    //     if (response.success && Array.isArray(response.data)) {
-    //       setClosedCases(response.data);
-    //     }
-    //   } catch (err) {
-    //     console.error("Error fetching closed cases:", err);
-    //     setError("Failed to load closed cases");
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
-    // fetchClosedCases();
-  }, []);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setSize((s) => s + 1);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    const current = loadMoreRef.current;
+    if (current) observer.observe(current);
+
+    return () => {
+      if (current) observer.unobserve(current);
+      observer.disconnect();
+    };
+  }, [hasMore, isValidating, setSize]);
+
+  const mapReportToCase = (item: MoldReportSnapshot): CaseData => {
+    let formattedDate = "N/A";
+    if (typeof item.date_observed === "string" && item.date_observed) {
+      const parsedDate = new Date(item.date_observed);
+      formattedDate = Number.isNaN(parsedDate.getTime())
+        ? item.date_observed
+        : parsedDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "2-digit",
+          });
+    }
+
+    const priority = item.priority || item.mold_case?.priority || "Unassigned";
+    const normalizedPriority = priority
+      ? priority.charAt(0).toUpperCase() + priority.slice(1)
+      : "Unassigned";
+
+    const status = item.status || "Closed";
+    const normalizedStatus = status
+      ? status.charAt(0).toUpperCase() + status.slice(1)
+      : "Closed";
+
+    return {
+      caseName: item.id || "N/A",
+      cropName: item.case_name || item.host || "N/A",
+      location: item.location || item.mold_case?.location || item.reporter?.address || "N/A",
+      submittedBy: item.user_id || item.reporter?.name || item.mold_case?.user_id || "N/A",
+      dateSubmitted: formattedDate,
+      priority: normalizedPriority,
+      status: normalizedStatus,
+    };
+  };
+
+  const closedCases = useMemo<CaseData[]>(() => {
+    if (!casePages) return [];
+    return casePages.flatMap((page) => (page?.data?.snapshot ?? []).map(mapReportToCase));
+  }, [casePages]);
+
+  const filteredClosedCases = useMemo(() => {
+    const searchLower = search.trim().toLowerCase();
+    if (!searchLower) return closedCases;
+
+    return closedCases.filter((item) =>
+      [
+        item.caseName,
+        item.cropName,
+        item.location,
+        item.submittedBy,
+        item.dateSubmitted,
+        item.priority,
+        item.status,
+      ]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(searchLower)),
+    );
+  }, [closedCases, search]);
+
+  const errorMessage = error ? "Failed to load closed cases." : null;
 
   /**
    * Handle view case - navigate to view case page
@@ -113,9 +138,9 @@ export default function CaseHistory() {
       </p>
 
       {/* Error Message Display */}
-      {error && (
+      {errorMessage && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-          {error}
+          {errorMessage}
         </div>
       )}
     
@@ -159,17 +184,9 @@ export default function CaseHistory() {
         <div className="p-6 text-center text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
           Loading closed cases...
         </div>
-      ) : closedCases.length === 0 ? (
-        <div className="mt-6">
-          <EmptyState
-            icon={faFolderOpen}
-            title="No Closed Cases"
-            message="You don't have any closed cases yet. Completed investigations will appear here."
-          />
-        </div>
       ) : (
         <CaseTable
-          cases={closedCases}
+          cases={filteredClosedCases}
           onEdit={handleViewCase}
           showPriority={true}
           showStatus={true}
@@ -177,6 +194,12 @@ export default function CaseHistory() {
           useViewIcon={true}
         />
       )}
+
+      <div ref={loadMoreRef} className="py-4 text-center">
+        {isValidating && hasMore && (
+          <p className="text-sm text-[var(--moldify-grey)]">Loading more closed cases...</p>
+        )}
+      </div>
     </div>
   );
 }

@@ -55,20 +55,24 @@ export default function DonutChart({
       </div>
 
       <div className="flex flex-col justify-center gap-4">
-        {data.map((item, index) => (
-          <div key={index} className="flex items-center gap-3">
-            <div
-              className="w-4 h-4 rounded-sm"
-              style={{
-                backgroundColor:
-                  item.color || defaultColors[index % defaultColors.length],
-              }}
-            />
-            <span className="text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm">
-              {item.value} {item.name}
-            </span>
-          </div>
-        ))}
+        {data.map((item, index) => {
+          // Skip items marked with hideFromLegend
+          if (item.hideFromLegend) return null;
+          return (
+            <div key={index} className="flex items-center gap-3">
+              <div
+                className="w-4 h-4 rounded-sm"
+                style={{
+                  backgroundColor:
+                    item.color || defaultColors[index % defaultColors.length],
+                }}
+              />
+              <span className="text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm">
+                {item.value} {item.name}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

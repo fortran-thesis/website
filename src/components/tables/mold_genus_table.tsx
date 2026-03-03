@@ -28,8 +28,10 @@ export default function MoldGenusTable({ data, onEdit, isLoading = false }: Mold
 
   if (isLoading) {
     return (
-      <div className="min-w-full overflow-x-auto rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow p-6">
-        <p className="text-center text-[var(--moldify-grey)]">Loading mold data...</p>
+      <div className="text-center">
+          <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">
+              Loading mold data...
+          </p>
       </div>
     );
   }

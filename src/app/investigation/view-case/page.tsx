@@ -16,8 +16,7 @@ import InVitroTab from "../investigation-tabs/in_vitro";
 import InVivoTab from "../investigation-tabs/in_vivo";
 import AddTreatmentModal from "@/components/modals/add_treatment_modal";
 import { useAuth } from "@/hooks/useAuth";
-import { useMoldReport } from "@/hooks/swr";
-import { useMoldCaseByReport } from "@/hooks/swr";
+import { useMoldReport, useMoldCaseByReport, useUser } from "@/hooks/swr";
 import { apiMutate } from "@/lib/api";
 import { mutate } from 'swr';
 
@@ -39,6 +38,12 @@ function ViewCaseContent() {
 
   const caseData = reportRes?.data ?? null;
   const moldCase = moldCaseRes?.data ?? null;
+  
+  /* ── SWR: fetch mycologist by ID if assigned ── */
+  const mycologistId = caseData?.assigned_mycologist_id;
+  const { data: mycologistRes } = useUser(mycologistId);
+  const mycologistData = mycologistRes?.data;
+  
   const loading = reportLoading || moldCaseLoading;
   const error = !caseId ? 'No case ID provided' : null;
 
@@ -195,7 +200,13 @@ function ViewCaseContent() {
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
   const isRejected = caseData?.status === 'closed' || caseData?.status === 'rejected';
-  const assignedMycologistName = moldCase?.mycologist_name || caseData?.assigned_mycologist?.details?.displayName || "Mycologist Assigned";
+  
+  // Get mycologist name from fetched user data
+  const assignedMycologistName = 
+    mycologistData?.details?.displayName 
+    || mycologistData?.user?.displayName 
+    || moldCase?.mycologist_name 
+    || "Assigned Specialist";
 
   // Normalize case_details
   const caseDetailsEntries = (caseData?.case_details ?? []).map((d: any) => {
@@ -390,6 +401,7 @@ function ViewCaseContent() {
               status={status}
               setAssignModalOpen={setAssignModalOpen}
               setRejectModalOpen={setRejectModalOpen}
+              mycologistLoading={!mycologistId || !mycologistRes}
             />
           </aside>
 
@@ -444,7 +456,7 @@ function ViewCaseContent() {
             </div>
           </div>
 
-            {/* 4. MODERN UTILITY BAR */}
+            {/* 4.  UTILITY BAR */}
             <div className="flex flex-wrap gap-3 bg-[var(--taupe)]/30 p-2 rounded-2xl border border-[var(--primary-color)]/5">
               {userRole !== "Administrator" && (
                 <button 

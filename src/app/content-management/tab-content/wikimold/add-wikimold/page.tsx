@@ -23,6 +23,8 @@ interface WikiMoldData {
 export default function AddWikiMold() {
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const initialData = useRef({ title: '', coverImage: '', content: '' });
   const [showConfirm, setShowConfirm] = useState(false);
   const userRole = "Mycologist";
@@ -68,7 +70,8 @@ export default function AddWikiMold() {
     if (e) e.preventDefault();
 
     if (!coverImageFile) {
-      alert("Cover photo is required. Please select an image file.");
+      setErrorMessage("Cover photo is required. Please select an image file.");
+      setTimeout(() => setErrorMessage(''), 5000);
       return;
     }
 
@@ -80,15 +83,18 @@ export default function AddWikiMold() {
 
     // Validation for required fields
     if (!title) {
-      alert("Title is required.");
+      setErrorMessage("Title is required.");
+      setTimeout(() => setErrorMessage(''), 5000);
       return;
     }
     if (!body) {
-      alert("Body is required.");
+      setErrorMessage("Body is required.");
+      setTimeout(() => setErrorMessage(''), 5000);
       return;
     }
     if (!author_id) {
-      alert("Author ID is required. Please log in again.");
+      setErrorMessage("Author ID is required. Please log in again.");
+      setTimeout(() => setErrorMessage(''), 5000);
       return;
     }
 
@@ -117,13 +123,16 @@ export default function AddWikiMold() {
         { revalidate: true },
       );
 
-      alert("WikiMold article created successfully!");
+      setSuccessMessage("WikiMold article created successfully!");
       setWikiMoldData({ title: "", coverImage: "", content: "" });
       setCoverImagePreview("");
       setCoverImageFile(null);
+      setTimeout(() => setSuccessMessage(''), 5000);
     } catch (error) {
       console.error("Error creating WikiMold:", error);
-      alert("Failed to create WikiMold article. " + (error instanceof Error ? error.message : "Please try again."));
+      const errorMsg = "Failed to create WikiMold article. " + (error instanceof Error ? error.message : "Please try again.");
+      setErrorMessage(errorMsg);
+      setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setIsSubmitting(false);
     }
@@ -193,6 +202,16 @@ export default function AddWikiMold() {
                     handleSubmit();
                   }}
                 />
+          {successMessage && (
+            <div className="w-full mb-4 px-4 py-3 bg-green-100 text-green-800 rounded-lg text-left font-semibold">
+              {successMessage}
+            </div>
+          )}
+          {errorMessage && (
+            <div className="w-full mb-4 px-4 py-3 bg-red-100 text-red-800 rounded-lg text-left font-semibold">
+              {errorMessage}
+            </div>
+          )}
           <div className="relative w-full mb-16 group">
             <div className="relative w-full h-[350px] rounded-[2.5rem] overflow-hidden bg-[var(--taupe)] shadow-2xl transition-all duration-700">
               <Image
