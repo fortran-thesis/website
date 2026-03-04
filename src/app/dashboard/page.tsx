@@ -18,9 +18,7 @@ import {
   useDashboardSummary,
   useNotifications,
   useUnreadNotificationCount,
-  markNotificationRead,
-  markAllNotificationsRead,
-  deleteNotification as deleteNotificationMutation,
+  useNotificationMutations,
 } from '@/hooks/swr';
 
 const userRole = "Administrator";
@@ -183,33 +181,29 @@ export default function Home() {
     ];
 
     /* ─── Notification hooks ─── */
-    const { data: notifRes, mutate: mutateNotifications } = useNotifications(20, undefined, !authLoading);
-    const { data: unreadRes, mutate: mutateUnread } = useUnreadNotificationCount(!authLoading);
+    const { data: notifRes } = useNotifications(20, undefined, !authLoading);
+    const { data: unreadRes } = useUnreadNotificationCount(!authLoading);
     const notifications = notifRes?.data?.snapshot ?? [];
     const notificationCount = unreadRes?.data?.count ?? 0;
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
+    const { markRead, markAllRead, remove: removeNotification } = useNotificationMutations();
+
     const handleMarkRead = async (id: string) => {
       try {
-        await markNotificationRead(id);
-        mutateNotifications();
-        mutateUnread();
+        await markRead(id);
       } catch { /* swallow */ }
     };
 
     const handleMarkAllRead = async () => {
       try {
-        await markAllNotificationsRead();
-        mutateNotifications();
-        mutateUnread();
+        await markAllRead();
       } catch { /* swallow */ }
     };
 
     const handleDeleteNotification = async (id: string) => {
       try {
-        await deleteNotificationMutation(id);
-        mutateNotifications();
-        mutateUnread();
+        await removeNotification(id);
       } catch { /* swallow */ }
     };
 

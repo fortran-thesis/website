@@ -4,7 +4,7 @@
 
 'use client';
 
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { apiUrl, apiMutate, type ApiResponse } from '@/lib/api';
 import type { PaginatedResponse } from './types';
 
@@ -113,4 +113,59 @@ export async function registerDeviceToken(token: string, platform: 'android' | '
 /** Remove a device token. */
 export async function removeDeviceToken(id: string) {
   return apiMutate(`/api/v1/notification/device-token/${id}`, { method: 'DELETE' });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Bound mutation hook (auto-revalidates after every action)         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Returns notification mutation helpers that automatically revalidate
+ * the SWR caches after every action — no manual `mutate()` required.
+ *
+ * ```tsx
+ * const { markRead, markAllRead, remove } = useNotificationMutations();
+ * await markRead(id);  // ← UI refreshes immediately
+ * ```
+ */
+export function useNotificationMutations() {
+  const { mutate } = useSWRConfig();
+
+  const revalidate = () =>
+    Promise.all([
+      mutate(
+        (key: unknown) =>
+          typeof key === 'string' &&
+          (key.startsWith('/api/v1/notification') || key.startsWith('$inf$/api/v1/notification')),
+        undefined,
+        { revalidate: true },
+      ),
+    ]);
+
+  const markRead = async (id: string) => {
+    await markNotificationRead(id);
+    await revalidate();
+  };
+
+  const markAllRead = async () => {
+    await markAllNotificationsRead();
+    await revalidate();
+  };
+
+  const remove = async (id: string) => {
+    await deleteNotification(id);
+    await revalidate();
+  };
+
+  const addDeviceToken = async (token: string, platform: 'android' | 'ios' | 'web') => {
+    await registerDeviceToken(token, platform);
+    await revalidate();
+  };
+
+  const removeToken = async (id: string) => {
+    await removeDeviceToken(id);
+    await revalidate();
+  };
+
+  return { markRead, markAllRead, remove, addDeviceToken, removeToken };
 }
