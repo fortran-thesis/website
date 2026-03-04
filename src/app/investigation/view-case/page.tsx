@@ -98,18 +98,37 @@ function ViewCaseContent() {
       setConfirmAssignOpen(false);
       setAssignModalOpen(false);
 
-      // Revalidate SWR caches to refresh UI with fresh data
+      // Optimistically update the single-report cache immediately so the UI reflects
+      // in_progress status without waiting for the backend Redis cache to clear.
+      await mutateReport(
+        (current: any) =>
+          current
+            ? {
+                ...current,
+                data: {
+                  ...current.data,
+                  status: 'in_progress',
+                  assigned_mycologist_id: pendingAssign.mycologist.id,
+                },
+              }
+            : current,
+        { revalidate: true }, // confirm with a background refetch once Redis is cleared
+      );
+
+      // Revalidate list-level caches — include $inf$ prefix for useSWRInfinite keys
       await Promise.all([
-        mutateReport(undefined, { revalidate: true }),
         mutateMoldCase(undefined, { revalidate: true }),
-        // Revalidate list-level caches so dashboards / lists reflect changes
         mutate(
-          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/mold-reports'),
+          (key: unknown) =>
+            typeof key === 'string' &&
+            (key.startsWith('/api/v1/mold-reports') || key.startsWith('$inf$/api/v1/mold-reports')),
           undefined,
           { revalidate: true },
         ),
         mutate(
-          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/mold-cases'),
+          (key: unknown) =>
+            typeof key === 'string' &&
+            (key.startsWith('/api/v1/mold-cases') || key.startsWith('$inf$/api/v1/mold-cases')),
           undefined,
           { revalidate: true },
         ),
@@ -131,15 +150,23 @@ function ViewCaseContent() {
 
       setRejectModalOpen(false);
 
-      // Revalidate SWR cache to refresh UI with fresh data
-      await Promise.all([
-        mutateReport(undefined, { revalidate: true }),
-        mutate(
-          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/mold-reports'),
-          undefined,
-          { revalidate: true },
-        ),
-      ]);
+      // Optimistically update status then confirm with a background refetch
+      await mutateReport(
+        (current: any) =>
+          current
+            ? { ...current, data: { ...current.data, status: 'closed' } }
+            : current,
+        { revalidate: true },
+      );
+
+      // Revalidate list caches — include $inf$ prefix for useSWRInfinite
+      await mutate(
+        (key: unknown) =>
+          typeof key === 'string' &&
+          (key.startsWith('/api/v1/mold-reports') || key.startsWith('$inf$/api/v1/mold-reports')),
+        undefined,
+        { revalidate: true },
+      );
     } catch (err: any) {
       console.error('Rejection failed:', err);
       alert(err?.message || 'Failed to reject case');
