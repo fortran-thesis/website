@@ -35,7 +35,8 @@ interface AuthContextValue {
   token: string | null;
   loading: boolean;
   setUser: React.Dispatch<React.SetStateAction<any>>;
-  refreshUser: () => Promise<any>;
+  /** Pass `force = true` to bypass the 60 s throttle (e.g. right after saving profile). */
+  refreshUser: (force?: boolean) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -62,31 +63,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /* ── Refresh profile from backend (deduped, 60 s throttle) ── */
-  const refreshUser = useCallback(async () => {
+  const refreshUser = useCallback(async (force = false) => {
     const now = Date.now();
     const minInterval = 60_000;
 
-    // Check sessionStorage timestamp
-    if (typeof window !== 'undefined') {
-      const last = Number(sessionStorage.getItem(refreshKey) || 0);
-      if (now - last < minInterval) return null;
+    if (!force) {
+      // Check sessionStorage timestamp
+      if (typeof window !== 'undefined') {
+        const last = Number(sessionStorage.getItem(refreshKey) || 0);
+        if (now - last < minInterval) return null;
+      }
+      if (now - lastRefreshRef.current < minInterval) return null;
     }
-    if (now - lastRefreshRef.current < minInterval) return null;
 
-    // Dedup concurrent calls
-    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+    // Dedup concurrent calls (skip dedup when forcing so a forced call always runs)
+    if (!force && refreshPromiseRef.current) return refreshPromiseRef.current;
 
     lastRefreshRef.current = now;
     if (typeof window !== 'undefined') {
       sessionStorage.setItem(refreshKey, String(now));
     }
 
-    refreshPromiseRef.current = (async () => {
+    const promise = (async () => {
       try {
         const res = await fetch('/api/v1/user/profile', {
           cache: 'no-store',
           credentials: 'include',
         });
+
+        // Handle auth errors (401, 403)
+        if (res.status === 401 || res.status === 403) {
+          console.warn(`🔒 Auth error (${res.status}) on profile refresh - clearing auth state`);
+          setIsAuth(false);
+          setUser(null);
+          setToken(null);
+          // Note: redirect will be handled by the error boundary
+          return null;
+        }
+
         if (res.status === 429) {
           console.warn('Rate limit exceeded on profile fetch');
           return null;
@@ -112,7 +126,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     })();
 
-    return refreshPromiseRef.current;
+    if (!force) {
+      refreshPromiseRef.current = promise;
+    }
+
+    return promise;
   }, []);
 
   /* ── Refresh once on mount if stored user exists ── */

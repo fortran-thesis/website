@@ -203,13 +203,13 @@ export default function Settings() {
         mutate('/api/v1/users/mycologists', undefined, { revalidate: true }),
         mutate('/api/v1/users/counts/disabled', undefined, { revalidate: true }),
         mutate(
-          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/users'),
+          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/users') || key.startsWith('$inf$/api/v1/users')),
           undefined,
           { revalidate: true },
         ),
       ]);
 
-      try { await refreshUser(); setProfileFile(null); } catch { /* ignore */ }
+      try { await refreshUser(true); setProfileFile(null); } catch { /* ignore */ }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : 'Internal error while updating profile.';
       alert('Failed to save profile: ' + message);
