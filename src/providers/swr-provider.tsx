@@ -2,6 +2,7 @@
 
 import { SWRConfig } from 'swr';
 import { fetcher } from '@/lib/api';
+import { SwrErrorBoundary } from '@/components/swr-error-boundary';
 
 /**
  * Global SWR provider with sensible defaults:
@@ -11,25 +12,28 @@ import { fetcher } from '@/lib/api';
  * - `dedupingInterval`    – dedup identical requests within 5 s
  * - `errorRetryCount`     – retry failed requests up to 3 times
  * - `shouldRetryOnError`  – skip retry for 4xx client errors (including 429)
+ * - `onError`             – handle auth errors (401, 403) and redirect to login
  */
 export default function SwrProvider({ children }: { children: React.ReactNode }) {
   return (
-    <SWRConfig
-      value={{
-        fetcher,
-        revalidateOnFocus: false,
-        revalidateOnReconnect: false,
-        revalidateIfStale: false,
-        dedupingInterval: 5000,
-        errorRetryCount: 3,
-        shouldRetryOnError(err) {
-          // Don't retry on 4xx client errors (auth failures, validation, not-found, rate-limit)
-          if (err?.status && err.status >= 400 && err.status < 500) return false;
-          return true;
-        },
-      }}
-    >
-      {children}
-    </SWRConfig>
+    <SwrErrorBoundary>
+      <SWRConfig
+        value={{
+          fetcher,
+          revalidateOnFocus: false,
+          revalidateOnReconnect: false,
+          revalidateIfStale: false,
+          dedupingInterval: 5000,
+          errorRetryCount: 3,
+          shouldRetryOnError(err) {
+            // Don't retry on 4xx client errors (auth failures, validation, not-found, rate-limit)
+            if (err?.status && err.status >= 400 && err.status < 500) return false;
+            return true;
+          },
+        }}
+      >
+        {children}
+      </SWRConfig>
+    </SwrErrorBoundary>
   );
 }
