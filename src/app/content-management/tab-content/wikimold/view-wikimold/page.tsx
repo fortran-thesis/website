@@ -147,9 +147,9 @@ function ViewWikiMoldContent() {
       // Revalidate SWR cache so the form shows fresh server data
       await Promise.all([
         mutate(`/api/v1/moldipedia/${articleId}`),
-        // Revalidate list-level caches so moldipedia lists reflect the update
+        // Revalidate list-level caches (include $inf$ prefix for useSWRInfinite keys)
         mutate(
-          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/moldipedia'),
+          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
           undefined,
           { revalidate: true },
         ),
@@ -188,9 +188,9 @@ function ViewWikiMoldContent() {
       // Revalidate SWR cache to refresh UI with fresh data
       await Promise.all([
         mutate(`/api/v1/moldipedia/${articleId}`),
-        // Revalidate list-level caches so moldipedia lists reflect the archival
+        // Revalidate list-level caches (include $inf$ prefix for useSWRInfinite keys)
         mutate(
-          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/moldipedia'),
+          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
           undefined,
           { revalidate: true },
         ),

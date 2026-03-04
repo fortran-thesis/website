@@ -132,7 +132,7 @@ export default function CreateMycologist() {
         mutate('/api/v1/users/mycologists', undefined, { revalidate: true }),
         mutate('/api/v1/users/counts/disabled', undefined, { revalidate: true }),
         mutate(
-          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/users'),
+          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/users') || key.startsWith('$inf$/api/v1/users')),
           undefined,
           { revalidate: true },
         ),

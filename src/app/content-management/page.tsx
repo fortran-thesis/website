@@ -1,5 +1,5 @@
   "use client";
-  import { useMemo, useState } from 'react';
+  import { useEffect, useMemo, useState } from 'react';
   import { useRouter } from 'next/navigation';
   import Breadcrumbs from '@/components/breadcrumbs_nav';
   import TabBar from '@/components/tab_bar';
@@ -90,11 +90,12 @@
       });
     }, [wikiRes]);
 
-    // Local state for wikimold (allows client-side archive removal)
+    // Local state for wikimold (allows optimistic archive removal)
     const [wikimoldData, setWikiMoldData] = useState<WikiMold[]>([]);
-    // Sync SWR data into local state when it arrives
-    useMemo(() => {
-      if (wikimoldDataFromApi.length > 0 && wikimoldData.length === 0) {
+    // Sync SWR data into local state whenever it changes (e.g. after archive revalidation,
+    // or returning from the add-wikimold page with a newly created article).
+    useEffect(() => {
+      if (wikimoldDataFromApi.length > 0) {
         setWikiMoldData(wikimoldDataFromApi);
       }
     }, [wikimoldDataFromApi]);
@@ -136,9 +137,9 @@
           // Revalidate SWR cache to ensure consistency
           await Promise.all([
             mutate(`/api/v1/moldipedia/${selectedWikiMold.id}`),
-            // Revalidate list-level caches
+            // Revalidate list-level caches (include $inf$ prefix for useSWRInfinite keys)
             mutate(
-              (key: string) => typeof key === 'string' && key.startsWith('/api/v1/moldipedia'),
+              (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
               undefined,
               { revalidate: true },
             ),

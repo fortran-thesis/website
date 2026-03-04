@@ -118,7 +118,7 @@ export default function AddWikiMold() {
 
       // Revalidate SWR caches so moldipedia lists reflect the new article
       await mutate(
-        (key: string) => typeof key === 'string' && key.startsWith('/api/v1/moldipedia'),
+        (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
         undefined,
         { revalidate: true },
       );
