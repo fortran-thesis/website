@@ -147,7 +147,7 @@ function ViewMoldInfoContent() {
 
         // Revalidate SWR caches so mold lists and detail views reflect the change
         await mutate(
-          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/mold'),
+          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/mold') || key.startsWith('$inf$/api/v1/mold')),
           undefined,
           { revalidate: true },
         );
