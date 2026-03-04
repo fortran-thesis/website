@@ -5,8 +5,9 @@ import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
+import ConfirmModal from "@/components/modals/confirmation_modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faArchive } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { useMoldipediaArticle } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
@@ -37,6 +38,9 @@ function ViewWikiMoldContent() {
   const searchParams = useSearchParams();
   const wikimoldId = searchParams.get("id") ?? '';
   const userRole = "Mycologist";
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
 
   const fallbackImage = "/assets/wikimold-fallback.png";
 
@@ -53,6 +57,7 @@ function ViewWikiMoldContent() {
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
 
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const titleEditedRef = useRef(false);
 
@@ -109,12 +114,6 @@ function ViewWikiMoldContent() {
     const user = getUserData();
     const author_id = user?.id || "";
 
-
-// ADD THIS
-console.log("[handlePublish] user:", JSON.stringify(user));
-console.log("[handlePublish] author_id:", author_id);
-
-
     if (!author_id) {
       alert("Author ID is required. Please log in again.");
       return;
@@ -156,12 +155,55 @@ console.log("[handlePublish] author_id:", author_id);
         ),
       ]);
 
-      alert("WikiMold article updated successfully!");
+      setSuccessMessage("WikiMold article updated successfully!");
+      setTimeout(() => setSuccessMessage(''), 5000);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : (err instanceof Error ? err.message : 'Please try again.');
-      alert(`Failed to update article. ${message}`);
+      setErrorMessage(`Failed to update article. ${message}`);
+      setTimeout(() => setErrorMessage(''), 5000);
     } finally {
       setIsPublishing(false);
+    }
+  };
+
+  /** Handles archiving a moldipedia article */
+  const handleArchive = async () => {
+    const articleId = wikiMoldInfo.id || wikimoldId;
+    if (!articleId) {
+      setErrorMessage("Cannot archive: article ID is missing.");
+      setTimeout(() => setErrorMessage(''), 5000);
+      return;
+    }
+
+    setIsArchiving(true);
+
+    try {
+      await apiMutate(`/api/v1/moldipedia/${articleId}/archive`, {
+        method: 'PATCH',
+        body: {},
+      });
+
+      setIsArchiveModalOpen(false);
+
+      // Revalidate SWR cache to refresh UI with fresh data
+      await Promise.all([
+        mutate(`/api/v1/moldipedia/${articleId}`),
+        // Revalidate list-level caches so moldipedia lists reflect the archival
+        mutate(
+          (key: string) => typeof key === 'string' && key.startsWith('/api/v1/moldipedia'),
+          undefined,
+          { revalidate: true },
+        ),
+      ]);
+
+      setSuccessMessage("WikiMold article archived successfully!");
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : (err instanceof Error ? err.message : 'Please try again.');
+      setErrorMessage(`Failed to archive article. ${message}`);
+      setTimeout(() => setErrorMessage(''), 5000);
+    } finally {
+      setIsArchiving(false);
     }
   };
 
@@ -179,6 +221,17 @@ console.log("[handlePublish] author_id:", author_id);
       </div>
 
       <form className="w-full">
+        {/* Success/Error Messages */}
+        {successMessage && (
+          <div className="w-full mb-4 px-4 py-3 bg-green-100 text-green-800 rounded-lg text-left font-semibold">
+            {successMessage}
+          </div>
+        )}
+        {errorMessage && (
+          <div className="w-full mb-4 px-4 py-3 bg-red-100 text-red-800 rounded-lg text-left font-semibold">
+            {errorMessage}
+          </div>
+        )}
         {/* Cover Image */}
         <div className="relative w-full mb-16 group">
           <div className="relative w-full h-[350px] rounded-[2.5rem] overflow-hidden bg-[var(--taupe)] shadow-2xl transition-all duration-700">
@@ -271,7 +324,19 @@ console.log("[handlePublish] author_id:", author_id);
         </div>
 
         {/* Floating Save Button */}
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-fit">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-fit flex items-center gap-4">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              setIsArchiveModalOpen(true);
+            }}
+            disabled={isArchiving || loading}
+            className="flex items-center gap-2 bg-[var(--moldify-red)] text-white font-black uppercase tracking-[0.2em] px-6 py-5 rounded-full hover:shadow-[0_20px_40px_-10px_rgba(239,68,68,0.4)] hover:scale-105 active:scale-95 transition-all cursor-pointer text-xs shadow-2xl disabled:opacity-30 disabled:cursor-not-allowed border-2 border-white/20 backdrop-blur-md"
+          >
+            <FontAwesomeIcon icon={faArchive} />
+            Archive
+          </button>
           <button
             type="submit"
             onClick={(e) => {
@@ -285,6 +350,18 @@ console.log("[handlePublish] author_id:", author_id);
           </button>
         </div>
       </form>
+
+      {/* Archive Confirmation Modal */}
+      <ConfirmModal
+        isOpen={isArchiveModalOpen}
+        title="Archive WikiMold Article?"
+        subtitle="Are you sure you want to archive this article? It will no longer be visible in the public moldipedia, but can be restored later."
+        cancelText="Cancel"
+        confirmText={isArchiving ? "Archiving..." : "Archive"}
+        confirmDisabled={isArchiving}
+        onCancel={() => setIsArchiveModalOpen(false)}
+        onConfirm={handleArchive}
+      />
     </main>
   );
 }

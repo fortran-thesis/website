@@ -63,7 +63,7 @@ export default function ExperimentTimelineTile({
                   <p className="text-sm font-bold text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
                     {item.label}
                   </p>
-                  <p className="text-base font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)]">
+                  <p className="text-base font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] break-words">
                     {item.value}
                   </p>
                 </div>
@@ -76,7 +76,7 @@ export default function ExperimentTimelineTile({
                 <p className="text-sm font-bold text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
                   {entry.notes.label}
                 </p>
-                <p className="text-base font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] leading-relaxed">
+                <p className="text-base font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] leading-relaxed break-words">
                   {entry.notes.value}
                 </p>
               </div>

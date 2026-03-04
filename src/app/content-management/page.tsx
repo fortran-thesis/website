@@ -11,6 +11,8 @@
   import ConfirmModal from '@/components/modals/confirmation_modal';
   import { useAuth } from '@/hooks/useAuth';
   import { useMoldList, useMoldipediaList } from '@/hooks/swr';
+  import { apiMutate, ApiError } from '@/lib/api';
+  import { mutate } from 'swr';
 
   export default function ContentManagement() {
       console.log('🚀 ContentManagement component rendering');
@@ -98,6 +100,7 @@
     }, [wikimoldDataFromApi]);
     const [showArchiveModal, setShowArchiveModal] = useState(false);
     const [selectedWikiMold, setSelectedWikiMold] = useState<WikiMold | null>(null);
+    const [isArchiving, setIsArchiving] = useState(false);
       
       const handleEditMold = (mold: MoldGenus) => {
         router.push(`/content-management/tab-content/mold-info/view-mold-info?id=${mold.id}`);
@@ -116,12 +119,41 @@
         setShowArchiveModal(true);
       };
       
-      const confirmArchiveWikiMold = () => {
-        if (selectedWikiMold) {
+      const confirmArchiveWikiMold = async () => {
+        if (!selectedWikiMold) return;
+
+        setIsArchiving(true);
+
+        try {
+          await apiMutate(`/api/v1/moldipedia/${selectedWikiMold.id}/archive`, {
+            method: 'PATCH',
+            body: {},
+          });
+
+          // Remove from local state
           setWikiMoldData(wikimoldData.filter(w => w.id !== selectedWikiMold.id));
+
+          // Revalidate SWR cache to ensure consistency
+          await Promise.all([
+            mutate(`/api/v1/moldipedia/${selectedWikiMold.id}`),
+            // Revalidate list-level caches
+            mutate(
+              (key: string) => typeof key === 'string' && key.startsWith('/api/v1/moldipedia'),
+              undefined,
+              { revalidate: true },
+            ),
+          ]);
+
+          setShowArchiveModal(false);
+          setSelectedWikiMold(null);
+        } catch (err: any) {
+          console.error('Archive failed:', err);
+          alert(err?.message || 'Failed to archive article');
+          setShowArchiveModal(false);
+          setSelectedWikiMold(null);
+        } finally {
+          setIsArchiving(false);
         }
-        setShowArchiveModal(false);
-        setSelectedWikiMold(null);
       };
       
       const tabs = useMemo(() => [
@@ -185,6 +217,8 @@
                 subtitle={`Are you sure you want to archive "${selectedWikiMold?.title}"?`}
                 cancelText="Cancel"
                 confirmText="Archive"
+                confirmDisabled={isArchiving}
+                confirmLoadingText="Archiving..."
                 onCancel={() => {
                   setShowArchiveModal(false);
                   setSelectedWikiMold(null);

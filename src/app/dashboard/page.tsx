@@ -94,14 +94,11 @@ export default function Home() {
       });
     }, [summary]);
 
-    // Priority breakdown (from batch)
-    const priorityData = summary?.priorityCounts ?? { high: 0, medium: 0, low: 0 };
-
     // Unassigned mold reports (admin dashboard table)
-        const { data: unassignedRes } = useUnassignedReports(50, isAdministrator);
+    const { data: unassignedRes } = useUnassignedReports(50, isAdministrator);
 
     // Assigned mold reports (mycologist dashboard table)
-        const { data: assignedRes } = useAssignedReports({ limit: 50 }, isMycologist);
+    const { data: assignedRes } = useAssignedReports({ limit: 50 }, isMycologist);
 
     // Moldipedia count (from batch)
     const wikimoldCount = summary?.moldipediaCount ?? 0;
@@ -114,7 +111,9 @@ export default function Home() {
           const timestamp = item.date_observed?._seconds
             ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
             : 'N/A';
-          const pri = item.mold_case?.priority;
+          // Check multiple possible paths for priority
+          const pri = item.mold_case?.priority || item.priority || item.case?.priority;
+          console.log('Item structure:', { id: item.id, has_mold_case: !!item.mold_case, has_priority: !!item.priority, extracted_pri: pri });
           return {
             id: item.id,
             caseName: item.case_name || 'N/A',
@@ -135,15 +134,40 @@ export default function Home() {
 
     // Mycologist: assigned cases for table + derived stats
     const assignedCases = useMemo(
-      () => transformCasesForTable(assignedRes?.data?.snapshot ?? []),
+      () => {
+        const transformed = transformCasesForTable(assignedRes?.data?.snapshot ?? []);
+        // Debug: log the first item to see the structure
+        if (assignedRes?.data?.snapshot && assignedRes.data.snapshot.length > 0) {
+          console.log('Full assigned case from API:', JSON.stringify(assignedRes.data.snapshot[0], null, 2));
+        }
+        return transformed;
+      },
       [assignedRes],
     );
+
+    // Priority breakdown (now uses assignedCases which is defined above)
+    const priorityData = useMemo(() => {
+      if (isMycologist && assignedCases.length > 0) {
+        // For mycologists: calculate from their assigned cases only
+        const high = assignedCases.filter((c: any) => (c.priority || '').toLowerCase() === 'high').length;
+        const medium = assignedCases.filter((c: any) => (c.priority || '').toLowerCase() === 'medium').length;
+        const low = assignedCases.filter((c: any) => (c.priority || '').toLowerCase() === 'low').length;
+        return { high, medium, low };
+      }
+      // For admins: use batch summary, or 0s if no data
+      if (isAdministrator) {
+        return summary?.priorityCounts ?? { high: 0, medium: 0, low: 0 };
+      }
+      return { high: 0, medium: 0, low: 0 };
+    }, [isMycologist, isAdministrator, summary, assignedCases]);
 
     const totalCases = isAdministrator ? totalCasesAdmin : assignedCases.length;
     const inProgressCases = assignedCases.filter((c: any) => (c.status || '').toLowerCase() === 'in progress').length;
 
     const statusBreakDown = useMemo(() => {
-      if (!isMycologist || assignedCases.length === 0) return [];
+      if (!isMycologist) return [];
+      // Only show data if there are assigned cases, otherwise return empty array (shows gray circle)
+      if (assignedCases.length === 0) return [];
       const ip = assignedCases.filter((c: any) => (c.status || '').toLowerCase() === 'in progress').length;
       const res = assignedCases.filter((c: any) => (c.status || '').toLowerCase() === 'resolved').length;
       return [
@@ -153,8 +177,9 @@ export default function Home() {
     }, [isMycologist, assignedCases]);
 
     const fallbackStatusBreakDown = [
-        { name: "In Progress", value: 10, color: "var(--moldify-blue)" },
-        { name: "Resolved", value: 30, color: "var(--primary-color)" },
+        { name: "In Progress", value: 0, color: "var(--moldify-blue)" },
+        { name: "Resolved", value: 0, color: "var(--primary-color)" },
+        { name: "No Data", value: 1, color: "var(--moldify-grey)", hideFromLegend: true },
     ];
 
     /* ─── Notification hooks ─── */
@@ -299,14 +324,27 @@ export default function Home() {
             )}
             
             {/* Line Chart & Priority Level Breakdown */}
-            <div className = "w-full my-8 flex flex-col lg:flex-row gap-x-10 gap-y-10">
-                <div className="w-full lg:w-2/3">
-                    <MonthlyCasesChart data={chartData.length > 0 ? chartData : fallbackChartData} />
+            {isAdministrator && (
+                <div className = "w-full my-8 flex flex-col lg:flex-row gap-x-10 gap-y-10">
+                    <div className="w-full lg:w-2/3">
+                        <MonthlyCasesChart data={chartData.length > 0 ? chartData : fallbackChartData} />
+                    </div>
+                    <div className="w-full lg:w-1/3">
+                        <PriorityBreakdown data={priorityData} />
+                    </div>
                 </div>
-                <div className="w-full lg:w-1/3">
-                    <PriorityBreakdown data={priorityData} />
+            )}
+
+            {isMycologist && (
+                <div className = "w-full my-8 flex flex-col lg:flex-row gap-x-10 gap-y-10">
+                    <div className="w-full lg:w-2/3">
+                        <MonthlyCasesChart data={chartData.length > 0 ? chartData : fallbackChartData} />
+                    </div>
+                    <div className="w-full lg:w-1/3">
+                        <PriorityBreakdown data={priorityData} />
+                    </div>
                 </div>
-            </div>            
+            )}            
             
             {/* Line Chart & Priority Level Breakdown */}
             <div className="mt-6 w-full">
