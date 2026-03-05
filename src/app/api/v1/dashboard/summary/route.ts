@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
   ] = await Promise.all([
     backendFetch(endpoints.user.countsRoles, cookie),
     backendFetch(endpoints.moldCase.countMetadata, cookie),
-    backendFetch(`${endpoints.report.list}?limit=1000`, cookie),
+    backendFetch(`${endpoints.flagReports.list}?limit=1000`, cookie),
     backendFetch(endpoints.moldReport.countMonthly, cookie),
     backendFetch(endpoints.moldReport.countPriorities, cookie),
     backendFetch(`${endpoints.moldipedia.list}?limit=1000`, cookie),
