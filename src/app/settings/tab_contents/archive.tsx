@@ -4,6 +4,7 @@ import EmptyState from "@/components/empty_state";
 import ConfirmationModal from "@/components/modals/confirmation_modal";
 import { useState, useEffect } from "react";
 import { faBoxArchive } from "@fortawesome/free-solid-svg-icons";
+import { endpoints } from "@/services";
 
 /**
  * Dummy data for archived WikiMolds
@@ -56,36 +57,50 @@ export default function Archive() {
    * Example API endpoint: GET /api/v1/wikimold/archived
    */
   useEffect(() => {
-    // Dummy data is already loaded in initial state
-    setIsLoading(false);
-
-    // Try to load from localStorage if available
-    try {
-      const stored = localStorage.getItem("archivedWikiMolds");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setArchivedWikiMolds(parsed);
+    // Attempt to fetch archived WikiMolds from backend, fall back to localStorage/dummy
+    const fetchArchivedWikiMolds = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(endpoints.moldipedia.archived, { credentials: "include" });
+        const json = await res.json();
+        if (json?.success && json.data?.snapshot && Array.isArray(json.data.snapshot)) {
+          // Map API shape to UI shape where needed
+          const mapped = json.data.snapshot.map((it: any) => ({
+            id: it.id,
+            title: it.title,
+            coverImage: it.cover_photo || it.coverImage || "",
+            datePublished: it.created_at || it.datePublished || "",
+          }));
+          setArchivedWikiMolds(mapped);
+          try {
+            localStorage.setItem("archivedWikiMolds", JSON.stringify(mapped));
+          } catch (e) {
+            // ignore
+          }
+          setIsLoading(false);
+          return;
         }
+      } catch (err) {
+        console.error("Error fetching archived wikimolds:", err);
+        setError("Failed to load archived wikimolds");
       }
-    } catch (parseErr) {
-      console.error("Error parsing archived wikimolds from localStorage:", parseErr);
-      // Keep dummy data on error
-    }
 
-    // TODO: Uncomment when backend API is ready
-    // const fetchArchivedWikiMolds = async () => {
-    //   try {
-    //     const response = await apiClient.get(endpoints.wikimold.archived);
-    //     if (response.success && Array.isArray(response.data)) {
-    //       setArchivedWikiMolds(response.data);
-    //     }
-    //   } catch (err) {
-    //     console.error("Error fetching archived wikimolds:", err);
-    //     setError("Failed to load archived wikimolds");
-    //   }
-    // };
-    // fetchArchivedWikiMolds();
+      // Fallback: try localStorage
+      try {
+        const stored = localStorage.getItem("archivedWikiMolds");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setArchivedWikiMolds(parsed);
+          }
+        }
+      } catch (parseErr) {
+        console.error("Error parsing archived wikimolds from localStorage:", parseErr);
+      }
+      setIsLoading(false);
+    };
+
+    fetchArchivedWikiMolds();
   }, []);
 
   /**
@@ -106,21 +121,33 @@ export default function Archive() {
   /**
    * Confirm and execute unarchive
    */
-  const confirmRestoreWikiMold = () => {
+  const confirmRestoreWikiMold = async () => {
     if (!selectedWikiMoldToRestore) return;
-    
-    console.log("Restoring archived WikiMold:", selectedWikiMoldToRestore.id);
-    
-    // Remove from archived list
-    const updated = archivedWikiMolds.filter(w => w.id !== selectedWikiMoldToRestore.id);
-    setArchivedWikiMolds(updated);
-    
-    // Close modal and reset
-    setShowRestoreModal(false);
-    setSelectedWikiMoldToRestore(null);
-    
-    // TODO: API call for backend integration
-    // await apiClient.post(endpoints.wikimold.restore(selectedWikiMoldToRestore.id));
+
+    setIsLoading(true);
+    try {
+      const res = await fetch(endpoints.moldipedia.restore(selectedWikiMoldToRestore.id), {
+        method: "PATCH",
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!json?.success) {
+        throw new Error(json?.error || "Failed to restore");
+      }
+      // Remove from archived list locally
+      const updated = archivedWikiMolds.filter(w => w.id !== selectedWikiMoldToRestore.id);
+      setArchivedWikiMolds(updated);
+      try {
+        localStorage.setItem("archivedWikiMolds", JSON.stringify(updated));
+      } catch (e) {}
+    } catch (err) {
+      console.error("Error restoring archived wikimold:", err);
+      setError("Failed to restore archived wikimold");
+    } finally {
+      setIsLoading(false);
+      setShowRestoreModal(false);
+      setSelectedWikiMoldToRestore(null);
+    }
   };
 
   /**

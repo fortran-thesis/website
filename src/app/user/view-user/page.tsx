@@ -120,8 +120,7 @@ function ViewUserContent() {
 
   const [imgSrc, setImgSrc] = useState(userProfileImage);
 
-  const hidePersonalInfo =
-    userRole === "Administrator" || userRole === "Mycologist";
+  const hidePersonalInfo = userRole === "Administrator";
 
   if (loading) {
     return (

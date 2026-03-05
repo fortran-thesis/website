@@ -195,7 +195,7 @@ function ViewCaseContent() {
     return d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "Loading...";
   })();
   const status = caseData?.status ? caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1) : "Pending";
-  const priorityValue = caseData?.mold_case?.priority || caseData?.priority || moldCase?.priority || priorityFromQuery || "";
+  const priorityValue = moldCase?.priority || caseData?.mold_case?.priority || caseData?.priority || priorityFromQuery || "";
   const priority = priorityValue
     ? priorityValue.charAt(0).toUpperCase() + priorityValue.slice(1)
     : "Unknown";
