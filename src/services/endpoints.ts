@@ -71,11 +71,7 @@ export const endpoints = {
     appeal: `${API_PREFIX}/support/appeal`,
   },
 
-  // Reports
-  report: {
-    list: `${API_PREFIX}/report`,
-    getById: (id: string) => `${API_PREFIX}/report/${id}`,
-  },
+  // (Deprecated) singular `report` endpoints removed — use `flagReports` instead.
 
   // Mold Reports
   moldReport: {
@@ -134,7 +130,10 @@ export const endpoints = {
   },
 
   // Flag Reports
-  flagReports: `${API_PREFIX}/flag-report`,
+  flagReports: {
+    list: `${API_PREFIX}/flag-report`,
+    getById: (id: string) => `${API_PREFIX}/flag-report/${id}`,
+  },
 
   // FAQ
   faq: {

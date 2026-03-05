@@ -81,7 +81,7 @@ export default function CaseHistory() {
       caseName: item.id || "N/A",
       cropName: item.case_name || item.host || "N/A",
       location: item.location || item.mold_case?.location || item.reporter?.address || "N/A",
-      submittedBy: item.user_id || item.reporter?.name || item.mold_case?.user_id || "N/A",
+      submittedBy: item.reporter?.name || 'N/A',
       dateSubmitted: formattedDate,
       priority: normalizedPriority,
       status: normalizedStatus,

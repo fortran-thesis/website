@@ -32,14 +32,16 @@ function ViewReportContent() {
   const reportData = reportRes?.data ?? null;
   const error = swrError ? (swrError instanceof Error ? swrError.message : 'Failed to load report') : null;
 
-  const reportedUserId = useMemo(() => {
-    const v = reportData?.reported_user_id?.trim();
-    return v || '(N/A)';
+  const reportedUserName = useMemo(() => {
+    const name = reportData?.reported?.name || reportData?.reported_user_name || reportData?.reported_user || reportData?.reported_user_id;
+    if (!name) return '(N/A)';
+    return typeof name === 'string' ? name : String(name);
   }, [reportData]);
 
-  const reporterId = useMemo(() => {
-    const v = reportData?.reporter_id?.trim();
-    return v || 'N/A';
+  const reporterName = useMemo(() => {
+    const name = reportData?.reporter?.name || reportData?.reporter_name || reportData?.reporter_id || reportData?.reporterId;
+    if (!name) return 'N/A';
+    return typeof name === 'string' ? name : String(name);
   }, [reportData]);
 
   const dateReported = useMemo(() => {
@@ -129,16 +131,16 @@ function ViewReportContent() {
 
         <div className="flex flex-col items-center md:items-start justify-center w-full">
           <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">
-            Reported User ID:
+            Reported User:
           </p>
 
           {/* The reported_user_id from the report */}
           <div className="flex flex-col md:flex-row items-center md:items-start mb-2">
             <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] mr-5">
-              {reportedUserId === '(N/A)' ? (
-                <span className="text-[var(--moldify-red)] text-lg">{reportedUserId}</span>
+              {reportedUserName === '(N/A)' ? (
+                <span className="text-[var(--moldify-red)] text-lg">{reportedUserName}</span>
               ) : (
-                reportedUserId
+                reportedUserName
               )}
             </h1>
             {/*  Automatically shows “Resolved” once a decision is made */}
@@ -150,11 +152,11 @@ function ViewReportContent() {
             {/* The reporter_id */}
             <div className="flex flex-col items-center md:items-start">
               <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-                Reporter ID:
-              </p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">
-                {reporterId}
-              </h2>
+                  Reporter:
+                </p>
+                <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">
+                  {reporterName}
+                </h2>
             </div>
 
             {/* Date Reported */}

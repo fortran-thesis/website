@@ -81,7 +81,7 @@ export default function Investigation() {
             const description = Array.isArray(it.case_details) && it.case_details[0]?.description
                 ? it.case_details[0].description : '';
             const location = it.mold_case?.location || it.location || it.reporter?.address || 'N/A';
-            const submittedBy = it.user_id || it.reporter?.name || it.mold_case?.user_id || 'N/A';
+            const submittedBy = it.reporter?.name || 'N/A';
 
             return {
                 id: it.id,
@@ -90,9 +90,10 @@ export default function Investigation() {
                 location,
                 submittedBy,
                 dateSubmitted,
-                priority: it.mold_case?.priority
-                    ? it.mold_case.priority.charAt(0).toUpperCase() + it.mold_case.priority.slice(1)
-                    : 'Unassigned',
+                priority: (() => {
+                    const p = it.priority;
+                    return p ? (p.charAt(0).toUpperCase() + p.slice(1)) : 'Unassigned';
+                })(),
                 status: it.status
                     ? it.status.charAt(0).toUpperCase() + it.status.slice(1)
                     : 'Pending',

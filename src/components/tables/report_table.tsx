@@ -58,7 +58,7 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
             <tr>
               <th className="py-3 px-6">Issue</th>
               <th className="py-3 px-6">Reported User</th>
-              <th className="py-3 px-6">Reported By (User ID)</th>
+              <th className="py-3 px-6">Reported By</th>
               <th className="py-3 px-6">Date Reported</th>
               <th className="py-3 px-6">Status</th>
               <th className="py-3 px-6 text-center">Action</th>
@@ -70,13 +70,22 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
             {data.map((report, index) => (
                 <tr
                   key={report.id || index}
-                  className="border-b border-[var(--taupe)] last:border-none hover:bg-[var(--accent-color)]/10 transition-colors text-center"
+                  className="border-b border-[var(--taupe)] last:border-none hover:bg-[var(--accent-color)]/10 transition-colors text-center cursor-pointer"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleEditClick(report)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleEditClick(report);
+                    }
+                  }}
                 >
                   <td className="py-3 px-6 truncate max-w-[150px]" title={report.issue}>
                     {report.issue}
                   </td>
                   <td className="py-3 px-6">{report.reportedUser}</td>
-                  <td className="py-3 px-6 font-mono">{report.reportedBy}</td>
+                  <td className="py-3 px-6">{report.reportedBy}</td>
                   <td className="py-3 px-6 whitespace-nowrap">{report.dateReported}</td>
                   <td className="py-3 px-6">
                     <StatusBox

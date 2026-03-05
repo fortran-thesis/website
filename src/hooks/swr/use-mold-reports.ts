@@ -19,13 +19,13 @@ const PUBLIC_COUNT_CACHE_MS = 10 * 60 * 1000;
 /* ------------------------------------------------------------------ */
 
 export interface MoldReportSnapshot {
+  priority: any;
   id: string;
   case_name?: string;
   host?: string;
   location?: string;
   status?: string;
   user_id?: string;
-  priority?: string;
   date_observed?: { _seconds: number } | string;
   mold_case?: { priority?: string; location?: string; user_id?: string };
   assigned_mycologist_id?: string;

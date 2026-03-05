@@ -43,8 +43,8 @@ export function useReportsInfinite(limit = 10) {
   return useSWRInfinite<ApiResponse<PaginatedResponse<ReportSnapshot>>>(
     (pageIndex, prev) => {
       if (prev && !prev.data?.nextPageToken) return null;
-      if (pageIndex === 0) return apiUrl('/api/v1/reports', { limit });
-      return apiUrl('/api/v1/reports', {
+      if (pageIndex === 0) return apiUrl('/api/v1/flag-report', { limit });
+      return apiUrl('/api/v1/flag-report', {
         limit,
         pageToken: prev!.data!.nextPageToken!,
       });
@@ -56,7 +56,7 @@ export function useReportsInfinite(limit = 10) {
 /** Fetch a single report by ID. */
 export function useReport(reportId: string | undefined) {
   return useSWR<ApiResponse<ReportSnapshot>>(
-    reportId ? `/api/v1/reports/${reportId}` : null,
+    reportId ? apiUrl(`/api/v1/flag-report/${reportId}`) : null,
   );
 }
 
@@ -66,6 +66,6 @@ export function useReport(reportId: string | undefined) {
  */
 export function useReportCount(enabled = true) {
   return useSWR<ApiResponse<PaginatedResponse<ReportSnapshot>>>(
-    enabled ? apiUrl('/api/v1/reports', { limit: 1000 }) : null,
+    enabled ? apiUrl('/api/v1/flag-report', { limit: 1000 }) : null,
   );
 }

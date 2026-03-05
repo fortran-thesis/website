@@ -6,7 +6,7 @@ import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import ReportsTable, { Report } from '@/components/tables/report_table';
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { useReportsInfinite } from '@/hooks/swr';
+import { useFlagReportsInfinite } from '@/hooks/swr';
 
 export default function Reports() {
        
@@ -23,25 +23,27 @@ export default function Reports() {
       return rawStatus ? rawStatus : 'Unresolved';
     };
 
-    // SWR: paginated reports
+    // SWR: paginated flag reports
     const {
       data: reportPages,
       size,
       setSize,
       isLoading: loading,
       isValidating: isLoadingMore,
-    } = useReportsInfinite(10);
+    } = useFlagReportsInfinite(10);
 
     const reports: Report[] = useMemo(
       () =>
         (reportPages ?? []).flatMap((page: any) =>
-          (page.data?.snapshot ?? []).map((r: any) => {
-            const rawStatus = r.status || r.report_status || r.resolution_status || r.metadata?.status || r.metadata?.report_status;
+            (page.data?.snapshot ?? []).map((r: any) => {
+            // FlagReport shape: prefer `id`, fall back to `content_id`.
+            const id = r.id || r.content_id || 'unknown';
+            const rawStatus = r.status || r.metadata?.status;
             return {
-              id: r.id,
-              issue: r.reason || 'Unknown Issue',
-              reportedUser: r.reported_user_id || 'Unknown',
-              reportedBy: r.reporter_id || 'Unknown',
+              id,
+              issue: r.reason || r.details || 'Unknown Issue',
+                  reportedUser: r.reported?.name || r.content_id || r.reported_user_id || 'Unknown',
+              reportedBy: r.reporter?.name || r.reporter_name || r.reporter_id || r.reporterId || 'Unknown',
               dateReported: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'N/A',
               status: normalizeStatus(rawStatus),
             };
