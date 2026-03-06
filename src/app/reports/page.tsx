@@ -42,9 +42,18 @@ export default function Reports() {
             return {
               id,
               issue: r.reason || r.details || 'Unknown Issue',
-                  reportedUser: r.reported?.name || r.content_id || r.reported_user_id || 'Unknown',
-              reportedBy: r.reporter?.name || r.reporter_name || r.reporter_id || r.reporterId || 'Unknown',
-              dateReported: r.created_at ? new Date(r.created_at).toLocaleDateString() : 'N/A',
+                    reportedUser: r.content?.author,
+                    reportedBy: r.reporter?.name || r.reporter_name || r.reporter_id || r.reporterId || 'Unknown',
+                    dateReported: (() => {
+                      const formatOpts: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+                      if (r.created_at) return new Date(r.created_at as string).toLocaleDateString(undefined, formatOpts);
+                      const metaDate = r.metadata?.created_at as any;
+                      if (metaDate && (metaDate._seconds || metaDate.seconds)) {
+                        const secs = (metaDate._seconds ?? metaDate.seconds) as number;
+                        return new Date(secs * 1000).toLocaleDateString(undefined, formatOpts);
+                      }
+                      return 'N/A';
+                    })(),
               status: normalizeStatus(rawStatus),
             };
           }),
