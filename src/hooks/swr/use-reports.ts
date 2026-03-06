@@ -22,7 +22,19 @@ export interface ReportSnapshot {
   description?: string;
   details?: string;
   reported_user_id?: string;
+  reported_user_name?: string;
+  reported_user?: string;
+  reported?: {
+    name?: string;
+    photo?: string;
+    avatar?: string;
+  };
   reporter_id?: string;
+  reporter_name?: string;
+  reporterId?: string;
+  reporter?: {
+    name?: string;
+  };
   created_at?: string | { _seconds: number; seconds?: number };
   status?: string;
   report_status?: string;
@@ -32,6 +44,17 @@ export interface ReportSnapshot {
     report_status?: string;
     created_at?: { seconds: number; _seconds?: number };
   };
+  // Optional content/image fields used by the report view
+  content?: {
+    title?: string;
+    name?: string;
+    body?: string;
+    description?: string;
+    image?: string;
+    cover_photo?: string;
+  };
+  image?: string;
+  image_url?: string;
 }
 
 /* ------------------------------------------------------------------ */
