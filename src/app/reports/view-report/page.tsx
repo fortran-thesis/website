@@ -33,7 +33,7 @@ function ViewReportContent() {
   const error = swrError ? (swrError instanceof Error ? swrError.message : 'Failed to load report') : null;
 
   const reportedUserName = useMemo(() => {
-    const name = reportData?.reported?.name || reportData?.reported_user_name || reportData?.reported_user || reportData?.reported_user_id;
+    const name = reportData?.content?.author
     if (!name) return '(N/A)';
     return typeof name === 'string' ? name : String(name);
   }, [reportData]);
@@ -45,9 +45,13 @@ function ViewReportContent() {
   }, [reportData]);
 
   const dateReported = useMemo(() => {
-    if (reportData?.created_at) return new Date(reportData.created_at as string).toLocaleDateString();
+    const formatOpts: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+    if (reportData?.created_at) return new Date(reportData.created_at as string).toLocaleDateString(undefined, formatOpts);
     const metaDate = reportData?.metadata?.created_at;
-    if (metaDate && typeof metaDate === 'object' && 'seconds' in metaDate) return new Date(metaDate.seconds * 1000).toLocaleDateString();
+    if (metaDate && typeof metaDate === 'object' && ('seconds' in metaDate || '_seconds' in metaDate)) {
+      const secs = (metaDate._seconds ?? (metaDate as any).seconds) as number;
+      return new Date(secs * 1000).toLocaleDateString(undefined, formatOpts);
+    }
     return 'N/A';
   }, [reportData]);
 
@@ -56,8 +60,8 @@ function ViewReportContent() {
   const reasonDescription = reportData?.details || reportData?.description || '';
   const additionalInfo = reportData?.details || reportData?.description || '';
 
-  const contentTitle = reportData?.content?.title || reportData?.content_title || reportData?.title || reportData?.content?.name || 'Reported Content';
-  const contentBody = reportData?.content?.body || reportData?.content_description || reportData?.content?.description || '';
+  const contentTitle = reportData?.content?.title || reportData?.title || reportData?.content?.name || 'Reported Content';
+  const contentBody = reportData?.content?.body || reportData?.content?.description || '';
   const userRole = "Administrator";
 
   const defaultProfile = "/assets/default-fallback.png";
@@ -85,7 +89,7 @@ function ViewReportContent() {
   useEffect(() => {
     if (!reportData) return;
     const profile = reportData?.reported?.photo || reportData?.reported?.avatar || null;
-    const contentImage = reportData?.image || reportData?.image_url || reportData?.content?.image || reportData?.content?.cover_photo || null;
+    const contentImage = reportData?.content?.cover_photo
     if (contentImage) {
       setImgSrc(contentImage);
       setHasImage(true);
@@ -99,26 +103,8 @@ function ViewReportContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportData]);
   const [isResolved, setIsResolved] = useState(false); 
-  const [copying, setCopying] = useState(false);
-  const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
   const imageSrc = reportData?.image || reportData?.image_url || reportData?.content?.image || reportData?.content?.cover_photo || (hasImage ? imgSrc : null) || null;
-
-  const handleCopySnapshot = async () => {
-    const payload = reportRes ?? reportData ?? {};
-    try {
-      setCopying(true);
-      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
-      setCopyStatus('Copied');
-      setTimeout(() => setCopyStatus(null), 2000);
-    } catch (err) {
-      console.error('copy failed', err);
-      setCopyStatus('Failed');
-      setTimeout(() => setCopyStatus(null), 2000);
-    } finally {
-      setCopying(false);
-    }
-  };
 
   /** Handles rejecting a report */
   const handleReject = async () => {
@@ -280,27 +266,9 @@ function ViewReportContent() {
 
         {/* RIGHT SIDE */}
         <div className="w-full lg:w-3/4 bg-[var(--taupe)] rounded-xl py-4 px-6 mt-10 md:mt-0 h-auto min-w-0">
-          <div className="flex items-start justify-between mb-3">
-            <h2 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-sm">
-              Reported Content
-            </h2>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="text-sm cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-white/5 text-[var(--primary-color)] py-1 px-3 rounded-lg hover:bg-white/10 transition flex items-center gap-2"
-                onClick={handleCopySnapshot}
-                disabled={copying || !reportRes && !reportData}
-              >
-                <FontAwesomeIcon icon={faClipboard} />
-                <span>{copying ? 'Copying...' : 'Copy snapshot'}</span>
-              </button>
-              {copyStatus && (
-                <span className={`text-sm ${copyStatus === 'Copied' ? 'text-green-600' : 'text-red-600'}`}>
-                  {copyStatus}
-                </span>
-              )}
-            </div>
-          </div>
+          <h2 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black mb-3 text-sm">
+            Reported Content
+          </h2>
 
           {/* Report image or placeholder */}
           <div className="relative w-full h-40 md:h-52 lg:h-60 rounded-lg overflow-hidden bg-[var(--moldify-softGrey)] flex items-center justify-center">
