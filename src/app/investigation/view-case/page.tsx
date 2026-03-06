@@ -226,7 +226,10 @@ function ViewCaseContent() {
 
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
-  const isRejected = caseData?.status === 'closed' || caseData?.status === 'rejected';
+  // Treat explicit 'rejected' as rejection. If status is 'closed' and a MoldCase exists
+  // (i.e. mycologist was assigned and worked the case), treat as approved/closed by farmer.
+  const isRejected = caseData?.status === 'rejected';
+  const isApproved = caseData?.status === 'closed' && !!moldCase;
   
   // Get mycologist name from fetched user data
   const assignedMycologistName = 
@@ -421,8 +424,9 @@ function ViewCaseContent() {
             {/* Case Status Card */}
             <CaseStatusCard
               userRole={userRole}
-              isAssigned={isAssigned}
-              isRejected={isRejected}
+                isAssigned={isAssigned}
+                isRejected={isRejected}
+                isApproved={isApproved}
               assignedMycologistName={assignedMycologistName}
               caseData={caseData}
               status={status}

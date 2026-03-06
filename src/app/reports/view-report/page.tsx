@@ -6,11 +6,11 @@ import {
   faImage,
 } from "@fortawesome/free-solid-svg-icons";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
-import { useState, useMemo, Suspense } from "react";
+import { useState, useMemo, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useReport } from '@/hooks/swr';
 import BackButton from "@/components/buttons/back_button";
-import Image from "next/image";
+// Use standard img elements here to avoid Next.js Image domain config issues
 import StatusBox from "@/components/tiles/status_tile";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import RequestRevisionModal from "@/components/modals/request_revision_modal";
@@ -51,28 +51,56 @@ function ViewReportContent() {
     return 'N/A';
   }, [reportData]);
 
-  const userIssue = reportData?.title || reportData?.reason || 'Inappropriate Content Posted';
-  const reasonDescription = reportData?.description || reportData?.details || 'The user has posted content that violates the community guidelines by sharing offensive images and language.';
-  const additionalInfo = reportData?.description || reportData?.details || 'The user has posted content that violates the community guidelines by sharing offensive images and language. This behavior has been reported multiple times by other users, and it is affecting the overall experience of the platform. Immediate action is required to address this issue and ensure a safe environment for all users.';
+  // Values derived from API response
+  const userIssue = reportData?.reason || reportData?.title || 'Inappropriate Content Posted';
+  const reasonDescription = reportData?.details || reportData?.description || '';
+  const additionalInfo = reportData?.details || reportData?.description || '';
 
-  const userProfileImage = "/assets/sdssdsd.jpg";
-  const title =
-    "The Rise of Molds: Dive into the Microscopic Landscape of Growing Fungi";
-  const content =
-    "Molds are a fascinating group of fungi that thrive in diverse environments, from damp basements to decaying organic matter. These microscopic organisms play a crucial role in ecosystems by breaking down complex organic materials, recycling nutrients, and contributing to soil health...";
+  const contentTitle = reportData?.content?.title || reportData?.content_title || reportData?.title || reportData?.content?.name || 'Reported Content';
+  const contentBody = reportData?.content?.body || reportData?.content_description || reportData?.content?.description || '';
   const userRole = "Administrator";
 
-  const [imgSrc, setImgSrc] = useState(userProfileImage);
-  const [hasImage, setHasImage] = useState(true);
+  const defaultProfile = "/assets/default-fallback.png";
+  const [imgSrc, setImgSrc] = useState<string | null>(reportData?.reported?.photo || reportData?.reported?.avatar || defaultProfile);
+  const [hasImage, setHasImage] = useState(Boolean(reportData?.reported?.photo || reportData?.reported?.avatar));
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isReqRevisionsModalOpen, setIsReqRevisionsModalOpen] = useState(false);
   const [reportActionLoading, setReportActionLoading] = useState(false);
-  const [reportStatus, setReportStatus] = useState("Unresolved");
+  const deriveStatus = (raw?: any) => {
+    const s = raw || reportData?.status || reportData?.metadata?.status;
+    if (!s) return 'Unresolved';
+    const lower = String(s).toLowerCase();
+    if (lower === 'resolved' || lower === 'rejected') return 'Resolved';
+    return 'Unresolved';
+  };
+
+  const [reportStatus, setReportStatus] = useState<string>(deriveStatus());
+  // Keep status in sync if the fetched report includes a status
+  useEffect(() => {
+    setReportStatus(deriveStatus());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportData]);
+
+  // Update images when report data arrives
+  useEffect(() => {
+    if (!reportData) return;
+    const profile = reportData?.reported?.photo || reportData?.reported?.avatar || null;
+    const contentImage = reportData?.image || reportData?.image_url || reportData?.content?.image || reportData?.content?.cover_photo || null;
+    if (contentImage) {
+      setImgSrc(contentImage);
+      setHasImage(true);
+    } else if (profile) {
+      setImgSrc(profile);
+      setHasImage(true);
+    } else {
+      setImgSrc(defaultProfile);
+      setHasImage(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportData]);
   const [isResolved, setIsResolved] = useState(false); 
 
-  const imageSrc = hasImage
-    ? "/assets/f0779092-c074-46cc-883a-700fafb86a53.png"
-    : null;
+  const imageSrc = reportData?.image || reportData?.image_url || reportData?.content?.image || reportData?.content?.cover_photo || (hasImage ? imgSrc : null) || null;
 
   /** Handles rejecting a report */
   const handleReject = async () => {
@@ -120,12 +148,14 @@ function ViewReportContent() {
         
         {/* The profile picture of the user that is reported */}
         <div className="w-50 aspect-square rounded-full overflow-hidden shadow-sm flex-shrink-0 relative">
-          <Image
-            src={imgSrc}
+          <img
+            src={imgSrc ?? "/assets/default-fallback.png"}
             alt="profile picture"
-            fill
-            className="object-cover rounded-full"
-            onError={() => setImgSrc("/assets/default-fallback.png")}
+            className="object-cover rounded-full w-full h-full"
+            onError={(e) => {
+              const t = e.target as HTMLImageElement;
+              if (t.src !== '/assets/default-fallback.png') t.src = '/assets/default-fallback.png';
+            }}
           />
         </div>
 
@@ -239,13 +269,15 @@ function ViewReportContent() {
           {/* Report image or placeholder */}
           <div className="relative w-full h-40 md:h-52 lg:h-60 rounded-lg overflow-hidden bg-[var(--moldify-softGrey)] flex items-center justify-center">
             {imageSrc ? (
-              <Image
+              <img
                 src={imageSrc}
                 alt="Report image"
-                fill
-                className="object-cover"
-                onError={() => setHasImage(false)}
-                priority
+                className="object-cover w-full h-full"
+                onError={(e) => {
+                  setHasImage(false);
+                  const t = e.target as HTMLImageElement;
+                  t.style.display = 'none';
+                }}
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-[var(--moldify-grey)] opacity-70">
@@ -261,10 +293,10 @@ function ViewReportContent() {
           </div>
           {/* Reported content title & description */}
           <h2 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black my-3">
-            {title}
+            {contentTitle}
           </h2>
           <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-justify">
-            {content}
+            {contentBody || reasonDescription}
           </p>
         </div>
       </div>

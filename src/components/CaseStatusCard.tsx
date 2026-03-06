@@ -2,11 +2,11 @@
 import StatusDropdown from "./StatusDropdown";
 
 export default function CaseStatusCard({ 
-  userRole, isAssigned, isRejected, assignedMycologistName, caseData, status,
+  userRole, isAssigned, isRejected, isApproved, assignedMycologistName, caseData, status,
   setAssignModalOpen, setRejectModalOpen 
 }: any) {
   
-  if (userRole === "Mycologist" && !isAssigned && !isRejected) return null;
+  if (userRole === "Mycologist" && !isAssigned && !isRejected && !isApproved) return null;
 
   const getTheme = () => {
     if (isRejected) return {
@@ -14,6 +14,13 @@ export default function CaseStatusCard({
       badge: "bg-[var(--moldify-red)] text-white",
       text: "text-[var(--moldify-red)]",
       label: "REJECTED",
+      sublabel: "Filing Status"
+    };
+    if (isApproved) return {
+      border: "border-[var(--primary-color)]/20",
+      badge: "bg-[var(--primary-color)] text-white",
+      text: "text-[var(--primary-color)]",
+      label: "APPROVED",
       sublabel: "Filing Status"
     };
     if (isAssigned) return {

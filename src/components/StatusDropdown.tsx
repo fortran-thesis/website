@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface DropdownOption {
   label: string;
@@ -27,14 +27,20 @@ export default function StatusDropdown({
   selectedValue
 }: StatusDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [localSelected, setLocalSelected] = useState<string | undefined>(selectedValue);
+
+  useEffect(() => {
+    setLocalSelected(selectedValue);
+  }, [selectedValue]);
 
   const handleSelect = (value: string) => {
     onSelect(value);
+    setLocalSelected(value);
     setIsOpen(false);
   };
 
-  const selectedOption = options.find(opt => opt.value === selectedValue);
-  const displayText = selectedOption ? selectedOption.label : placeholder;
+  // Revert: always show placeholder on the closed button per request
+  const displayText = placeholder;
 
   return (
     <div className="relative">
@@ -71,20 +77,24 @@ export default function StatusDropdown({
                 No options available
               </div>
             ) : (
-              options.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => handleSelect(option.value)}
-                  className={`w-full text-left px-4 py-3 text-xs font-bold transition-colors font-[family-name:var(--font-bricolage-grotesque)] break-words ${
-                    option.variant === "danger"
-                      ? "hover:bg-red-50 text-red-600"
-                      : "hover:bg-[var(--taupe)] text-[var(--primary-color)]"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))
+              options.map((option) => {
+                const isSelected = option.value === (localSelected ?? selectedValue);
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => handleSelect(option.value)}
+                    className={`w-full text-left px-4 py-3 text-xs transition-colors font-[family-name:var(--font-bricolage-grotesque)] break-words ${
+                        option.variant === "danger"
+                          ? "hover:bg-red-50 text-red-600"
+                          : "hover:bg-[var(--taupe)] text-[var(--primary-color)]"
+                      } ${isSelected ? 'font-black' : 'font-bold'}`}
+                    style={isSelected ? { backgroundColor: textColor, color: backgroundColor } as any : undefined}
+                  >
+                      <span className="truncate">{option.label}</span>
+                  </button>
+                );
+              })
             )}
           </div>
         </>
