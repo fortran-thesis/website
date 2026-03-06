@@ -99,8 +99,26 @@ function ViewReportContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportData]);
   const [isResolved, setIsResolved] = useState(false); 
+  const [copying, setCopying] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
   const imageSrc = reportData?.image || reportData?.image_url || reportData?.content?.image || reportData?.content?.cover_photo || (hasImage ? imgSrc : null) || null;
+
+  const handleCopySnapshot = async () => {
+    const payload = reportRes ?? reportData ?? {};
+    try {
+      setCopying(true);
+      await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+      setCopyStatus('Copied');
+      setTimeout(() => setCopyStatus(null), 2000);
+    } catch (err) {
+      console.error('copy failed', err);
+      setCopyStatus('Failed');
+      setTimeout(() => setCopyStatus(null), 2000);
+    } finally {
+      setCopying(false);
+    }
+  };
 
   /** Handles rejecting a report */
   const handleReject = async () => {
@@ -262,9 +280,27 @@ function ViewReportContent() {
 
         {/* RIGHT SIDE */}
         <div className="w-full lg:w-3/4 bg-[var(--taupe)] rounded-xl py-4 px-6 mt-10 md:mt-0 h-auto min-w-0">
-          <h2 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black mb-3 text-sm">
-            Reported Content
-          </h2>
+          <div className="flex items-start justify-between mb-3">
+            <h2 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-sm">
+              Reported Content
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="text-sm cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-white/5 text-[var(--primary-color)] py-1 px-3 rounded-lg hover:bg-white/10 transition flex items-center gap-2"
+                onClick={handleCopySnapshot}
+                disabled={copying || !reportRes && !reportData}
+              >
+                <FontAwesomeIcon icon={faClipboard} />
+                <span>{copying ? 'Copying...' : 'Copy snapshot'}</span>
+              </button>
+              {copyStatus && (
+                <span className={`text-sm ${copyStatus === 'Copied' ? 'text-green-600' : 'text-red-600'}`}>
+                  {copyStatus}
+                </span>
+              )}
+            </div>
+          </div>
 
           {/* Report image or placeholder */}
           <div className="relative w-full h-40 md:h-52 lg:h-60 rounded-lg overflow-hidden bg-[var(--moldify-softGrey)] flex items-center justify-center">
