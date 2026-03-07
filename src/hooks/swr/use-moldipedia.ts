@@ -30,6 +30,8 @@ export interface MoldipediaArticle {
   content?: string;
   created_at?: string;
   tags?: string[];
+  treatment?: string;
+  mold_type?: string;
   metadata?: {
     created_at?: { _seconds: number } | string;
   };
