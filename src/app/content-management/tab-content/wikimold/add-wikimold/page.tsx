@@ -10,36 +10,81 @@ import { faPen } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { apiMutate } from '@/lib/api';
 import { mutate } from 'swr';
+import { StickyDossierNav } from "@/components/dossier_nav";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
 
 interface WikiMoldData {
+  // Frontend form model that maps to the payload sent to POST /api/v1/moldipedia.
   title: string;
   coverImage: string;
   content: string;
+  mold_type: string;
+  treatments: {
+    mechanical: string;
+    cultural: string;
+    biological: string;
+    physical: string;
+    chemical: string;
+  };
+  findings: Array<{
+    title: string;
+    content: string;
+  }>;
 }
+
+const EMPTY_WIKIMOLD_DATA: WikiMoldData = {
+  // Stable defaults keep all inputs controlled from first render.
+  title: "",
+  coverImage: "",
+  content: "",
+  mold_type: "",
+  treatments: {
+    mechanical: "",
+    cultural: "",
+    biological: "",
+    physical: "",
+    chemical: "",
+  },
+  findings: [
+    { title: "", content: "" },
+    { title: "", content: "" },
+    { title: "", content: "" },
+    { title: "", content: "" },
+    { title: "", content: "" },
+  ],
+};
 
 export default function AddWikiMold() {
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const initialData = useRef({ title: '', coverImage: '', content: '' });
+  const initialData = useRef<WikiMoldData>(EMPTY_WIKIMOLD_DATA);
   const [showConfirm, setShowConfirm] = useState(false);
   const userRole = "Mycologist";
   const fallbackImage = "/assets/wikimold-fallback.png";
-  const [wikiMoldData, setWikiMoldData] = useState<WikiMoldData>({
-    title: "",
-    coverImage: "",
-    content: "",
-  });
+  const [wikiMoldData, setWikiMoldData] = useState<WikiMoldData>(EMPTY_WIKIMOLD_DATA);
+  const [coverImagePreview, setCoverImagePreview] = useState("");
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const navItems = [
+    { id: 'description', label: '01. Description' },
+    { id: 'treatments', label: '02. Treatment Control' },
+    { id: 'findings', label: '03. Findings' },
+  ];
+
   useEffect(() => {
+    // Snapshot baseline form data for unsaved-changes detection.
     initialData.current = { ...wikiMoldData };
   }, []);
 
   useEffect(() => {
-    const isChanged = wikiMoldData.title !== initialData.current.title || wikiMoldData.content !== initialData.current.content || wikiMoldData.coverImage !== initialData.current.coverImage;
+    // TODO: JSON.stringify diffing is simple but can get expensive as editor content grows.
+    // Consider dirty flags per section (or a deep-equal helper with memoization) for better scalability.
+    const isChanged = JSON.stringify(wikiMoldData) !== JSON.stringify(initialData.current) || !!coverImageFile;
     setInfoMessage(isChanged ? '' : 'You haven\'t made any changes yet.');
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isChanged) {
@@ -49,10 +94,7 @@ export default function AddWikiMold() {
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [wikiMoldData]);
-  const [coverImagePreview, setCoverImagePreview] = useState("");
-  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  }, [wikiMoldData, coverImageFile]);
 
   const handleCoverImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,6 +102,7 @@ export default function AddWikiMold() {
       setCoverImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
+        // Preview image locally; actual file is still uploaded via FormData.
         setCoverImagePreview(reader.result as string);
       };
       reader.readAsDataURL(file);
@@ -75,6 +118,7 @@ export default function AddWikiMold() {
       return;
     }
 
+    // Lazy-load auth helper to avoid loading auth logic until submit time.
     const { getUserData } = await import("@/utils/auth");
     const user = getUserData();
     const author_id = user?.id || "";
@@ -101,12 +145,28 @@ export default function AddWikiMold() {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
+      // API payload contract: details JSON + cover_photo multipart file.
       const details = {
         title,
         body,
         author_id,
         tags: [],
+        // TODO: This nested shape is cleaner for frontend, but verify backend contract accepts this structure.
+        // If backend expects flat keys (e.g., treatment_mechanical), add a mapper before submit.
+        mold_type: wikiMoldData.mold_type.trim(),
+        treatments: {
+          mechanical: wikiMoldData.treatments.mechanical.trim(),
+          cultural: wikiMoldData.treatments.cultural.trim(),
+          biological: wikiMoldData.treatments.biological.trim(),
+          physical: wikiMoldData.treatments.physical.trim(),
+          chemical: wikiMoldData.treatments.chemical.trim(),
+        },
+        findings: wikiMoldData.findings.map(f => ({
+          title: f.title.trim(),
+          content: f.content.trim(),
+        })),
       };
+      // TODO: Remove verbose payload logs in production to avoid leaking content in browser consoles.
       console.log("Submitting details:", details);
       formData.append("details", JSON.stringify(details));
       formData.append("cover_photo", coverImageFile);
@@ -116,7 +176,7 @@ export default function AddWikiMold() {
         formData,
       });
 
-      // Revalidate SWR caches so moldipedia lists reflect the new article
+      // Revalidate list caches so newly created article appears immediately.
       await mutate(
         (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
         undefined,
@@ -124,7 +184,8 @@ export default function AddWikiMold() {
       );
 
       setSuccessMessage("WikiMold article created successfully!");
-      setWikiMoldData({ title: "", coverImage: "", content: "" });
+        // Reset form and local image state after successful create.
+        setWikiMoldData(EMPTY_WIKIMOLD_DATA);
       setCoverImagePreview("");
       setCoverImageFile(null);
       setTimeout(() => setSuccessMessage(''), 5000);
@@ -139,7 +200,7 @@ export default function AddWikiMold() {
   };
 
   const handleBack = () => {
-    const isChanged = wikiMoldData.title !== initialData.current.title || wikiMoldData.content !== initialData.current.content || wikiMoldData.coverImage !== initialData.current.coverImage;
+    const isChanged = JSON.stringify(wikiMoldData) !== JSON.stringify(initialData.current) || !!coverImageFile;
     if (isChanged) {
       setShowBackConfirm(true);
     } else {
@@ -158,23 +219,24 @@ export default function AddWikiMold() {
         </div>
       )}
 
-      <main className="relative flex flex-col xl:py-2 py-10 w-full">
+      {/* Main editor shell: header, cover hero, sticky nav, and sectioned content form. */}
+      <main className="relative flex flex-col xl:py-2 py-10 w-full font-[family-name:var(--font-bricolage-grotesque)]">
         {infoMessage && (
           <div className="w-full max-w-2xl mx-auto mb-4 px-4 py-3 bg-blue-100 text-blue-800 rounded-lg text-center font-semibold">
             {infoMessage}
           </div>
         )}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 mb-8">
           <Breadcrumbs role={userRole} skipSegments={["tab-content", "wikimold"]} />
-          <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-            CONTENT MANAGEMENT
+          <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl uppercase tracking-tighter">
+            Content Management
           </h1>
         </div>
 
-        <div className="mt-8 mb-6">
+        <div className="mb-8">
           <BackButton onClick={handleBack} />
         </div>
-      <ConfirmModal
+        <ConfirmModal
         isOpen={showBackConfirm}
         title="Unsaved Changes"
         subtitle="You have unsaved changes. Are you sure you want to go back? Your changes will not be saved."
@@ -188,20 +250,20 @@ export default function AddWikiMold() {
       />
 
         <form className="w-full" onSubmit={(e) => { e.preventDefault(); setShowConfirm(true); }}>
-                <ConfirmModal
-                  isOpen={showConfirm}
-                  title="Confirm Publish"
-                  subtitle="Are you sure you want to publish this WikiMold article?"
-                  confirmText="Publish"
-                  cancelText="Cancel"
-                  confirmDisabled={isSubmitting}
-                  confirmLoadingText="Publishing..."
-                  onCancel={() => setShowConfirm(false)}
-                  onConfirm={() => {
-                    setShowConfirm(false);
-                    handleSubmit();
-                  }}
-                />
+          <ConfirmModal
+            isOpen={showConfirm}
+            title="Confirm Publish"
+            subtitle="Are you sure you want to publish this WikiMold article?"
+            confirmText="Publish"
+            cancelText="Cancel"
+            confirmDisabled={isSubmitting}
+            confirmLoadingText="Publishing..."
+            onCancel={() => setShowConfirm(false)}
+            onConfirm={() => {
+              setShowConfirm(false);
+              handleSubmit();
+            }}
+          />
           {successMessage && (
             <div className="w-full mb-4 px-4 py-3 bg-green-100 text-green-800 rounded-lg text-left font-semibold">
               {successMessage}
@@ -212,6 +274,7 @@ export default function AddWikiMold() {
               {errorMessage}
             </div>
           )}
+          {/* Cover hero with inline image picker; preview updates before submit. */}
           <div className="relative w-full mb-16 group">
             <div className="relative w-full h-[350px] rounded-[2.5rem] overflow-hidden bg-[var(--taupe)] shadow-2xl transition-all duration-700">
               <Image
@@ -229,20 +292,155 @@ export default function AddWikiMold() {
             </div>
           </div>
 
-          <div className="max-w-full mx-auto px-4">
-            <div className="mb-12">
-              <input
-                id="title"
-                type="text"
-                value={wikiMoldData.title}
-                onChange={(e) => setWikiMoldData({ ...wikiMoldData, title: e.target.value })}
-                placeholder="Enter Title..."
-                className="w-full font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] text-4xl font-black bg-transparent border-none placeholder:opacity-20 focus:outline-none transition-all"
-              />
-            </div>
+          {/* Sticky in-page navigation for quick jumps between major form sections. */}
+          <StickyDossierNav items={navItems} />
 
-            <div className="relative">
-              <style>{`
+          {/* Article Meta Section */}
+          <div className="max-w-full mx-auto px-4 mb-24 mt-10">
+            <div className="flex flex-col lg:flex-row items-start gap-12 lg:gap-24 relative">
+              {/* Column 1: Article Title */}
+              <div className="flex-1 w-full group">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--accent-color)]">01. Project Title</span>
+                </div>
+
+                <div className="relative">
+                  <input
+                    id="title"
+                    type="text"
+                    value={wikiMoldData.title}
+                    onChange={(e) => setWikiMoldData((prev) => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter Title..."
+                    className="w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-5xl font-black placeholder:opacity-10 focus:outline-none transition-all uppercase tracking-tighter"
+                  />
+                  <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--primary-color)]/10 group-focus-within:bg-[var(--accent-color)] transition-colors duration-300" />
+                </div>
+
+                <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--primary-color)]/30 mt-4 italic">
+                  Public Facing Database Heading
+                </p>
+              </div>
+
+              {/* Column 2: Mold Genus */}
+              <div className="flex-1 w-full group">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--accent-color)]">02. Genus Name</span>
+                </div>
+
+                <div className="relative">
+                  <input
+                    id="mold_type"
+                    type="text"
+                    value={wikiMoldData.mold_type}
+                    onChange={(e) => setWikiMoldData((prev) => ({ ...prev, mold_type: e.target.value }))}
+                    placeholder="Genus Species..."
+                    className="w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-5xl font-black italic placeholder:opacity-10 focus:outline-none transition-all tracking-tight"
+                  />
+                  <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--primary-color)]/10 group-focus-within:bg-[var(--accent-color)] transition-colors duration-300" />
+                </div>
+
+                <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--primary-color)]/30 mt-4 italic">
+                  Scientific Pathogen Identification
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Sectioned editor body for description, treatments, and findings content blocks. */}
+          <div className="max-w-full mx-auto px-4 space-y-20">
+            {/* Section 1: core biological description (main article body). */}
+            <section id="description" className="scroll-mt-32 mt-22">
+              <div className="flex flex-col gap-2 mb-8">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 01</label>
+                <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Mold Description</h2>
+              </div>
+
+              <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 01</label>
+                  <h2 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tighter">Biological Description</h2>
+                </div>
+                <div className="space-y-4">
+                  <ReactQuill
+                    value={wikiMoldData.content}
+                    onChange={(content) => setWikiMoldData((prev) => ({ ...prev, content }))}
+                    theme="snow"
+                    placeholder="Describe the pathogen characteristics..."
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Section 2: treatment protocol variants grouped by control type. */}
+            <section id="treatments" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
+              <div className="flex flex-col gap-2 mb-8">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 02</label>
+                <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Remediation Protocols</h2>
+              </div>
+
+              <div className="grid grid-cols-1 gap-12">
+                {Object.entries({
+                  mechanical: 'Mechanical',
+                  cultural: 'Cultural',
+                  biological: 'Biological',
+                  physical: 'Physical',
+                  chemical: 'Chemical',
+                }).map(([key, label], index) => (
+                  <div key={key} className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Protocol 0{index + 1}</label>
+                      <h3 className="font-black text-2xl text-[var(--primary-color)]">{label} Control</h3>
+                    </div>
+                    <ReactQuill
+                      value={wikiMoldData.treatments[key as keyof typeof wikiMoldData.treatments] || ""}
+                      onChange={(val) => setWikiMoldData((prev) => ({
+                        ...prev,
+                        treatments: {
+                          ...prev.treatments,
+                          [key]: val,
+                        },
+                      }))}
+                      theme="snow"
+                      placeholder={`Detail the ${label.toLowerCase()} steps...`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Section 3: staged findings entries for investigative progression. */}
+            <section id="findings" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
+              <div className="flex flex-col gap-2 mb-8">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 03</label>
+                <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Discovery Findings</h2>
+              </div>
+
+              <div className="space-y-12">
+                {wikiMoldData.findings.map((finding, index) => (
+                  <div key={index} className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent transition-all hover:border-[var(--primary-color)]/10">
+                    <div className="flex flex-col gap-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Discovery Stage 0{index + 1}</label>
+                      <h3 className="font-black text-2xl text-[var(--primary-color)]">Stage {index + 1}</h3>
+                    </div>
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Detailed Analysis</label>
+                      <ReactQuill
+                        value={finding.content}
+                        onChange={(val) => setWikiMoldData((prev) => {
+                          const newFindings = [...prev.findings];
+                          newFindings[index] = { ...newFindings[index], content: val };
+                          return { ...prev, findings: newFindings };
+                        })}
+                        theme="snow"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Shared rich-text editor skin to keep all Quill instances visually consistent. */}
+            <style>{`
                 .ql-toolbar.ql-snow {
                   border: none !important;
                   background: transparent !important;
@@ -272,22 +470,9 @@ export default function AddWikiMold() {
                 .ql-fill { fill: var(--moldify-grey) !important; }
                 .ql-active .ql-stroke { stroke: var(--primary-color) !important; }
               `}</style>
-              <ReactQuill
-                value={wikiMoldData.content}
-                onChange={(content) => setWikiMoldData({ ...wikiMoldData, content })}
-                theme="snow"
-                modules={{
-                  toolbar: [
-                    [{ header: [2, 3, false] }],
-                    ["bold", "italic", "underline", "link"],
-                    [{ list: "ordered" }, { list: "bullet" }],
-                  ],
-                }}
-                placeholder="Write your body here..."
-              />
-            </div>
           </div>
 
+          {/* Floating primary action keeps publish CTA visible while scrolling long forms. */}
           <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-fit">
             <button
               type="submit"
