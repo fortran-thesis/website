@@ -7,41 +7,49 @@ import { useState, useEffect } from 'react';
 const MoldifyLogo = '/assets/Moldify_Logo.png';
 const grass = '/assets/grass.png';
 
-function FooterLink({ href, children, prefetch = true }: { href: string; children: React.ReactNode; prefetch?: boolean }) {
-  const router = useRouter();
-  const pathname = usePathname();
+export default function Footer() {
   const [isNavigating, setIsNavigating] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     setIsNavigating(false);
   }, [pathname]);
 
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (pathname !== href && !isNavigating) {
-      setIsNavigating(true);
-      router.push(href);
-    }
-  };
+  function FooterLink({ href, children, prefetch = true }: { href: string; children: React.ReactNode; prefetch?: boolean }) {
+    const router = useRouter();
+
+    const handleClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      if (pathname !== href) {
+        setIsNavigating(true);
+        router.push(href);
+      }
+    };
+
+    return (
+      <Link 
+        href={href} 
+        prefetch={prefetch}
+        onClick={handleClick}
+        className="relative w-fit block group transition-all duration-300"
+      >
+        {children}
+        <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[var(--background-color)] opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100" />
+      </Link>
+    );
+  }
 
   return (
-    <Link 
-      href={href} 
-      prefetch={prefetch}
-      onClick={handleClick}
-      className={`relative w-fit block group transition-all duration-300 ${
-        isNavigating ? 'opacity-60' : ''
-      }`}
-    >
-      {children}
-      <span className="absolute bottom-0 left-0 w-0 h-[2px] bg-[var(--background-color)] opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100" />
-    </Link>
-  );
-}
-
-export default function Footer() {
-  return (
-    <footer className="relative bg-[var(--primary-color)] px-6 lg:px-24 pt-16 pb-20 md:pb-12 w-full overflow-hidden">
+    <>
+      {isNavigating && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]"
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+      <footer className="relative bg-[var(--primary-color)] px-6 lg:px-24 pt-16 pb-20 md:pb-12 w-full overflow-hidden">
       
       {/* --- CONTENT LAYER --- */}
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start gap-12 relative z-30">
@@ -136,5 +144,6 @@ export default function Footer() {
       </div>
 
     </footer>
+    </>
   );
 }
