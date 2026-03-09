@@ -93,9 +93,15 @@ function ViewMoldInfoContent() {
         }
       }));
       if (mold.mold_details?.prevention) {
-        setMoldManagement(prev => ({
-          ...prev,
-          chemicalControl: (mold.mold_details.prevention.fungicide || []).join(', '),
+        const prev = mold.mold_details.prevention as any;
+        setMoldManagement(curr => ({
+          physicalControl: prev.physicalControl ?? curr.physicalControl ?? '',
+          mechanicalControl: prev.mechanicalControl ?? curr.mechanicalControl ?? '',
+          culturalControl: prev.culturalControl ?? curr.culturalControl ?? '',
+          biologicalControl: prev.biologicalControl ?? curr.biologicalControl ?? '',
+          chemicalControl: Array.isArray(prev.fungicide)
+            ? prev.fungicide.join(', ')
+            : prev.chemicalControl ?? curr.chemicalControl ?? '',
         }));
       }
     }, [moldSwr]);
@@ -152,7 +158,7 @@ function ViewMoldInfoContent() {
           { revalidate: true },
         );
 
-        alert(moldId ? 'Mold information updated successfully!' : 'Mold information published successfully!');
+        // Success handled via UI state; removed intrusive alert dialog.
       } catch (err) {
         setError(
           err instanceof ApiError ? err.message :

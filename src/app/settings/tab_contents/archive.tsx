@@ -4,33 +4,7 @@ import EmptyState from "@/components/empty_state";
 import ConfirmationModal from "@/components/modals/confirmation_modal";
 import { useState, useEffect } from "react";
 import { faBoxArchive } from "@fortawesome/free-solid-svg-icons";
-import { endpoints } from "@/services";
-
-/**
- * Dummy data for archived WikiMolds
- * This is used for development/testing purposes
- * TODO: Remove this and use actual API responses when backend is ready
- */
-const DUMMY_ARCHIVED_WIKIMOLDS: WikiMold[] = [
-  {
-    id: "WM-ARCHIVED-001",
-    title: "Aspergillus: A Comprehensive Guide to Fungal Identification",
-    coverImage: "/assets/mold1.jpg",
-    datePublished: "2024-01-15",
-  },
-  {
-    id: "WM-ARCHIVED-002",
-    title: "Penicillium Species and Their Agricultural Impact",
-    coverImage: "",
-    datePublished: "2024-01-10",
-  },
-  {
-    id: "WM-ARCHIVED-003",
-    title: "Trichoderma: Beneficial Molds in Agriculture",
-    coverImage: "/assets/mold2.jpg",
-    datePublished: "2024-01-18",
-  },
-];
+import { mutate } from 'swr';
 
 /**
  * Archive Component
@@ -39,8 +13,8 @@ const DUMMY_ARCHIVED_WIKIMOLDS: WikiMold[] = [
  * Users can restore or permanently delete archived WikiMolds from this page
  */
 export default function Archive() {
-  // State to store archived wikimold data - initialize with dummy data
-  const [archivedWikiMolds, setArchivedWikiMolds] = useState<WikiMold[]>(DUMMY_ARCHIVED_WIKIMOLDS);
+  // State to store archived wikimold data - initialize as empty, will be loaded from API
+  const [archivedWikiMolds, setArchivedWikiMolds] = useState<WikiMold[]>([]);
   
   // State for loading and error handling
   const [isLoading, setIsLoading] = useState(false);
@@ -51,17 +25,15 @@ export default function Archive() {
   const [selectedWikiMoldToRestore, setSelectedWikiMoldToRestore] = useState<WikiMold | null>(null);
 
   /**
-   * Fetch archived WikiMold data from backend or local storage
-   * Currently loads from localStorage with dummy data fallback
-   * TODO: Replace with actual API call when backend server is ready
-   * Example API endpoint: GET /api/v1/wikimold/archived
+   * Fetch archived WikiMold data from backend API
+   * The API endpoint now properly filters archived moldipedia articles
    */
   useEffect(() => {
-    // Attempt to fetch archived WikiMolds from backend, fall back to localStorage/dummy
+    // Fetch archived WikiMolds from backend
     const fetchArchivedWikiMolds = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(endpoints.moldipedia.archived, { credentials: "include" });
+        const res = await fetch('/api/v1/moldipedia/archive', { credentials: "include" });
         const json = await res.json();
         if (json?.success && json.data?.snapshot && Array.isArray(json.data.snapshot)) {
           // Map API shape to UI shape where needed
@@ -81,21 +53,22 @@ export default function Archive() {
           return;
         }
       } catch (err) {
-        console.error("Error fetching archived wikimolds:", err);
+        console.error("Error fetching archived wikimolds from API:", err);
         setError("Failed to load archived wikimolds");
-      }
-
-      // Fallback: try localStorage
-      try {
-        const stored = localStorage.getItem("archivedWikiMolds");
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setArchivedWikiMolds(parsed);
+        
+        // Fallback: try localStorage for offline support
+        try {
+          const stored = localStorage.getItem("archivedWikiMolds");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setArchivedWikiMolds(parsed);
+              setError(null); // Clear error if localStorage has data
+            }
           }
+        } catch (parseErr) {
+          console.error("Error parsing cached archived wikimolds:", parseErr);
         }
-      } catch (parseErr) {
-        console.error("Error parsing archived wikimolds from localStorage:", parseErr);
       }
       setIsLoading(false);
     };
@@ -105,12 +78,7 @@ export default function Archive() {
 
   /**
    * Handle unarchive action - restore archived WikiMold back to active
-   * This removes the WikiMold from archived list and returns it to the main content
-   * 
-   * TODO: When integrating backend:
-   * - Call API to move WikiMold from archived to active
-   * - Sync with content management page
-   * - Update parent state if needed
+   * Calls the backend API to unarchive the article
    */
   const handleRestoreWikiMold = (wikimold: WikiMold) => {
     // Show confirmation modal before unarchiving
@@ -126,7 +94,7 @@ export default function Archive() {
 
     setIsLoading(true);
     try {
-      const res = await fetch(endpoints.moldipedia.restore(selectedWikiMoldToRestore.id), {
+      const res = await fetch(`/api/v1/moldipedia/${selectedWikiMoldToRestore.id}/unarchive`, {
         method: "PATCH",
         credentials: "include",
       });
@@ -140,9 +108,21 @@ export default function Archive() {
       try {
         localStorage.setItem("archivedWikiMolds", JSON.stringify(updated));
       } catch (e) {}
+
+      // Revalidate SWR cache to sync with main content-management page
+      // This allows the unarchived article to appear in the main WikiMold list
+      await Promise.all([
+        mutate(`/api/v1/moldipedia/${selectedWikiMoldToRestore.id}`),
+        // Revalidate all moldipedia list-level caches (including infinite scroll)
+        mutate(
+          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
+          undefined,
+          { revalidate: true },
+        ),
+      ]);
     } catch (err) {
       console.error("Error restoring archived wikimold:", err);
-      setError("Failed to restore archived wikimold");
+      setError("Failed to restore archived wikimold - please try again");
     } finally {
       setIsLoading(false);
       setShowRestoreModal(false);
