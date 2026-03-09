@@ -66,8 +66,24 @@ export default function EditMycoModal({ isOpen, onClose, onSubmit }: EditMycoMod
       setError("Password is required");
       return;
     }
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      setError("Password must contain at least one lowercase letter");
+      return;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      setError("Password must contain at least one uppercase letter");
+      return;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setError("Password must contain at least one number");
+      return;
+    }
+    if (!/[^a-zA-Z0-9]/.test(formData.password)) {
+      setError("Password must contain at least one special character");
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -127,7 +143,18 @@ export default function EditMycoModal({ isOpen, onClose, onSubmit }: EditMycoMod
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <>
+      {/* Top Loading Bar */}
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-hidden">
       <div className="bg-[var(--background-color)] rounded-2xl shadow-xl w-full max-w-lg p-8 relative max-h-[100vh] overflow-hidden">
          <div className="overflow-y-auto max-h-[90vh]">
             <div className="pr-2">
@@ -148,7 +175,7 @@ export default function EditMycoModal({ isOpen, onClose, onSubmit }: EditMycoMod
             <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-5 right-3 text-[var(--moldify-red)] hover:text-red-600 cursor-pointer font-black"
+                className="absolute top-5 right-3 text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
             >
                 ✕
             </button>
@@ -261,14 +288,17 @@ export default function EditMycoModal({ isOpen, onClose, onSubmit }: EditMycoMod
             <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`w-full font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 ${
+                  isLoading ? 'cursor-wait' : 'cursor-pointer'
+                }`}
               > 
-                {isLoading ? "Saving..." : "Save Changes"}
+                Save Changes
             </button>
             </form>
             </div>
          </div>
      </div>
     </div>
+    </>
   );
 }

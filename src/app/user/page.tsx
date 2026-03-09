@@ -1,25 +1,20 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSearch, faUsers, faPlus } from '@fortawesome/free-solid-svg-icons';
+import StatusDropdown from '@/components/StatusDropdown';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import DonutChart from '@/components/charts/donut-chart';
 import UserTable from '@/components/tables/user_table';
-import { useState, useEffect, useRef } from 'react';
-import AddMycoModal, { MycoFormData } from '@/components/modals/create_myco_acc_modal';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUserRoleCounts, useUserDisabledCounts, useUsersInfinite } from '@/hooks/swr';
 
 
 export default function Users() {
 
     const userRole = "Administrator";
-
-    // UI state
-    const [users, setUsers] = useState<any[]>([]);
-    const [isAddMycoModal, setShowAddMycoModal] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+    const router = useRouter();
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     // Search and filter state
@@ -27,9 +22,12 @@ export default function Users() {
     const [roleFilter, setRoleFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
 
-    // Stats from API endpoints
-    const [roleCounts, setRoleCounts] = useState({ farmer: 0, mycologist: 0, admin: 0 });
-    const [disabledCounts, setDisabledCounts] = useState({ active: 0, inactive: 0 });
+    // SWR: counts
+    const { data: rolesData } = useUserRoleCounts();
+    const { data: disabledData } = useUserDisabledCounts();
+
+    const roleCounts = (rolesData as any)?.data ?? { farmer: 0, mycologist: 0, admin: 0 };
+    const disabledCounts = (disabledData as any)?.data ?? { active: 0, inactive: 0 };
 
     const totalUsers = roleCounts.farmer + roleCounts.mycologist + roleCounts.admin;
     const totalFarmers = roleCounts.farmer;
@@ -43,147 +41,59 @@ export default function Users() {
         { name: "Active", value: activeCount, color: "var(--primary-color)" },
     ];
 
-    // Build search URL with active filters
-    const buildSearchUrl = (token?: string | null) => {
-        const params = new URLSearchParams();
-        if (searchQuery) params.set('search', searchQuery);
-        if (roleFilter && roleFilter !== 'all') params.set('role', roleFilter);
-        if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
-        params.set('limit', '10');
-        if (token) params.set('pageToken', token);
+    // SWR: paginated users
+    const {
+      data: usersPages,
+      size,
+      setSize,
+      isLoading: loading,
+      isValidating: isLoadingMore,
+    } = useUsersInfinite(100);
 
-        const queryString = params.toString();
-        // If no filters, use regular /users endpoint; otherwise use /users/search
-        if (!searchQuery && !roleFilter && !statusFilter) {
-            return `/api/v1/users?${queryString}`;
-        }
-        return `/api/v1/users/search?${queryString}`;
-    };
+    const users = useMemo(
+      () => usersPages?.flatMap((p: any) => p.data?.snapshot ?? []) ?? [],
+      [usersPages],
+    );
+    const hasMore = usersPages?.[usersPages.length - 1]?.data?.nextPageToken;
+    const error: string | null = null;
 
-    // Fetch initial users page (no pagination for now)
+    // Client-side filter function
+    const filteredUsers = useMemo(() => {
+        return users.filter((user: any) => {
+            const searchLower = searchQuery.toLowerCase();
+            const roleValue = (user.user?.role || '').toLowerCase();
+            const normalizedRole = roleValue === 'user'
+                ? 'farmer'
+                : roleValue === 'administrator'
+                ? 'admin'
+                : roleValue;
+
+            const fullName = `${user.user?.first_name ?? ''} ${user.user?.last_name ?? ''}`.trim();
+            const matchesSearch = !searchQuery ||
+                fullName.toLowerCase().includes(searchLower) ||
+                user.user?.username?.toLowerCase().includes(searchLower) ||
+                user.details?.displayName?.toLowerCase().includes(searchLower) ||
+                user.details?.email?.toLowerCase().includes(searchLower);
+
+            const matchesRole = !roleFilter || roleFilter === 'all' || normalizedRole === roleFilter;
+
+            const isDisabled = user.details?.disabled === true;
+            const matchesStatus = !statusFilter || statusFilter === 'all' ||
+                (statusFilter === 'active' && !isDisabled) ||
+                (statusFilter === 'disabled' && isDisabled);
+
+            return matchesSearch && matchesRole && matchesStatus;
+        });
+    }, [users, searchQuery, roleFilter, statusFilter]);
+
+    // Infinite scroll via IntersectionObserver → load next SWR page
     useEffect(() => {
-        // Fetch role and disabled counts
-        const fetchCounts = async () => {
-            try {
-                const [rolesRes, disabledRes] = await Promise.all([
-                    fetch('/api/v1/users/counts/roles', { cache: 'no-store' }),
-                    fetch('/api/v1/users/counts/disabled', { cache: 'no-store' })
-                ]);
-                if (rolesRes.ok) {
-                    const rolesBody = await rolesRes.json();
-                    if (rolesBody.success && rolesBody.data) setRoleCounts(rolesBody.data);
-                }
-                if (disabledRes.ok) {
-                    const disabledBody = await disabledRes.json();
-                    if (disabledBody.success && disabledBody.data) setDisabledCounts(disabledBody.data);
-                }
-            } catch (err) {
-                // Optionally handle error
-            }
-        };
-        fetchCounts();
-        let mounted = true;
-        const fetchUsers = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const url = buildSearchUrl();
-                const res = await fetch(url, { cache: 'no-store' });
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    throw new Error(body?.error || 'Failed to load users');
-                }
-                const body = await res.json();
-                console.log(body);
-                const data = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
-                if (mounted) {
-                    setUsers(data);
-                    setNextPageToken(body.data?.nextPageToken || null);
-                }
-            } catch (e: any) {
-                console.error('Failed to load users', e);
-                if (mounted) setError(e?.message || 'Failed to load users');
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        };
-        fetchUsers();
-        return () => { mounted = false; };
-    }, [searchQuery, roleFilter, statusFilter]);
-
-    const handleMycoSubmit = async (data: MycoFormData) => {
-        console.log('Form submitted:', data);
-
-        // Refresh users list and counts (reset pagination)
-        try {
-            const [rolesRes, disabledRes] = await Promise.all([
-                fetch('/api/v1/users/counts/roles', { cache: 'no-store' }),
-                fetch('/api/v1/users/counts/disabled', { cache: 'no-store' })
-            ]);
-            if (rolesRes.ok) {
-                const rolesBody = await rolesRes.json();
-                if (rolesBody.success && rolesBody.data) setRoleCounts(rolesBody.data);
-            }
-            if (disabledRes.ok) {
-                const disabledBody = await disabledRes.json();
-                if (disabledBody.success && disabledBody.data) setDisabledCounts(disabledBody.data);
-            }
-
-            // Refresh users list and reset pagination
-            const url = buildSearchUrl();
-            const usersRes = await fetch(url, { cache: 'no-store' });
-            if (usersRes.ok) {
-                const usersBody = await usersRes.json();
-                const usersData = Array.isArray(usersBody.data?.snapshot) ? usersBody.data.snapshot : [];
-                console.log('Updated users list:', usersData);
-                setUsers(usersData);
-                setNextPageToken(usersBody.data?.nextPageToken || null);
-            } else {
-                console.error('Failed to fetch users:', usersRes.status);
-            }
-        } catch (err) {
-            console.error('Failed to refresh data:', err);
-        }
-    };
-
-    // Intersection Observer for infinite scroll
-    useEffect(() => {
-        if (!nextPageToken || isLoadingMore) return;
-
-        const handleLoadMore = async () => {
-            setIsLoadingMore(true);
-            try {
-                const url = buildSearchUrl(nextPageToken);
-                const res = await fetch(url, { cache: 'no-store' });
-                if (!res.ok) {
-                    const body = await res.json().catch(() => ({}));
-                    throw new Error(body?.error || 'Failed to load more users');
-                }
-                const body = await res.json();
-                const newData = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
-
-                // Safety check: if token didn't change and we got data, stop loading
-                const newToken = body.data?.nextPageToken || null;
-                if (newToken === nextPageToken && newData.length > 0) {
-                    console.warn('⚠️ Backend returned same token - stopping pagination');
-                    setNextPageToken(null); // Stop pagination
-                    setIsLoadingMore(false);
-                    return;
-                }
-
-                setUsers(prev => [...prev, ...newData]);
-                setNextPageToken(newToken);
-            } catch (err) {
-                console.error('Failed to load more users:', err);
-            } finally {
-                setIsLoadingMore(false);
-            }
-        };
+        if (!hasMore || isLoadingMore) return;
 
         const observer = new IntersectionObserver(
             entries => {
                 if (entries[0].isIntersecting) {
-                    handleLoadMore();
+                    setSize(s => s + 1);
                 }
             },
             { threshold: 0.1 }
@@ -198,7 +108,7 @@ export default function Users() {
                 observer.unobserve(loadMoreRef.current);
             }
         };
-    }, [nextPageToken, isLoadingMore]);
+    }, [hasMore, isLoadingMore, setSize]);
 
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
@@ -242,13 +152,13 @@ export default function Users() {
                 {/* Right Section */}
                 <button
                     className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
-                    onClick={() => setShowAddMycoModal(true)}
+                    onClick={() => router.push('/user/create-mycologist')}
                 >
                     <span>Create Mycologist Account</span>
                     <FontAwesomeIcon icon={faPlus} />
                 </button>
             </div>
-            <div className="flex flex-col mt-5 md:flex-row md:ml-auto gap-x-2 gap-y-3 w-full">
+            <div className="flex flex-col mt-2 md:flex-row md:ml-auto gap-x-2 gap-y-3 w-full">
                 {/* Search Bar */}
                 <div className="relative flex items-center w-full">
                     <label htmlFor="search" className="sr-only">Search Users</label>
@@ -258,7 +168,6 @@ export default function Users() {
                         value={searchQuery}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
-                            setNextPageToken(null); // Reset pagination
                         }}
                         className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--background-color)] py-2 px-4 rounded-full border-2 border-[var(--primary-color)] focus:outline-none w-full pr-10"
                     />
@@ -267,54 +176,51 @@ export default function Users() {
 
                 {/* Filter Dropdowns */}
                 <div className="flex gap-2 w-full md:w-auto">
-                    {/* Filter by Role */}
-                    <label htmlFor="role" className="sr-only">Filter by Role</label>
-                    <select
-                        id="role"
-                        value={roleFilter}
-                        onChange={(e) => {
-                            setRoleFilter(e.target.value);
-                            setNextPageToken(null); // Reset pagination
+                    {/* Custom Role Dropdown */}
+                    <StatusDropdown
+                        placeholder="Filter By Role"
+                        backgroundColor="var(--accent-color)"
+                        textColor="var(--moldify-black)"
+                        options={[
+                            { label: "All", value: "all" },
+                            { label: "Farmer", value: "farmer" },
+                            { label: "Mycologist", value: "mycologist" },
+                            { label: "Admin", value: "admin" }
+                        ]}
+                        onSelect={(value) => {
+                            setRoleFilter(value);
                         }}
-                        className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
-                    >
-                        <option value="" className="bg-[var(--taupe)] font-bold text-[var(--primary-color)]">
-                            Filter By Role
-                        </option>
-                        <option value="all" className="bg-[var(--taupe)]">All</option>
-                        <option value="farmer" className="bg-[var(--taupe)]">Farmer</option>
-                        <option value="mycologist" className="bg-[var(--taupe)]">Mycologist</option>
-                        <option value="admin" className="bg-[var(--taupe)]">Admin</option>
-                    </select>
+                    />
 
-                    {/* Filter by Status */}
-                    <label htmlFor="status" className="sr-only">Filter by Status</label>
-                    <select
-                        id="status"
-                        value={statusFilter}
-                        onChange={(e) => {
-                            setStatusFilter(e.target.value);
-                            setNextPageToken(null); // Reset pagination
+                    {/* Custom Status Dropdown */}
+                    <StatusDropdown
+                        placeholder="Filter By Status"
+                        backgroundColor="var(--accent-color)"
+                        textColor="var(--moldify-black)"
+                        options={[
+                            { label: "All", value: "all" },
+                            { label: "Active", value: "active" },
+                            { label: "Disabled", value: "disabled" }
+                        ]}
+                        onSelect={(value) => {
+                            setStatusFilter(value);
                         }}
-                        className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full md:w-auto"
-                    >
-                        <option value="" className="bg-[var(--taupe)] font-bold text-[var(--primary-color)]">
-                            Filter By Status
-                        </option>
-                        <option value="all" className="bg-[var(--taupe)]">All</option>
-                        <option value="active" className="bg-[var(--taupe)]">Active</option>
-                        <option value="disabled" className="bg-[var(--taupe)]">Disabled</option>
-                    </select>
+                    />
                 </div>
             </div>
 
 
             {/* Submitted Cases Table */}
-            <div className="mt-6 w-full">
-                {loading && <p>Loading users...</p>}
+            <div className="mt-5 w-full">
+                {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading users...</p>}
                 {error && <p className="text-red-600">{error}</p>}
-                {!loading && !error && <UserTable data={users} 
+                {!loading && !error && <UserTable data={filteredUsers} 
                     onEdit={(c: any) => {
+                      console.log('📋 UserTable edit clicked:', { user: c, userId: c?.id });
+                      if (!c?.id) {
+                        console.error('❌ User has no id:', c);
+                        return;
+                      }
                       window.location.href = `/user/view-user?id=${c.id}`;
                   }}/>}
 
@@ -323,12 +229,6 @@ export default function Users() {
                     {isLoadingMore && <p className="text-sm text-[var(--moldify-grey)]">Loading more users...</p>}
                 </div>
             </div>
-
-            <AddMycoModal
-                isOpen={isAddMycoModal}
-                onClose={() => setShowAddMycoModal(false)}
-                onSubmit={handleMycoSubmit}
-            />
         </main>
     );
 }

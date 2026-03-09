@@ -70,8 +70,24 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
       setError("Password is required");
       return;
     }
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (!/[a-z]/.test(formData.password)) {
+      setError("Password must contain at least one lowercase letter");
+      return;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      setError("Password must contain at least one uppercase letter");
+      return;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setError("Password must contain at least one number");
+      return;
+    }
+    if (!/[^a-zA-Z0-9]/.test(formData.password)) {
+      setError("Password must contain at least one special character");
       return;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -139,7 +155,18 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <>
+      {/* Top Loading Bar */}
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-hidden">
       <div className="bg-[var(--background-color)] rounded-2xl shadow-xl w-full max-w-lg p-8 relative max-h-[100vh] overflow-hidden">
          <div className="overflow-y-auto max-h-[90vh]">
             <div className="pr-2">
@@ -160,7 +187,7 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
             <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-5 right-3 text-[var(--moldify-red)] hover:text-red-600 cursor-pointer font-black"
+                className="absolute top-5 right-5 text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
             >
                 ✕
             </button>
@@ -184,10 +211,8 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
 
             {/* Success Message */}
             {successMessage && (
-              <div className="bg-green-100 border-l-4 border-green-500 p-3 mb-4 rounded">
-                <p className="text-green-700 text-sm font-[family-name:var(--font-bricolage-grotesque)]">
-                  {successMessage}
-                </p>
+              <div className="mb-6 p-3 bg-green-100 border border-green-200 text-green-700 rounded-lg text-xs text-center lg:text-left">
+                {successMessage}
               </div>
             )}
 
@@ -285,12 +310,12 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
                     required
-                    className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 rounded-lg focus:outline-none appearance-none"
+                  className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-12 rounded-lg focus:outline-none appearance-none"
                 />
                 <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary-color)] hover:text-[var(--hover-primary)] transition cursor-pointer"
+                  className="absolute right-4 text-[var(--primary-color)] opacity-50 cursor-pointer hover:opacity-100 transition-all"
                     aria-label="Toggle password visibility"
                 >
                     <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} className="w-4 h-4" />
@@ -314,12 +339,12 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
                     value={formData.confirmPassword}
                     onChange={(e) => handleChange("confirmPassword", e.target.value)}
                     required
-                    className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 rounded-lg focus:outline-none appearance-none"
+                  className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-12 rounded-lg focus:outline-none appearance-none"
                 />
                 <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary-color)] hover:text-[var(--hover-primary)] transition cursor-pointer"
+                  className="absolute right-4 text-[var(--primary-color)] opacity-50 cursor-pointer hover:opacity-100 transition-all"
                     aria-label="Toggle confirm password visibility"
                 >
                     <FontAwesomeIcon icon={showConfirmPassword ? faEye : faEyeSlash} className="w-4 h-4" />
@@ -331,14 +356,17 @@ export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModal
             <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`w-full font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 ${
+                  isLoading ? 'cursor-wait' : 'cursor-pointer'
+                }`}
             >
-                {isLoading ? "Creating..." : "Create Account"}
+                Create Account
             </button>
             </form>
             </div>
          </div>
      </div>
     </div>
+    </>
   );
 }

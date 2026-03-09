@@ -16,6 +16,7 @@ interface ProfileCardProps {
   onSave: () => void;
   onChangePicture: (file: File) => void;
   onRemovePicture: () => void;
+  isLoading?: boolean;
 }
 
 export default function ProfileCard({
@@ -24,11 +25,18 @@ export default function ProfileCard({
   onSave,
   onChangePicture,
   onRemovePicture,
+  isLoading = false,
 }: ProfileCardProps) {
   const [userData, setUserData] = useState(data);
   const [imgSrc, setImgSrc] = useState(
     data.profilePicture || "/assets/default-fallback.png"
   );
+
+  // Sync userData whenever parent data changes
+  useEffect(() => {
+    console.log('📍 ProfileCard data prop changed:', data);
+    setUserData(data);
+  }, [data]);
 
   // Keep image in sync if parent updates it
   useEffect(() => {
@@ -68,7 +76,10 @@ export default function ProfileCard({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col space-y-8 mt-5">
+    <form
+      onSubmit={handleSubmit}
+      className={`flex flex-col space-y-8 mt-5 ${isLoading ? "cursor-wait" : ""}`}
+    >
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
@@ -105,7 +116,9 @@ export default function ProfileCard({
         <div className="flex flex-col md:items-center mt-4 md:mt-0">
           <label
             htmlFor="uploadInput"
-            className="bg-[var(--accent-color)] hover:bg-[var(--hover-accent)] text-[var(--moldify-black)] px-6 py-2 rounded-md text-xs font-[family-name:var(--font-bricolage-grotesque)] font-semibold transition cursor-pointer flex items-center justify-center"
+            className={`bg-[var(--accent-color)] hover:bg-[var(--hover-accent)] text-[var(--moldify-black)] px-6 py-2 rounded-md text-xs font-[family-name:var(--font-bricolage-grotesque)] font-semibold transition flex items-center justify-center ${
+              isLoading ? "cursor-not-allowed opacity-60 pointer-events-none" : "cursor-pointer"
+            }`}
           >
             Change Profile Picture
           </label>
@@ -115,12 +128,16 @@ export default function ProfileCard({
             accept="image/*"
             className="hidden"
             onChange={handleFileChange}
+            disabled={isLoading}
           />
           {imgSrc !== "/assets/default-fallback.png" && (
             <button
               type="button"
               onClick={handleRemovePicture}
-              className="text-xs text-[var(--moldify-red)] mt-1 font-[family-name:var(--font-bricolage-grotesque)] hover:underline cursor-pointer"
+              disabled={isLoading}
+              className={`text-xs text-[var(--moldify-red)] mt-1 font-[family-name:var(--font-bricolage-grotesque)] hover:underline ${
+                isLoading ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+              }`}
             >
               Remove Profile Picture
             </button>
@@ -143,6 +160,7 @@ export default function ProfileCard({
               type="text"
               value={userData.firstName}
               onChange={(e) => handleInputChange("firstName", e.target.value)}
+              disabled={isLoading}
               className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 mb-1 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
@@ -159,12 +177,13 @@ export default function ProfileCard({
               type="text"
               value={userData.lastName}
               onChange={(e) => handleInputChange("lastName", e.target.value)}
+              disabled={isLoading}
               className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 mb-1 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             />
           </div>
         </div>
 
-        <div className="mt-6">
+        {/* <div className="mt-6">
           <label
             htmlFor="email"
             className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-2"
@@ -178,16 +197,17 @@ export default function ProfileCard({
             onChange={(e) => handleInputChange("email", e.target.value)}
             className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 mb-1 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           />
-        </div>
+        </div> */}
       </div>
 
       {/* Save Button */}
       <div>
         <button
           type="submit"
-          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] text-[var(--background-color)] px-10 py-3 rounded-lg font-semibold transition w-full md:w-auto cursor-pointer"
+          disabled={isLoading}
+          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] font-[family-name:var(--font-bricolage-grotesque)] text-md text-[var(--background-color)] px-10 py-3 rounded-lg font-semibold transition w-full md:w-auto disabled:opacity-60 cursor-pointer"
         >
-          Save Changes
+          {isLoading ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </form>

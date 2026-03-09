@@ -10,6 +10,7 @@ export function useAccountRecoveryUtils3 (){
     const [confirmPassword, setConfirmPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
+    const [showCancelModal, setShowCancelModal] = useState(false);
 
     const router = useRouter();
 
@@ -23,14 +24,24 @@ export function useAccountRecoveryUtils3 (){
 
     // This handles the cancel button
     const handleCancel = () => {
-        if (hasChanges() && confirm("Are you sure you want to cancel? You will lose all progress")) {
-            setPassword("");
-            setConfirmPassword("");
+        if (hasChanges()) {
+            setShowCancelModal(true);
+        } else {
             router.back();
         }
-        else if (!hasChanges()) {
-            router.back();
-        }
+    };
+
+    // This confirms the cancel action
+    const confirmCancel = () => {
+        setPassword("");
+        setConfirmPassword("");
+        setShowCancelModal(false);
+        router.back();
+    };
+
+    // This closes the cancel modal
+    const closeCancelModal = () => {
+        setShowCancelModal(false);
     };
 
     // This handles the Change Password Button
@@ -44,9 +55,25 @@ export function useAccountRecoveryUtils3 (){
             return;
         }
 
-        // Validate password length
-        if (password.length < 6) {
-            setError("Password must be at least 6 characters long.");
+        // Validate password complexity (must match server PasswordSchema)
+        if (password.length < 8) {
+            setError("Password must be at least 8 characters long.");
+            return;
+        }
+        if (!/[a-z]/.test(password)) {
+            setError("Password must contain at least one lowercase letter.");
+            return;
+        }
+        if (!/[A-Z]/.test(password)) {
+            setError("Password must contain at least one uppercase letter.");
+            return;
+        }
+        if (!/[0-9]/.test(password)) {
+            setError("Password must contain at least one number.");
+            return;
+        }
+        if (!/[^a-zA-Z0-9]/.test(password)) {
+            setError("Password must contain at least one special character.");
             return;
         }
 
@@ -74,9 +101,8 @@ export function useAccountRecoveryUtils3 (){
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ 
-                    email,
                     token,
-                    new_password: password 
+                    newPassword: password 
                 }),
             });
 
@@ -118,7 +144,10 @@ export function useAccountRecoveryUtils3 (){
         setPassword,
         confirmPassword,
         setConfirmPassword,
+        showCancelModal,
         handleCancel,
+        confirmCancel,
+        closeCancelModal,
         handleChangePassword,
         isLoading,
         error,

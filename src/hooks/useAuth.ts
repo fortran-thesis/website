@@ -1,31 +1,17 @@
 /**
  * Auth Hook
- * Custom React hook for checking authentication status
+ *
+ * Thin re-export of the AuthProvider context.
+ * All auth state (user, token, loading) is fetched **once** in <AuthProvider>
+ * and shared to every consumer via React Context — no duplicate profile fetches.
  */
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { isAuthenticated, getUserData, getAuthToken } from '@/utils/auth';
+import { useAuthContext } from '@/providers/auth-provider';
 
-export const useAuth = () => {
-  const [isAuth, setIsAuth] = useState<boolean>(false);
-  const [user, setUser] = useState<any>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    // Check auth status on mount
-    setIsAuth(isAuthenticated());
-    setUser(getUserData());
-    setToken(getAuthToken());
-    setLoading(false);
-  }, []);
-
-  return {
-    isAuthenticated: isAuth,
-    user,
-    token,
-    loading,
-  };
-};
+/**
+ * Drop-in hook that every page / component already imports.
+ * Internally delegates to the shared AuthProvider context.
+ */
+export const useAuth = useAuthContext;

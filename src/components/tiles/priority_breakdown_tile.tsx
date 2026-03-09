@@ -93,7 +93,7 @@ export default function PriorityBreakdown({
 
       <div className="flex justify-between font-semibold">
         <span className="font-[family-name:var(--font-bricolage-grotesque)]">
-          Total Cases:
+          Total Assigned Cases:
         </span>
         <span className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black">
           {totalCases}

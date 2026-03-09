@@ -6,6 +6,7 @@ export function useAccountRecovery1(){
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
     const router = useRouter();
 
     // This tracks changes made by the user in the input fields
@@ -13,14 +14,34 @@ export function useAccountRecovery1(){
 
     // This handles the cancel button
     const handleCancel = () => {
-        if (hasChanges() && confirm("Are you sure you want to cancel? All entered data will be lost.")) {
+        if (hasChanges()) {
+            setShowCancelModal(true);
+        } else {
+            // Clear sessionStorage and navigate back
+            if (typeof window !== "undefined") {
+                sessionStorage.removeItem("recoveryEmail");
+                sessionStorage.removeItem("recoveryType");
+            }
             setEmail("");
             router.back();
         }
-        else if (!hasChanges()) {
-            setEmail("");
-            router.back();
+    }
+
+    // This confirms the cancel action
+    const confirmCancel = () => {
+        // Clear sessionStorage before navigating back
+        if (typeof window !== "undefined") {
+            sessionStorage.removeItem("recoveryEmail");
+            sessionStorage.removeItem("recoveryType");
         }
+        setEmail("");
+        setShowCancelModal(false);
+        router.back();
+    }
+
+    // This closes the cancel modal
+    const closeCancelModal = () => {
+        setShowCancelModal(false);
     }
 
     // This handles the Send Code Button
@@ -79,7 +100,10 @@ export function useAccountRecovery1(){
         setEmail,
         isLoading,
         error,
+        showCancelModal,
         handleCancel,
+        confirmCancel,
+        closeCancelModal,
         handleSendCode
     }
 }

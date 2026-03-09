@@ -11,11 +11,13 @@ export interface PasswordData {
 
 interface ChangePasswordFormProps {
   onSave: (data: PasswordData) => void;
+  onError?: (message: string | null) => void;
   isLoading?: boolean;
 }
 
 export default function ChangePasswordForm({
   onSave,
+  onError,
   isLoading = false,
 }: ChangePasswordFormProps) {
   const [formData, setFormData] = useState<PasswordData>({
@@ -39,9 +41,33 @@ export default function ChangePasswordForm({
     e.preventDefault();
 
     if (formData.newPassword !== formData.confirmNewPassword) {
-      alert("New passwords do not match.");
+      onError?.("New passwords do not match.");
       return;
     }
+
+    // Validate password complexity (must match server PasswordSchema)
+    if (formData.newPassword.length < 8) {
+      onError?.("Password must be at least 8 characters long.");
+      return;
+    }
+    if (!/[a-z]/.test(formData.newPassword)) {
+      onError?.("Password must contain at least one lowercase letter.");
+      return;
+    }
+    if (!/[A-Z]/.test(formData.newPassword)) {
+      onError?.("Password must contain at least one uppercase letter.");
+      return;
+    }
+    if (!/[0-9]/.test(formData.newPassword)) {
+      onError?.("Password must contain at least one number.");
+      return;
+    }
+    if (!/[^a-zA-Z0-9]/.test(formData.newPassword)) {
+      onError?.("Password must contain at least one special character.");
+      return;
+    }
+
+    onError?.(null);
 
     onSave(formData);
   };
@@ -51,7 +77,10 @@ export default function ChangePasswordForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col space-y-8 mt-5">
+    <form
+      onSubmit={handleSubmit}
+      className={`flex flex-col space-y-8 mt-5 ${isLoading ? "cursor-wait" : ""}`}
+    >
       {/* Header */}
       <div>
         <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
@@ -101,25 +130,28 @@ export default function ChangePasswordForm({
                 }
                 disabled={isLoading}
                 required
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none w-full pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none w-full pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
               />
 
               <button
                 type="button"
                 onClick={() => togglePasswordVisibility(field as keyof PasswordData)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--primary-color)] p-2 rounded-full hover:bg-black/10 transition cursor-pointer"
+                className={`absolute right-4 text-[var(--primary-color)] opacity-50 transition-all ${
+                  isLoading ? "cursor-not-allowed" : "cursor-pointer hover:opacity-100"
+                }`}
                 tabIndex={-1}
                 aria-label={
                   showPassword[field as keyof PasswordData]
                     ? "Hide password"
                     : "Show password"
                 }
+                disabled={isLoading}
               >
                 <FontAwesomeIcon
                   icon={
                     showPassword[field as keyof PasswordData] ? faEye : faEyeSlash
                   }
-                  className="w-5 h-5"
+                  className="w-4 h-4"
                 />
               </button>
             </div>
@@ -132,7 +164,7 @@ export default function ChangePasswordForm({
         <button
           type="submit"
           disabled={isLoading}
-          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] text-[var(--background-color)] px-10 py-3 rounded-lg font-semibold transition w-full md:w-auto cursor-pointer disabled:opacity-60"
+          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] text-[var(--background-color)] px-10 py-3 rounded-lg font-[family-name:var(--font-bricolage-grotesque)] text-md font-semibold transition w-full md:w-auto disabled:opacity-60 cursor-pointer"
         >
           {isLoading ? "Saving..." : "Save Changes"}
         </button>

@@ -40,7 +40,7 @@ export default function AddTreatmentModal({ isOpen, onClose }: AddTreatmentModal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 overflow-hidden">
       <div className="bg-[var(--background-color)] rounded-2xl shadow-xl w-full max-w-lg p-8 relative">
         {/* Header */}
         <div className="flex justify-center items-center mb-4">
@@ -59,7 +59,7 @@ export default function AddTreatmentModal({ isOpen, onClose }: AddTreatmentModal
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-5 right-3 text-[var(--moldify-red)] hover:text-red-600 cursor-pointer font-black"
+            className="absolute top-5 right-3 text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
           >
             ✕
           </button>

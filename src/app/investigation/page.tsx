@@ -1,166 +1,156 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faClipboard} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faSeedling, faClockRotateLeft, faHourglassHalf, faCircleCheck} from '@fortawesome/free-solid-svg-icons';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
-import {useState, useEffect, useRef} from 'react'
+import StatusDropdown from '@/components/StatusDropdown';
+import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import useSWR from 'swr';
+import useSWRInfinite from 'swr/infinite';
+import { apiUrl, type ApiResponse } from '@/lib/api';
+import type { PaginatedResponse } from '@/hooks/swr/types';
+import type { MoldReportSnapshot, StatusCounts } from '@/hooks/swr/use-mold-reports';
 
 export default function Investigation() {
-        const [caseStats, setCaseStats] = useState({ total: 0, pending: 0, in_progress: 0, resolved: 0, closed: 0 });
-        const [cases, setCases] = useState<any[]>([]);
-        const [loading, setLoading] = useState(false);
-        const [error, setError] = useState<string | null>(null);
-        const [isLoadingMore, setIsLoadingMore] = useState(false);
-        const [nextPageToken, setNextPageToken] = useState<string | null>(null);
-        const loadMoreRef = useRef<HTMLDivElement>(null);
+        const { user: authUser, loading: authLoading } = useAuth();
         
-        // Search and filter state
+        // Map auth user data  
+        const user = authUser ? {
+            name: (authUser.user?.first_name && authUser.user?.last_name) 
+                ? `${authUser.user.first_name} ${authUser.user.last_name}`
+                : authUser.user?.username || authUser.name || "Guest User",
+            role: authUser.user?.role || authUser.role || "admin"
+        } : {
+            name: "Guest User",
+            role: "admin"
+        };
+
+        // Determine user role
+        const isAdministrator = user.role === "admin" || user.role === "Administrator";
+        const isMycologist = user.role === "mycologist" || user.role === "Mycologist";
+        const userRole = user.role === "admin" ? "Administrator" : user.role === "mycologist" ? "Mycologist" : "User";
+    
+        /* ── SWR: admin status counts (only fetched for admin role) ── */
+        const { data: adminStatsRes } = useSWR<ApiResponse<StatusCounts>>(
+            isAdministrator ? '/api/v1/mold-reports/count/status' : null,
+        );
+
+        /* ── SWR: paginated cases (role-aware endpoint) ── */
+        const {
+            data: casePagesData,
+            size,
+            setSize,
+            isValidating: isLoadingMore,
+            isLoading: casesLoading,
+        } = useSWRInfinite<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
+            (pageIndex, prev) => {
+                if (authLoading) return null;
+                if (prev && !prev.data?.nextPageToken) return null;
+                const base = isAdministrator
+                    ? '/api/v1/mold-reports'
+                    : '/api/v1/mold-reports/assigned';
+                if (pageIndex === 0) return apiUrl(base, { limit: 100 });
+                return apiUrl(base, { limit: 100, pageToken: prev!.data!.nextPageToken! });
+            },
+            { revalidateFirstPage: false },
+        );
+
+        /* Auto-expand remaining pages so all data loads eagerly */
+        useEffect(() => {
+            if (!casePagesData || isLoadingMore) return;
+            const lastPage = casePagesData[casePagesData.length - 1];
+            if (lastPage?.data?.nextPageToken) {
+                setSize(s => s + 1);
+            }
+        }, [casePagesData, isLoadingMore, setSize]);
+
+        /* ── Map report snapshot → display row ── */
+        const mapReportToCase = (it: MoldReportSnapshot) => {
+            let dateSubmittedISO = '';
+            const createdSeconds = it.metadata?.created_at?._seconds;
+            if (createdSeconds) {
+                dateSubmittedISO = new Date(createdSeconds * 1000).toISOString();
+            } else if (typeof it.date_observed === 'string') {
+                dateSubmittedISO = it.date_observed;
+            }
+            const dateSubmitted = dateSubmittedISO
+                ? new Date(dateSubmittedISO).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: '2-digit' })
+                : '';
+            const description = Array.isArray(it.case_details) && it.case_details[0]?.description
+                ? it.case_details[0].description : '';
+            const location = it.mold_case?.location || it.location || it.reporter?.address || 'N/A';
+            const submittedBy = it.reporter?.name || 'N/A';
+
+            return {
+                id: it.id,
+                caseName: it.case_name || '',
+                cropName: it.host || '',
+                location,
+                submittedBy,
+                dateSubmitted,
+                priority: (() => {
+                    const p = it.priority;
+                    return p ? (p.charAt(0).toUpperCase() + p.slice(1)) : 'Unassigned';
+                })(),
+                status: it.status
+                    ? it.status.charAt(0).toUpperCase() + it.status.slice(1)
+                    : 'Pending',
+                description,
+            };
+        };
+
+        /* ── Flatten paginated SWR data into a single cases array ── */
+        const cases = useMemo(() => {
+            if (!casePagesData) return [];
+            return casePagesData.flatMap(page =>
+                (page?.data?.snapshot ?? []).map(mapReportToCase),
+            );
+        }, [casePagesData]);
+
+        /* ── Derive stats (admin: from API, mycologist: from cases) ── */
+        const caseStats = useMemo(() => {
+            if (isAdministrator && adminStatsRes?.data) return adminStatsRes.data;
+            return cases.reduce(
+                (acc, c) => {
+                    const s = c.status?.toLowerCase() || 'pending';
+                    if (s === 'pending') acc.pending++;
+                    else if (s === 'in progress') acc.in_progress++;
+                    else if (s === 'resolved') acc.resolved++;
+                    else if (s === 'closed') acc.closed++;
+                    acc.total++;
+                    return acc;
+                },
+                { total: 0, pending: 0, in_progress: 0, resolved: 0, closed: 0 },
+            );
+        }, [isAdministrator, adminStatsRes, cases]);
+
+        /* ── Search & filter state ── */
         const [searchQuery, setSearchQuery] = useState('');
         const [priorityFilter, setPriorityFilter] = useState('');
         const [statusFilter, setStatusFilter] = useState('');
-        
-        const userRole = "Administrator";
 
-    // Build search URL with active filters
-    const buildSearchUrl = (token?: string | null) => {
-        const params = new URLSearchParams();
-        if (searchQuery) params.set('search', searchQuery);
-        if (priorityFilter && priorityFilter !== 'all') params.set('priority', priorityFilter);
-        if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter);
-        params.set('limit', '10');
-        if (token) params.set('pageToken', token);
+        const filteredCases = useMemo(() => {
+            return cases.filter((c) => {
+                const searchLower = searchQuery.toLowerCase();
+                const matchesSearch = !searchQuery ||
+                    c.caseName?.toLowerCase().includes(searchLower) ||
+                    c.cropName?.toLowerCase().includes(searchLower) ||
+                    c.location?.toLowerCase().includes(searchLower) ||
+                    c.submittedBy?.toLowerCase().includes(searchLower) ||
+                    c.description?.toLowerCase().includes(searchLower) ||
+                    c.status?.toLowerCase().includes(searchLower) ||
+                    c.priority?.toLowerCase().includes(searchLower);
+                const matchesPriority = !priorityFilter || priorityFilter === 'all' || c.priority?.toLowerCase() === priorityFilter;
+                const matchesStatus = !statusFilter || statusFilter === 'all' || c.status?.toLowerCase() === statusFilter;
+                return matchesSearch && matchesPriority && matchesStatus;
+            });
+        }, [cases, searchQuery, priorityFilter, statusFilter]);
 
-        const queryString = params.toString();
-        // If no filters, use regular /mold-reports endpoint; otherwise use /mold-reports/search
-        if (!searchQuery && !priorityFilter && !statusFilter) {
-            return `/api/v1/mold-reports?${queryString}`;
-        }
-        return `/api/v1/mold-reports/search?${queryString}`;
-    };
-
-    // Map report data to display format
-    const mapReportToCase = (it: any) => {
-        let dateSubmittedISO = '';
-        if (it.metadata?.created_at?._seconds) {
-            dateSubmittedISO = new Date(it.metadata.created_at._seconds * 1000).toISOString();
-        } else if (it.date_observed) {
-            dateSubmittedISO = it.date_observed;
-        }
-        const dateSubmitted = dateSubmittedISO
-            ? new Date(dateSubmittedISO).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: '2-digit' })
-            : '';
-        const description = Array.isArray(it.case_details) && it.case_details[0]?.description ? it.case_details[0].description : '';
-        return {
-            id: it.id,
-            caseName: it.case_name || '',
-            cropName: it.host || '',
-            location: it.reporter?.address || '',
-            submittedBy: it.reporter?.name || '',
-            dateSubmitted,
-            priority: it.mold_case?.priority.charAt(0).toUpperCase() + it.mold_case?.priority.slice(1) || 'Unassigned',
-            status: it.status.charAt(0).toUpperCase() + it.status.slice(1) || 'Pending',
-            description,
-        };
-    };
-
-    useEffect(() => {
-        // Fetch stats
-        const fetchStats = async () => {
-            try {
-                const statsRes = await fetch('/api/v1/mold-reports/count/status', { cache: 'no-store' });
-                if (statsRes.ok) {
-                    const body = await statsRes.json();
-                    if (body.success && body.data) setCaseStats(body.data);
-                }
-            } catch (err) {
-                // ignore for now
-            }
-        };
-        fetchStats();
-        
-        // Fetch cases with current filters
-        let mounted = true;
-        const fetchCases = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const url = buildSearchUrl();
-                const casesRes = await fetch(url, { cache: 'no-store' });
-                if (!casesRes.ok) {
-                    throw new Error('Failed to load cases');
-                }
-                const body = await casesRes.json();
-                const items = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
-                const mapped = items.map(mapReportToCase);
-                if (mounted) {
-                    setCases(mapped);
-                    setNextPageToken(body.data?.nextPageToken || null);
-                }
-            } catch (err) {
-                if (mounted) setError(err instanceof Error ? err.message : 'Failed to load cases');
-            } finally {
-                if (mounted) setLoading(false);
-            }
-        };
-        
-        fetchCases();
-        return () => { mounted = false; };
-    }, [searchQuery, priorityFilter, statusFilter]);
-
-    // Intersection Observer for infinite scroll
-    useEffect(() => {
-        if (!nextPageToken || isLoadingMore) return;
-
-        const handleLoadMore = async () => {
-            setIsLoadingMore(true);
-            try {
-                const url = buildSearchUrl(nextPageToken);
-                const res = await fetch(url, { cache: 'no-store' });
-                if (!res.ok) {
-                    throw new Error('Failed to load more cases');
-                }
-                const body = await res.json();
-                const items = Array.isArray(body.data?.snapshot) ? body.data.snapshot : [];
-                const mapped = items.map(mapReportToCase);
-
-                // Safety check: if token didn't change and we got data, stop loading
-                const newToken = body.data?.nextPageToken || null;
-                if (newToken === nextPageToken && mapped.length > 0) {
-                    console.warn('⚠️ Backend returned same token - stopping pagination');
-                    setNextPageToken(null);
-                    setIsLoadingMore(false);
-                    return;
-                }
-
-                setCases(prev => [...prev, ...mapped]);
-                setNextPageToken(newToken);
-            } catch (err) {
-                console.error('Failed to load more cases:', err);
-            } finally {
-                setIsLoadingMore(false);
-            }
-        };
-
-        const observer = new IntersectionObserver(
-            entries => {
-                if (entries[0].isIntersecting) {
-                    handleLoadMore();
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        if (loadMoreRef.current) {
-            observer.observe(loadMoreRef.current);
-        }
-
-        return () => {
-            if (loadMoreRef.current) {
-                observer.unobserve(loadMoreRef.current);
-            }
-        };
-    }, [nextPageToken, isLoadingMore]);
+        /* ── Derived loading / has-more flags ── */
+        const loading = authLoading || casesLoading;
+        const hasMore = !!casePagesData?.[casePagesData.length - 1]?.data?.nextPageToken;
 
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
@@ -170,7 +160,7 @@ export default function Investigation() {
                 <div className="flex flex-col">
                     <Breadcrumbs role={userRole} />
                     <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-                        INVESTIGATION OVERSIGHT
+                        CASE MANAGEMENT
                     </h1>
                 </div>
 
@@ -178,11 +168,13 @@ export default function Investigation() {
             {/* End Header Section */}
             
             {/* Statistics Tiles */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3 mt-6">
-                <StatisticsTile icon={faClipboard} iconColor="var(--moldify-black)" title="Total Cases" statNum={caseStats.total} />
-                <StatisticsTile icon={faClipboard} iconColor="var(--accent-color)" title="Pending Mold Cases" statNum={caseStats.pending} />
-                <StatisticsTile icon={faClipboard} iconColor="var(--moldify-blue)" title="In Progress Mold Cases" statNum={caseStats.in_progress} />
-                <StatisticsTile icon={faClipboard} iconColor="var(--primary-color)" title="Resolved Mold Cases" statNum={caseStats.resolved} />
+            <div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 mt-6 ${isMycologist ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
+                <StatisticsTile icon={faSeedling} iconColor="var(--moldify-black)" title="Total Cases" statNum={caseStats.total} />
+                {!isMycologist && (
+                    <StatisticsTile icon={faClockRotateLeft} iconColor="var(--accent-color)" title="Pending Mold Cases" statNum={caseStats.pending} />
+                )}
+                <StatisticsTile icon={faHourglassHalf} iconColor="var(--moldify-blue)" title="In Progress Mold Cases" statNum={caseStats.in_progress} />
+                <StatisticsTile icon={faCircleCheck} iconColor="var(--primary-color)" title="Resolved Mold Cases" statNum={caseStats.resolved} />
             </div>
             
             {/* Submitted Cases Section */}
@@ -203,7 +195,6 @@ export default function Investigation() {
                             value={searchQuery}
                             onChange={(e) => {
                                 setSearchQuery(e.target.value);
-                                setNextPageToken(null);
                             }}
                             className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--background-color)] py-2 px-4 rounded-full border-2 border-[var(--primary-color)] focus:outline-none w-full pr-10"
                         />
@@ -213,66 +204,73 @@ export default function Investigation() {
                     {/* Filter Dropdowns */}
                     <div className="flex gap-2 w-full lg:w-auto">
                         {/* Filter by Priority */}
-                        <label htmlFor="priority" className="sr-only">Filter by Priority</label>
-                        <select
-                            id="priority"
-                            value={priorityFilter}
-                            onChange={(e) => {
-                                setPriorityFilter(e.target.value);
-                                setNextPageToken(null);
-                            }}
-                            className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full lg:w-auto"
-                        >
-                            <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold">
-                            Filter By Priority
-                            </option>
-                            <option value="all" className="bg-[var(--taupe)]">All</option>
-                            <option value="low" className="bg-[var(--taupe)]">Low Priority</option>
-                            <option value="medium" className="bg-[var(--taupe)]">Medium Priority</option>
-                            <option value="high" className="bg-[var(--taupe)]">High Priority</option>
-                        </select>
+                        <div className="w-full lg:w-auto">
+                            <StatusDropdown
+                                placeholder="Filter By Priority"
+                                backgroundColor="var(--accent-color)"
+                                textColor="var(--moldify-black)"
+                                options={[
+                                    { label: "All", value: "all" },
+                                    { label: "Low Priority", value: "low" },
+                                    { label: "Medium Priority", value: "medium" },
+                                    { label: "High Priority", value: "high" }
+                                ]}
+                                onSelect={(value) => setPriorityFilter(value)}
+                            />
+                        </div>
 
                         {/* Filter by Status */}
-                        <label htmlFor="status" className="sr-only">Filter by Status</label>
-                        <select
-                            id="status"
-                            value={statusFilter}
-                            onChange={(e) => {
-                                setStatusFilter(e.target.value);
-                                setNextPageToken(null);
-                            }}
-                            className="bg-[var(--accent-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold px-5 py-2 rounded-lg cursor-pointer focus:outline-none w-full lg:w-auto"
-                        >
-                            <option value="" className="bg-[var(--taupe)] text-[var(--primary-color)] font-bold">
-                            Filter By Status
-                            </option>
-                            <option value="all" className="bg-[var(--taupe)]">All</option>
-                            <option value="pending" className="bg-[var(--taupe)]">Pending</option>
-                            <option value="in_progress" className="bg-[var(--taupe)]">In Progress</option>
-                            <option value="resolved" className="bg-[var(--taupe)]">Resolved</option>
-                            <option value="closed" className="bg-[var(--taupe)]">Closed</option>
-                        </select>
+                        <div className="w-full lg:w-auto">
+                            <StatusDropdown
+                                placeholder="Filter By Status"
+                                backgroundColor="var(--accent-color)"
+                                textColor="var(--moldify-black)"
+                                options={
+                                    isMycologist
+                                        ? [
+                                            { label: "All", value: "all" },
+                                            { label: "In Progress", value: "in progress" },
+                                            { label: "Resolved", value: "resolved" },
+                                            { label: "Closed", value: "closed" }
+                                        ]
+                                        : [
+                                            { label: "All", value: "all" },
+                                            { label: "Pending", value: "pending" },
+                                            { label: "In Progress", value: "in progress" },
+                                            { label: "Resolved", value: "resolved" },
+                                            { label: "Rejected", value: "rejected"},
+                                            { label: "Closed", value: "closed" }
+                                        ]
+                                }
+                                onSelect={(value) => setStatusFilter(value)}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
 
 
             {/* Submitted Cases Table */}
-            <div className="mt-6 w-full">
-                {loading && <p>Loading cases...</p>}
-                {error && <p className="text-red-600">{error}</p>}
-                {!loading && !error && (
+            <div className="w-full">
+                {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading cases...</p>}
+                {!loading && (
                     <>
                         <CaseTable
-                            cases={cases}
+                            cases={filteredCases}
                             onEdit={(c: any) => {
-                                window.location.href = `/investigation/view-case?id=${c.id}`;
+                                const params = new URLSearchParams({
+                                    id: c.id,
+                                    priority: c.priority || "",
+                                });
+                                window.location.href = `/investigation/view-case?${params.toString()}`;
                             }}
                         />
-                        {/* Infinite scroll trigger */}
-                        <div ref={loadMoreRef} className="py-4 text-center">
-                            {isLoadingMore && <p className="text-sm text-[var(--moldify-grey)]">Loading more cases...</p>}
-                        </div>
+                        {/* Loading indicator for additional pages */}
+                        {(isLoadingMore || hasMore) && (
+                            <div className="py-4 text-center">
+                                <p className="text-sm text-[var(--moldify-grey)]">Loading more cases...</p>
+                            </div>
+                        )}
                     </>
                 )}
             </div>

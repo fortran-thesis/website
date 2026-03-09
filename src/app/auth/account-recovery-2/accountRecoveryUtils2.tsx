@@ -9,6 +9,8 @@ export function useAccountRecoveryUtils2(){
     const [codeSegments, setCodeSegments] = useState(["", "", "", ""]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
+    const [successMessage, setSuccessMessage] = useState("");
+    const [showCancelModal, setShowCancelModal] = useState(false);
     const router = useRouter();
       // This handles changes in each individual digit input box
       const handleCodeChange = (idx: number, value: string) => {
@@ -42,18 +44,30 @@ export function useAccountRecoveryUtils2(){
 
       // This handles the Cancel Button
       const handleCancel = () =>{
-        if((hasChanges) && confirm("Are you sure you want to cancel? All entered data will be lost.")) {
-          setCodeSegments(["", "", "", ""]);
-          router.back();
-        } else if (!hasChanges) {
+        if(hasChanges) {
+          setShowCancelModal(true);
+        } else {
           router.back();
         }
+      }
+
+      // This confirms the cancel action
+      const confirmCancel = () => {
+        setCodeSegments(["", "", "", ""]);
+        setShowCancelModal(false);
+        router.back();
+      }
+
+      // This closes the cancel modal
+      const closeCancelModal = () => {
+        setShowCancelModal(false);
       }
 
       // This handles the Verify Code Button
       const handleVerify = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
+        setSuccessMessage("");
         
         if (fullCode.length !== 4) {
           setError("Please enter a valid 4-digit code.");
@@ -118,14 +132,16 @@ export function useAccountRecoveryUtils2(){
               throw new Error(usernameData.message || "Failed to retrieve username");
             }
 
-            alert("Username recovery complete! Please check your email.");
-            // Clear recovery session after successful completion
-            if (typeof window !== "undefined") {
-              sessionStorage.removeItem("recoveryEmail");
-              sessionStorage.removeItem("recoveryType");
-              sessionStorage.removeItem("recoveryToken");
-            }
-            router.push("/auth/log-in");
+            setSuccessMessage("Username recovery complete! Please check your email.");
+            // Clear recovery session and redirect after a short delay
+            setTimeout(() => {
+              if (typeof window !== "undefined") {
+                sessionStorage.removeItem("recoveryEmail");
+                sessionStorage.removeItem("recoveryType");
+                sessionStorage.removeItem("recoveryToken");
+              }
+              router.push("/auth/log-in");
+            }, 1500);
           } else {
             // Store token in sessionStorage for step 3
             if (typeof window !== "undefined") {
@@ -146,9 +162,13 @@ export function useAccountRecoveryUtils2(){
         codeSegments,
         handleCodeChange,
         fullCode,
+        showCancelModal,
         handleCancel,
+        confirmCancel,
+        closeCancelModal,
         handleVerify,
         isLoading,
         error,
+      successMessage,
     };
 }

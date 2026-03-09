@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { envOptions } from '@/configs/envOptions';
 
 export default async function DashboardLayout({
   children,
@@ -10,7 +11,7 @@ export default async function DashboardLayout({
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('session');
 
-  if (!sessionCookie?.value) {
+  if (!envOptions.disableAuth && !sessionCookie?.value) {
 
     redirect('/auth/log-in');
   }

@@ -9,6 +9,7 @@ import { setUserData } from '@/utils/auth';
 
 {/* IMAGES */}
 const LogInImage = '/assets/LogIn_Image.svg';
+const LogInHeader = '/assets/login_header.svg';
 const MoldifyLogov2 = '/assets/moldify-logo-v3.svg';
 
 {/* This is the log in page of the Moldify Website
@@ -65,8 +66,34 @@ export default function Auth() {
       console.log('🔍 Login proxy response:', proxyRes.status, data);
 
       if (proxyRes.ok && (data.success || proxyRes.status === 200)) {
-        // Proxy should set a same-origin HttpOnly cookie (session) when login succeeds
-        if (data?.user) setUserData(data.user);
+        console.log('🟢 Login successful');
+        // Store user data if provided in response
+        if (data?.user) {
+          console.log('📦 User in response, storing');
+          setUserData(data.user);
+        } else {
+          console.log('⚠️ No user in response, fetching profile');
+          // If backend didn't return user in JSON, fetch current user via session cookie
+          try {
+            console.log('🔄 Fetching /api/v1/user/profile...');
+            const profileRes = await fetch('/api/v1/user/profile', { 
+              credentials: 'include',
+              cache: 'no-store'
+            });
+            console.log('📍 Profile status:', profileRes.status);
+            if (profileRes.ok) {
+              const profileData = await profileRes.json();
+              console.log('📥 Profile data:', profileData);
+              const user = profileData?.data || profileData?.user || profileData;
+              if (user) {
+                setUserData(user);
+                console.log('✅ Stored user');
+              }
+            }
+          } catch (err) {
+            console.error('❌ Profile fetch failed:', err);
+          }
+        }
 
         // Small delay to let browser persist cookie
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -83,113 +110,131 @@ export default function Auth() {
   };
 
   return (
-      <div className="bg-[var(--taupe)] min-h-screen w-full p-10 xl:p-20 flex flex-col items-center justify-center">
-        <main className="p-5 flex flex-grow xl:flex-row w-full sm:w-4/5 max-w-[1200px] shadow-lg rounded-xl  gap-x-10 bg-[var(--background-color)]">
-          <div className="w-full xl:w-1/2 flex flex-col">
-            {/* LOG IN HEADER*/}
-            <div className = "flex justify-space-between items-center mb-10 space-x-3">
-              <Image
-                src={MoldifyLogov2}
-                alt="Moldify Logo"
-                width={32}
-                height={32}
-                className="object-contain rounded-xl"
-              />
-              <p className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-sm">MOLDIFY</p>
+      <>
+      {/* Top Loading Bar */}
+      {isLoading && (
+        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
+          <div 
+            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
+            style={{ width: '30%' }}
+          />
+        </div>
+      )}
+
+      <div className="relative min-h-screen w-full flex items-center justify-center lg:justify-start bg-[#fcfaf2] overflow-hidden">
+      
+      {/* 1. BACKGROUND IMAGE - Hidden on mobile, visible on Extra Large screens (xl) */}
+      <div className="absolute inset-0 z-0 hidden xl:block">
+        <Image
+          src={LogInHeader}
+          alt="Login Background"
+          fill
+          priority
+          className="object-cover object-right-top"
+          style={{ objectPosition: 'right -60px' }}
+        />
+      </div>
+
+      {/* 2. FORM CONTENT CONTAINER */}
+      <div className="relative z-10 w-full xl:w-[50%] h-full flex flex-col justify-center items-center mt-25 xl:items-start px-8 md:px-20 lg:px-32">
+        
+        <div className="max-w-[480px] w-full">
+          {/* LOGO */}
+          <div className="flex items-center mb-6 space-x-2">
+            <Image
+              src={MoldifyLogov2}
+              alt="Logo"
+              width={32}
+              height={32}
+              className="object-contain"
+            />
+            <p className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-md tracking-[0.2em]">MOLDIFY</p>
+          </div>
+
+          <h1 className="font-[family-name:var(--font-montserrat)] font-black text-5xl md:text-6xl text-[var(--primary-color)] mb-12 tracking-tight">LOG IN</h1>
+
+          {error && (
+            <div className="mb-6 p-3 bg-red-100 border border-red-200 text-red-700 rounded-lg text-xs text-center lg:text-left">
+              {error}
             </div>
-            
-            <h1 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)]">LOG IN</h1>
+          )}
 
-            {/* Error Message */}
-            {error && (
-              <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
+          <form className="flex flex-col space-y-6" onSubmit={handleSubmit}>
+            {/* USERNAME */}
+            <div className="flex flex-col">
+              <label htmlFor="username" className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-bold mb-1.5 ml-1">
+                Username
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                value={formData.username}
+                onChange={handleInputChange}
+                disabled={isLoading}
+                className="bg-[var(--taupe)] py-3 px-5 rounded-xl font-[family-name:var(--font-bricolage-grotesque)] text-sm focus:outline-none"
+                placeholder="Enter username"
+                required
+              />
+              <button 
+                type="button"
+                onClick={() => handleRecoveryClick("forgot-username")}
+                className="text-xs mt-1.5 self-end hover:underline text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] cursor-pointer"
+              >
+                Forgot Username?
+              </button>
+            </div>
 
-            {/* LOG IN FORM*/}
-            <form className="mt-8 flex flex-col" onSubmit={handleSubmit}>
-                <label
-                  htmlFor="username" 
-                  className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold my-1">
-                    Username
-                </label>
-                {/* Username Textbox */}
+            {/* PASSWORD */}
+            <div className="flex flex-col">
+              <label htmlFor="password" className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-bold mb-1.5 ml-1">
+                Password
+              </label>
+              <div className="relative flex items-center">
                 <input
-                  id="username"
-                  name="username"
-                  type="text"
-                  placeholder="Enter username"
-                  value={formData.username}
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
                   onChange={handleInputChange}
                   disabled={isLoading}
-                  className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 mb-1 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-[var(--taupe)] py-3 px-5 rounded-xl w-full font-[family-name:var(--font-bricolage-grotesque)] text-sm focus:outline-none pr-12"
+                  placeholder="Enter password"
                   required
                 />
-                {/*  Forgot Username Button */}
-                <Link href="/auth/account-recovery" onClick={(e) => { e.preventDefault(); handleRecoveryClick("forgot-username"); }}>
-                  <p className="ml-1 text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-xs hover:underline cursor-pointer flex justify-end">
-                    Forgot Username?
-                  </p>
-                </Link>
-
-                <label 
-                  htmlFor="password"
-                  className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mt-8 mb-1">
-                    Password
-                </label>
-                {/* Password Textbox */}
-                <div className="relative flex items-center overflow-clip">
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter Password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    disabled={isLoading}
-                    className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none mb-1 w-full pr-10 disabled:opacity-50 disabled:cursor-not-allowed"
-                    required
-                  />
-
-                  {/* Eye Toggle */}
-                  <button
-                    type="button"
-                    className="p-2 cursor-pointer rounded-full bg-transparent absolute right-2 top-1/2 -translate-y-1/2 text-[var(--primary-color)] hover:bg-black/10 transition"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    tabIndex={-1}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} className="w-15 h-7" />
-                  </button>
-                </div>
-
-                {/*  Forgot Password Button */}
-                <Link href="/auth/account-recovery" onClick={(e) => { e.preventDefault(); handleRecoveryClick("forgot-password"); }}>
-                  <p className="ml-1 text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-xs hover:underline cursor-pointer flex justify-end">
-                    Forgot Password?
-                  </p>
-                </Link>
-
-                {/* Log In Button */}
                 <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  type="button"
+                  className="absolute right-4 text-[var(--primary-color)] opacity-50 cursor-pointer hover:opacity-100 transition-all"
+                  onClick={() => setShowPassword(!showPassword)}
                 >
-                  {isLoading ? 'Logging in...' : 'Log In'}
+                  <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} className="w-4 h-4" />
                 </button>
-            </form>
-          </div>
-          <div className="hidden relative w-1/2 xl:flex">
-            <Image
-              src={LogInImage}
-              alt="Log In Illustration"
-              fill
-              className="object-cover rounded-xl"
-            />
-          </div>
-        </main>
+              </div>
+              <button 
+                type="button"
+                onClick={() => handleRecoveryClick("forgot-password")}
+                className="text-xs mt-1.5 self-end hover:underline text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] cursor-pointer"
+              >
+                Forgot Password?
+              </button>
+            </div>
+
+            {/* LOGIN BUTTON */}
+            <div className="pt-4 flex justify-center xl:justify-start ">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`w-full xl:w-auto bg-[var(--primary-color)] text-white font-bold py-3.5 px-20 rounded-full font-[family-name:var(--font-bricolage-grotesque)] text-md hover:brightness-110 transition-all shadow-md active:scale-95 ${
+                  isLoading ? 'opacity-60 cursor-wait' : 'cursor-pointer'
+                }`}
+              >
+                Log In
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
+    </div>
+    </>
   );
 }

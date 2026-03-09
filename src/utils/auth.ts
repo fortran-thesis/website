@@ -116,6 +116,15 @@ export const setUserData = (user: any) => {
 };
 
 /**
+ * Remove user data from localStorage
+ */
+export const removeUserData = () => {
+  if (typeof window === 'undefined') return;
+  
+  localStorage.removeItem('user');
+};
+
+/**
  * Helper function to get a cookie by name
  */
 const getCookie = (name: string): string | null => {

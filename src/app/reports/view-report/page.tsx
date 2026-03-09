@@ -6,40 +6,105 @@ import {
   faImage,
 } from "@fortawesome/free-solid-svg-icons";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
-import { useState } from "react";
+import { useState, useMemo, Suspense, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { useReport } from '@/hooks/swr';
 import BackButton from "@/components/buttons/back_button";
-import Image from "next/image";
+// Use standard img elements here to avoid Next.js Image domain config issues
 import StatusBox from "@/components/tiles/status_tile";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import RequestRevisionModal from "@/components/modals/request_revision_modal";
 
 export default function ViewReport() {
-  const userName = "Faith Gabrielle Gamboa";
-  const username = "lauren123";
-  const userEmail = "lauren@gmail.com";
-  const userProfileImage = "/assets/sdssdsd.jpg";
-  const userIssue = "Inappropriate Content Posted";
-  const reasonDescription =
-    "The user has posted content that violates the community guidelines by sharing offensive images and language.";
-  const additionalInfo =
-    "The user has posted content that violates the community guidelines by sharing offensive images and language. This behavior has been reported multiple times by other users, and it is affecting the overall experience of the platform. Immediate action is required to address this issue and ensure a safe environment for all users.";
-  const title =
-    "The Rise of Molds: Dive into the Microscopic Landscape of Growing Fungi";
-  const content =
-    "Molds are a fascinating group of fungi that thrive in diverse environments, from damp basements to decaying organic matter. These microscopic organisms play a crucial role in ecosystems by breaking down complex organic materials, recycling nutrients, and contributing to soil health...";
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+      <ViewReportContent />
+    </Suspense>
+  );
+}
+
+function ViewReportContent() {
+  const searchParams = useSearchParams();
+  const reportId = searchParams.get("id");
+
+  // SWR: fetch report
+  const { data: reportRes, isLoading: loading, error: swrError } = useReport(reportId ?? undefined);
+  const reportData = reportRes?.data ?? null;
+  const error = swrError ? (swrError instanceof Error ? swrError.message : 'Failed to load report') : null;
+
+  const reportedUserName = useMemo(() => {
+    const name = reportData?.content?.author
+    if (!name) return '(N/A)';
+    return typeof name === 'string' ? name : String(name);
+  }, [reportData]);
+
+  const reporterName = useMemo(() => {
+    const name = reportData?.reporter?.name || reportData?.reporter_name || reportData?.reporter_id || reportData?.reporterId;
+    if (!name) return 'N/A';
+    return typeof name === 'string' ? name : String(name);
+  }, [reportData]);
+
+  const dateReported = useMemo(() => {
+    const formatOpts: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+    if (reportData?.created_at) return new Date(reportData.created_at as string).toLocaleDateString(undefined, formatOpts);
+    const metaDate = reportData?.metadata?.created_at;
+    if (metaDate && typeof metaDate === 'object' && ('seconds' in metaDate || '_seconds' in metaDate)) {
+      const secs = (metaDate._seconds ?? (metaDate as any).seconds) as number;
+      return new Date(secs * 1000).toLocaleDateString(undefined, formatOpts);
+    }
+    return 'N/A';
+  }, [reportData]);
+
+  // Values derived from API response
+  const userIssue = reportData?.reason || reportData?.title || 'Inappropriate Content Posted';
+  const reasonDescription = reportData?.details || reportData?.description || '';
+  const additionalInfo = reportData?.details || reportData?.description || '';
+
+  const contentTitle = reportData?.content?.title || reportData?.title || reportData?.content?.name || 'Reported Content';
+  const contentBody = reportData?.content?.body || reportData?.content?.description || '';
   const userRole = "Administrator";
 
-  const [imgSrc, setImgSrc] = useState(userProfileImage);
-  const [hasImage, setHasImage] = useState(true);
+  const defaultProfile = "/assets/default-fallback.png";
+  const [imgSrc, setImgSrc] = useState<string | null>(reportData?.reported?.photo || reportData?.reported?.avatar || defaultProfile);
+  const [hasImage, setHasImage] = useState(Boolean(reportData?.reported?.photo || reportData?.reported?.avatar));
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isReqRevisionsModalOpen, setIsReqRevisionsModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [reportStatus, setReportStatus] = useState("Unresolved");
+  const [reportActionLoading, setReportActionLoading] = useState(false);
+  const deriveStatus = (raw?: any) => {
+    const s = raw || reportData?.status || reportData?.metadata?.status;
+    if (!s) return 'Unresolved';
+    const lower = String(s).toLowerCase();
+    if (lower === 'resolved' || lower === 'rejected') return 'Resolved';
+    return 'Unresolved';
+  };
+
+  const [reportStatus, setReportStatus] = useState<string>(deriveStatus());
+  // Keep status in sync if the fetched report includes a status
+  useEffect(() => {
+    setReportStatus(deriveStatus());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportData]);
+
+  // Update images when report data arrives
+  useEffect(() => {
+    if (!reportData) return;
+    const profile = reportData?.reported?.photo || reportData?.reported?.avatar || null;
+    const contentImage = reportData?.content?.cover_photo
+    if (contentImage) {
+      setImgSrc(contentImage);
+      setHasImage(true);
+    } else if (profile) {
+      setImgSrc(profile);
+      setHasImage(true);
+    } else {
+      setImgSrc(defaultProfile);
+      setHasImage(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportData]);
   const [isResolved, setIsResolved] = useState(false); 
 
-  const imageSrc = hasImage
-    ? "/assets/f0779092-c074-46cc-883a-700fafb86a53.png"
-    : null;
+  const imageSrc = reportData?.image || reportData?.image_url || reportData?.content?.image || reportData?.content?.cover_photo || (hasImage ? imgSrc : null) || null;
 
   /** Handles rejecting a report */
   const handleReject = async () => {
@@ -50,7 +115,7 @@ export default function ViewReport() {
 
   /** Handles requesting revision with additional details */
   const handleSubmit = async (details: string) => {
-    setLoading(true);
+    setReportActionLoading(true);
     try {
       setReportStatus("Revision Requested");
       setIsReqRevisionsModalOpen(false);
@@ -58,12 +123,12 @@ export default function ViewReport() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      setReportActionLoading(false);
     }
   };
 
   return (
-    <main className="relative flex flex-col xl:py-2 py-10 w-full max-w-295 overflow-hidden">
+    <main className="relative flex flex-col xl:py-2 py-10 w-full max-w-none overflow-hidden">
       {/* Header Section */}
       <div className="flex flex-row justify-between mb-10">
         <div className="flex flex-col">
@@ -76,17 +141,25 @@ export default function ViewReport() {
 
       <BackButton />
 
+      {loading && <p className="text-center">Loading report...</p>}
+      {error && <p className="text-center text-red-600">{error}</p>}
+
+      {!loading && !error && (
+        <>
+
       {/* User Info */}
       <div className="flex flex-col md:flex-row w-full gap-x-4 items-center">
         
         {/* The profile picture of the user that is reported */}
         <div className="w-50 aspect-square rounded-full overflow-hidden shadow-sm flex-shrink-0 relative">
-          <Image
-            src={imgSrc}
+          <img
+            src={imgSrc ?? "/assets/default-fallback.png"}
             alt="profile picture"
-            fill
-            className="object-cover rounded-full"
-            onError={() => setImgSrc("/assets/default-fallback.png")}
+            className="object-cover rounded-full w-full h-full"
+            onError={(e) => {
+              const t = e.target as HTMLImageElement;
+              if (t.src !== '/assets/default-fallback.png') t.src = '/assets/default-fallback.png';
+            }}
           />
         </div>
 
@@ -95,10 +168,14 @@ export default function ViewReport() {
             Reported User:
           </p>
 
-          {/* The name of the user that is reported */}
+          {/* The reported_user_id from the report */}
           <div className="flex flex-col md:flex-row items-center md:items-start mb-2">
             <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] mr-5">
-              {userName}
+              {reportedUserName === '(N/A)' ? (
+                <span className="text-[var(--moldify-red)] text-lg">{reportedUserName}</span>
+              ) : (
+                reportedUserName
+              )}
             </h1>
             {/*  Automatically shows “Resolved” once a decision is made */}
             <StatusBox status={isResolved ? "Resolved" : reportStatus} />
@@ -106,23 +183,23 @@ export default function ViewReport() {
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-10 gap-y-6 my-3 w-full">
 
-            {/* The reported user's username */}
+            {/* The reporter_id */}
             <div className="flex flex-col items-center md:items-start">
               <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-                Username:
-              </p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">
-                {username}
-              </h2>
+                  Reporter:
+                </p>
+                <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">
+                  {reporterName}
+                </h2>
             </div>
 
-            {/* The reported user's email */}
+            {/* Date Reported */}
             <div className="flex flex-col items-center md:items-start">
               <p className="text-sm text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-                Email:
+                Date Reported:
               </p>
               <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">
-                {userEmail}
+                {dateReported}
               </h2>
             </div>
           </div>
@@ -196,13 +273,15 @@ export default function ViewReport() {
           {/* Report image or placeholder */}
           <div className="relative w-full h-40 md:h-52 lg:h-60 rounded-lg overflow-hidden bg-[var(--moldify-softGrey)] flex items-center justify-center">
             {imageSrc ? (
-              <Image
+              <img
                 src={imageSrc}
                 alt="Report image"
-                fill
-                className="object-cover"
-                onError={() => setHasImage(false)}
-                priority
+                className="object-cover w-full h-full"
+                onError={(e) => {
+                  setHasImage(false);
+                  const t = e.target as HTMLImageElement;
+                  t.style.display = 'none';
+                }}
               />
             ) : (
               <div className="flex flex-col items-center justify-center text-[var(--moldify-grey)] opacity-70">
@@ -218,10 +297,10 @@ export default function ViewReport() {
           </div>
           {/* Reported content title & description */}
           <h2 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black my-3">
-            {title}
+            {contentTitle}
           </h2>
           <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-justify">
-            {content}
+            {contentBody || reasonDescription}
           </p>
         </div>
       </div>
@@ -241,10 +320,12 @@ export default function ViewReport() {
         isOpen={isReqRevisionsModalOpen}
         onClose={() => setIsReqRevisionsModalOpen(false)}
         onSubmit={handleSubmit}
-        isSubmitting={loading}
+        isSubmitting={reportActionLoading}
         reasonTitle={userIssue}
         reasonDescription={reasonDescription}
       />
+        </>
+      )}
     </main>
   );
 }

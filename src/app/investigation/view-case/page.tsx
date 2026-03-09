@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import TabBar from "@/components/tab_bar";
-import StatusBox from "@/components/tiles/status_tile";
+import CaseStatusCard from "@/components/CaseStatusCard";
 import AssignCaseModal from "@/components/modals/assign_case_modal";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -15,6 +15,10 @@ import CaseDetailsTab from "../investigation-tabs/case_details";
 import InVitroTab from "../investigation-tabs/in_vitro";
 import InVivoTab from "../investigation-tabs/in_vivo";
 import AddTreatmentModal from "@/components/modals/add_treatment_modal";
+import { useAuth } from "@/hooks/useAuth";
+import { useMoldReport, useMoldCaseByReport, useUser } from "@/hooks/swr";
+import { apiMutate } from "@/lib/api";
+import { mutate } from 'swr';
 
 type Mycologist = {
   name: string;
@@ -26,12 +30,24 @@ type Mycologist = {
 function ViewCaseContent() {
   const searchParams = useSearchParams();
   const caseId = searchParams.get('id');
+  const priorityFromQuery = searchParams.get('priority');
   
-  const [caseData, setCaseData] = useState<any>(null);
-  const [moldCase, setMoldCase] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /* ── SWR: mold report + mold case ── */
+  const { data: reportRes, isLoading: reportLoading, mutate: mutateReport } = useMoldReport(caseId ?? undefined);
+  const { data: moldCaseRes, isLoading: moldCaseLoading, mutate: mutateMoldCase } = useMoldCaseByReport(caseId ?? undefined);
+
+  const caseData = reportRes?.data ?? null;
+  const moldCase = moldCaseRes?.data ?? null;
   
+  /* ── SWR: fetch mycologist by ID if assigned ── */
+  const mycologistId = caseData?.assigned_mycologist_id;
+  const { data: mycologistRes } = useUser(mycologistId);
+  const mycologistData = mycologistRes?.data;
+  
+  const loading = reportLoading || moldCaseLoading;
+  const error = !caseId ? 'No case ID provided' : null;
+
+  /* ── UI modal state ── */
   const [isAssignModalOpen, setAssignModalOpen] = useState(false);
   const [isRejectModalOpen, setRejectModalOpen] = useState(false);
   const [isConfirmAssignOpen, setConfirmAssignOpen] = useState(false);
@@ -39,186 +55,188 @@ function ViewCaseContent() {
 
   const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; priority: string; endDate: Date | null } | null>(null);
 
-  // Fetch case data by ID
-  useEffect(() => {
-    if (!caseId) {
-      setError('No case ID provided');
-      setLoading(false);
-      return;
-    }
-
-    const fetchCase = async () => {
-      try {
-        const res = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
-        if (!res.ok) {
-          throw new Error('Failed to load case details');
-        }
-        const body = await res.json();
-
-        console.log("Fetched case data:", body.data);
-
-        if (body.success && body.data) {
-          setCaseData(body.data);
-          console.log("Full case data:", body.data); // Log the entire case data
-          console.log("Priority from case data:", body.data.priority); // Log the priority specifically
-
-          // If case has assigned mycologist, fetch the mold-case
-          if (body.data.assigned_mycologist_id) {
-            try {
-              const moldCaseRes = await fetch(`/api/v1/mold-cases/by-report/${caseId}`, { cache: 'no-store' });
-              if (moldCaseRes.ok) {
-                const moldCaseBody = await moldCaseRes.json();
-                if (moldCaseBody.success && moldCaseBody.data) {
-                  setMoldCase(moldCaseBody.data);
-                }
-              }
-            } catch (err: any) {
-              console.error('Failed to fetch mold-case:', err);
-            }
-          }
-        } else {
-          throw new Error(body.error || 'Failed to load case');
-        }
-      } catch (err: any) {
-        setError(err?.message || 'Failed to load case');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCase();
-  }, [caseId]);
-
   // Called from AssignCaseModal -> opens confirmation modal
   const handleAssignClick = (mycologist: Mycologist, priority: string, endDate: Date | null) => {
-    console.log("🔍 Page - Received priority:", priority);
-    console.log("🔍 Page - Received mycologist:", mycologist);
-    console.log("🔍 Page - Received endDate:", endDate);
     setPendingAssign({ mycologist, priority, endDate });
     setConfirmAssignOpen(true);
   };
 
   // Called from confirmation modal -> finalize assignment
-  const handleConfirmAssign = async () => {
+  const handleConfirmAssign = useCallback(async () => {
     if (!pendingAssign || !caseId || !caseData) return;
 
     try {
       // Step 1: PATCH to assign mycologist to the mold-report
-      const assignRes = await fetch(`/api/v1/mold-reports/${caseId}/assign`, {
+      await apiMutate(`/api/v1/mold-reports/${caseId}/assign`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assigned_mycologist_id: pendingAssign.mycologist.id,
-        }),
+        body: { assigned_mycologist_id: pendingAssign.mycologist.id },
       });
-
-      if (!assignRes.ok) {
-        throw new Error('Failed to assign mycologist');
-      }
 
       // Step 2: POST to create a mold-case
-      const moldCasePayload = {
-        mycologist_id: pendingAssign.mycologist.id,
-        name: caseData.case_name,
-        mold_report_id: caseId,
-        photo_url: caseData.case_details?.[0]?.cover_photo || "",
-        priority: pendingAssign.priority,
-        start_date: new Date().toISOString(),
-        end_date: pendingAssign.endDate
-          ? pendingAssign.endDate.toISOString()
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        cultivation_details: {
-          in_vivo_details: {},
-          in_vitro_details: {},
-        },
-        cultivation_logs: [],
-        is_archived: false,
-      };
-
-      const caseRes = await fetch('/api/v1/mold-cases', {
+      await apiMutate('/api/v1/mold-cases', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(moldCasePayload),
+        body: {
+          mycologist_id: pendingAssign.mycologist.id,
+          name: caseData.case_name,
+          mold_report_id: caseId,
+          photo_url: caseData.case_details?.[0]?.cover_photo || "",
+          priority: pendingAssign.priority,
+          start_date: new Date().toISOString(),
+          end_date: pendingAssign.endDate
+            ? pendingAssign.endDate.toISOString()
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          cultivation_details: {
+            in_vivo_details: {},
+            in_vitro_details: {},
+          },
+          cultivation_logs: [],
+          is_archived: false,
+        },
       });
 
-      if (!caseRes.ok) {
-        throw new Error('Failed to create mold case');
-      }
-
-      console.log("Assignment complete:", pendingAssign.mycologist, pendingAssign.priority, pendingAssign.endDate);
       setPendingAssign(null);
       setConfirmAssignOpen(false);
       setAssignModalOpen(false);
 
-      // Refresh case data to update UI
-      const refreshRes = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
-      if (refreshRes.ok) {
-        const body = await refreshRes.json();
-        if (body.success && body.data) {
-          setCaseData(body.data);
-        }
-      }
+      // Optimistically update the single-report cache immediately so the UI reflects
+      // in_progress status without waiting for the backend Redis cache to clear.
+      await mutateReport(
+        (current: any) =>
+          current
+            ? {
+                ...current,
+                data: {
+                  ...current.data,
+                  status: 'in_progress',
+                  assigned_mycologist_id: pendingAssign.mycologist.id,
+                },
+              }
+            : current,
+        { revalidate: true }, // confirm with a background refetch once Redis is cleared
+      );
+
+      // Revalidate list-level caches — include $inf$ prefix for useSWRInfinite keys
+      await Promise.all([
+        mutateMoldCase(undefined, { revalidate: true }),
+        mutate(
+          (key: unknown) =>
+            typeof key === 'string' &&
+            (key.startsWith('/api/v1/mold-reports') || key.startsWith('$inf$/api/v1/mold-reports')),
+          undefined,
+          { revalidate: true },
+        ),
+        mutate(
+          (key: unknown) =>
+            typeof key === 'string' &&
+            (key.startsWith('/api/v1/mold-cases') || key.startsWith('$inf$/api/v1/mold-cases')),
+          undefined,
+          { revalidate: true },
+        ),
+      ]);
     } catch (err: any) {
       console.error('Assignment failed:', err);
       alert(err?.message || 'Failed to assign case');
     }
-  };
+  }, [pendingAssign, caseId, caseData, mutateReport, mutateMoldCase]);
 
-  const handleReject = async () => {
+  const handleReject = useCallback(async () => {
     if (!caseId) return;
 
     try {
-      const rejectRes = await fetch(`/api/v1/mold-reports/${caseId}/reject`, {
+      await apiMutate(`/api/v1/mold-reports/${caseId}/reject`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: {},
       });
 
-      if (!rejectRes.ok) {
-        throw new Error('Failed to reject case');
-      }
-
-      console.log("Case rejected!");
       setRejectModalOpen(false);
 
-      // Refresh case data to update UI
-      const refreshRes = await fetch(`/api/v1/mold-reports/${caseId}`, { cache: 'no-store' });
-      if (refreshRes.ok) {
-        const body = await refreshRes.json();
-        if (body.success && body.data) {
-          setCaseData(body.data);
-        }
-      }
+      // Optimistically update status then confirm with a background refetch
+      await mutateReport(
+        (current: any) =>
+          current
+            ? { ...current, data: { ...current.data, status: 'closed' } }
+            : current,
+        { revalidate: true },
+      );
+
+      // Revalidate list caches — include $inf$ prefix for useSWRInfinite
+      await mutate(
+        (key: unknown) =>
+          typeof key === 'string' &&
+          (key.startsWith('/api/v1/mold-reports') || key.startsWith('$inf$/api/v1/mold-reports')),
+        undefined,
+        { revalidate: true },
+      );
     } catch (err: any) {
       console.error('Rejection failed:', err);
       alert(err?.message || 'Failed to reject case');
     }
-  };
+  }, [caseId, mutateReport]);
 
   type UserRole = "Administrator" | "Mycologist";
+  const { user: authUser } = useAuth();
 
-  const [userRole] = useState<UserRole>("Administrator");
-  
+  const rawRole = (authUser?.user?.role || authUser?.role || "").toLowerCase();
+  const userRole: UserRole = rawRole === "mycologist" ? "Mycologist" : "Administrator";
+
+  /** Convert Firestore timestamp or ISO string to Date */
+  const toDate = (v: string | { _seconds: number } | undefined): Date | null => {
+    if (!v) return null;
+    if (typeof v === 'string') return new Date(v);
+    return new Date(v._seconds * 1000);
+  };
+
   // Use data from API
   const caseName = caseData?.case_name || "Loading...";
   const cropName = caseData?.host || "Loading...";
   const location = caseData?.location || "Loading...";
-  const dateObserved = caseData?.date_observed 
-    ? new Date(caseData.date_observed).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    : "Loading...";
+  const dateObserved = (() => {
+    const d = toDate(caseData?.date_observed);
+    return d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "Loading...";
+  })();
   const status = caseData?.status ? caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1) : "Pending";
-  const priority = caseData?.priority || "------";
+  const priorityValue = moldCase?.priority || caseData?.mold_case?.priority || caseData?.priority || priorityFromQuery || "";
+  const priority = priorityValue
+    ? priorityValue.charAt(0).toUpperCase() + priorityValue.slice(1)
+    : "Unknown";
+  
+  // Helper function to get status color (matching status_tile.tsx)
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "pending":
+        return "var(--accent-color)";
+      case "in progress":
+        return "var(--moldify-blue)";
+      case "resolved":
+        return "var(--primary-color)";
+      case "closed":
+        return "var(--moldify-grey)";
+      case "rejected":
+        return "var(--moldify-red)";
+      default:
+        return "rgba(0, 0, 0, 0.15)";
+    }
+  };
   
   // Reporter info
-  const reporterName = caseData?.reporter?.details.displayName || "Loading...";
-  const reporterEmail = caseData?.reporter?.details.email || "N/A";
-  const reporterPhone = caseData?.reporter?.details.phone_number || "N/A";
-  const imageUrl = caseData?.reporter?.details.photo_url || "/profile-placeholder.png";
+  const reporterName = caseData?.reporter?.details?.displayName || "Loading...";
+  const reporterEmail = caseData?.reporter?.details?.email || "N/A";
+  const reporterPhone = caseData?.reporter?.details?.phone_number || "N/A";
+  const imageUrl = caseData?.reporter?.details?.photo_url || "/profile-placeholder.svg";
 
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
-  const isRejected = caseData?.status === 'closed';
-  const assignedMycologistName = caseData?.assigned_mycologist?.details?.displayName || null;
+  // Treat explicit 'rejected' as rejection. If status is 'closed' and a MoldCase exists
+  // (i.e. mycologist was assigned and worked the case), treat as approved/closed by farmer.
+  const isRejected = caseData?.status === 'rejected';
+  const isApproved = caseData?.status === 'closed' && !!moldCase;
+  
+  // Get mycologist name from fetched user data
+  const assignedMycologistName = 
+    mycologistData?.details?.displayName 
+    || mycologistData?.user?.displayName 
+    || moldCase?.mycologist_name 
+    || "Assigned Specialist";
 
   // Normalize case_details
   const caseDetailsEntries = (caseData?.case_details ?? []).map((d: any) => {
@@ -263,7 +281,7 @@ function ViewCaseContent() {
     const vitroLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vitro");
     const vitroEntries = vitroLogs.map((log: any) => ({
       date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.jpg",
+      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
       sizeValue: log.characteristics?.size || "N/A",
       colorValue: log.characteristics?.color || "N/A",
       notes: log.additional_info || "",
@@ -271,7 +289,7 @@ function ViewCaseContent() {
     
     return (
       <InVitroTab
-        dateTime={moldCase.start_date ? `Started: ${new Date(moldCase.start_date).toLocaleString()}` : ""}
+        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
         growthMedium={moldCase.cultivation_details?.in_vitro_details?.growthMedium || ""}
         incubationTemperature={moldCase.cultivation_details?.in_vitro_details?.incubationTemperature || ""}
         inVitroEntries={vitroEntries}
@@ -306,7 +324,7 @@ function ViewCaseContent() {
     const vivoLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vivo");
     const vivoEntries = vivoLogs.map((log: any) => ({
       date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.jpg",
+      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
       sizeValue: log.characteristics?.size || "N/A",
       colorValue: log.characteristics?.color || "N/A",
       notes: log.additional_info || "",
@@ -314,7 +332,7 @@ function ViewCaseContent() {
     
     return (
       <InVivoTab
-        dateTime={moldCase.start_date ? `Started: ${new Date(moldCase.start_date).toLocaleString()}` : ""}
+        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
         environmentalTemperature={moldCase.cultivation_details?.in_vivo_details?.environmentalTemperature || ""}
         inVivoEntries={vivoEntries}
       />
@@ -347,153 +365,177 @@ function ViewCaseContent() {
   const [imgSrc, setImgSrc] = useState(imageUrl);
 
   return (
-    <div className="flex flex-col min-h-screen xl:py-2 py-10">
-      {/* Header */}
-      <header className="w-full bg-[var(--background-color)] z-10 mb-5">
-        <Breadcrumbs role={userRole} />
-        <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-          INVESTIGATION OVERSIGHT
-        </h1>
+    <main className="relative flex flex-col xl:py-2 py-10 w-full">
+      
+      {/* 1. MINIMALIST TOP NAV */}
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+        <div className="space-y-1">
+          <Breadcrumbs role={userRole} />
+          <div className="flex items-center gap-4">
+            <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-4xl uppercase tracking-tighter">
+              Case Management
+            </h1>
+          </div>
+        </div>
+
       </header>
-
-      <BackButton />
-
-      {loading && (
-        <div className="flex justify-center items-center h-64">
-          <p className="text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">Loading case details...</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="flex justify-center items-center h-64">
-          <p className="text-red-600 font-[family-name:var(--font-bricolage-grotesque)]">{error}</p>
-        </div>
-      )}
+       {/* Back Button */}
+      <div className="mb-3">
+        <BackButton />
+      </div>
 
       {!loading && !error && caseData && (
-      <div className="flex flex-col lg:flex-row flex-1 mt-2 gap-6">
-
-        <aside className="lg:sticky lg:top-10 lg:self-start w-full lg:w-1/3 bg-transparent rounded-xl">
-          {/* Show dropdown only if not assigned and not rejected */}
-          {userRole !== "Mycologist" && !isAssigned && !isRejected && (
-            <select
-              aria-label="action-options"
-              id="action"
-              className="bg-[var(--taupe)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold p-4 rounded-lg cursor-pointer focus:outline-none w-full"
-              defaultValue=""
-              onChange={(e) => {
-                if (e.target.value === "assign") setAssignModalOpen(true);
-                if (e.target.value === "reject") setRejectModalOpen(true);
-              }}
-            >
-              <option value="" disabled>Choose Action</option>
-              <option value="assign">Assign Case</option>
-              <option value="reject">Reject Case</option>
-            </select>
-          )}
-
-          {/* Show assigned message if assigned */}
-          {isAssigned && assignedMycologistName && (
-            <p className="p-4 rounded-lg bg-[var(--taupe)] font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] text-sm font-semibold">
-              Assigned to: {assignedMycologistName}
-            </p>
-          )}
-
-          {/* Show rejected message if rejected */}
-          {isRejected && (
-            <p className="p-4 rounded-lg bg-red-100 border border-red-400 font-[family-name:var(--font-bricolage-grotesque)] text-red-700 text-sm font-semibold">
-              This case has been rejected
-            </p>
-          )}
-
-          {/* Farmer Info */}
-          <div className="w-full min-h-screen p-6 bg-[var(--taupe)] mt-2 rounded-lg flex flex-col justify-start">
-            <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] items-start font-extrabold">
-              Farmer Information
-            </p>
-            <div className="mt-4 flex flex-col items-center">
-              <div className="relative w-50 h-50 rounded-full overflow-hidden shadow-sm">
-                <Image
-                  key={imgSrc}
-                  src={imgSrc}
-                  alt="Profile Picture"
-                  fill
-                  className="object-cover rounded-full"
-                  onError={() => setImgSrc("/assets/default-fallback.png")}
-                  priority
-                />
-              </div>
-              <div className="flex flex-col mt-4 items-center justify-center">
-                <h1 className="font-[family-name:var(--font-montserrat)] text-lg font-black text-[var(--primary-color)]">{reporterName}</h1>
-                <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Email Address:</p>
-                <p className="text-sm font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{reporterEmail}</p>
-                <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Phone Number:</p>
-                <p className="text-sm font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{reporterPhone}</p>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+          
+          {/* LEFT COLUMN: Sidebar Info (Farmer + Metadata) */}
+          <aside className="xl:col-span-4 space-y-6">
+            
+            {/* Farmer Profile Card - Earthy & Modern */}
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+              <div className="flex flex-col items-center text-center">
+                <div className="relative w-32 h-32 rounded-3xl overflow-hidden mb-4 border-4 border-[var(--taupe)] shadow-md">
+                   <Image
+                    key={imgSrc}
+                    src={imgSrc}
+                    alt="Profile"
+                    fill
+                    className="object-cover "
+                    onError={() => setImgSrc("/assets/default-fallback.png")}
+                  />
+                </div>
+                <h2 className="text-2xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase">{reporterName}</h2>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mt-1">Farmer</span>
+                
+                <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-[var(--primary-color)]/10 to-transparent my-6" />
+                
+                <div className="w-full space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="font-[family-name:var(--font-montserrat)] font-bold opacity-40">Email</span>
+                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[var(--primary-color)]">{reporterEmail}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="font-[family-name:var(--font-montserrat)] font-bold opacity-40">Phone</span>
+                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[var(--primary-color)]">{reporterPhone}</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <hr className="my-8 border-t border-[var(--moldify-grey)]" />
 
-            <div className="flex flex-col gap-2">
-             {userRole !== "Administrator" && (
+            {/* Case Status Card */}
+            <CaseStatusCard
+              userRole={userRole}
+                isAssigned={isAssigned}
+                isRejected={isRejected}
+                isApproved={isApproved}
+              assignedMycologistName={assignedMycologistName}
+              caseData={caseData}
+              status={status}
+              setAssignModalOpen={setAssignModalOpen}
+              setRejectModalOpen={setRejectModalOpen}
+              mycologistLoading={!mycologistId || !mycologistRes}
+            />
+          </aside>
+
+          {/* RIGHT COLUMN: Case Core Data */}
+          <section className="xl:col-span-8 space-y-4">
+  
+          {/* MINIMALIST STATUS LINE - No boxes, just clean typography on the cream bg */}
+          <div className="font-[family-name:var(--font-montserrat)] flex items-center gap-6 px-2">
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-2 h-2 rounded-full" 
+                style={{ backgroundColor: getStatusColor(status) }}
+              />
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--primary-color)]">
+                {status}
+              </span>
+            </div>
+            
+            <div className="w-[1px] h-3 bg-[var(--primary-color)]/20" />
+            
+            <div className="flex items-center gap-2">
+              <span className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.2em] opacity-60">Priority:</span>
+              <span className={`text-xs font-black uppercase tracking-[0.2em] ${priority === 'High' ? 'text-red-700' : 'text-[var(--primary-color)]'}`}>
+                {priority}
+              </span>
+            </div>
+          </div>
+
+          {/* THE ACTUAL HERO CARD - Now completely clean */}
+          <div className="bg-[var(--primary-color)] text-[var(--background-color)] rounded-[2.5rem] p-12 relative shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)] overflow-hidden">
+            <FontAwesomeIcon icon={faSeedling} className="absolute -right-10 -bottom-10 text-white/5 text-[18rem]" />
+            
+            <div className="relative z-10">
+              <h2 className="text-5xl font-black font-[family-name:var(--font-montserrat)] uppercase tracking-tighter leading-[0.9] mb-12">
+                {caseName}
+              </h2>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-12 pt-10 border-t border-white/10">
+                <div>
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Host Crop</span>
+                  <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{cropName}</p>
+                </div>
+                <div>
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Location</span>
+                  <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{location}</p>
+                </div>
+                <div className="col-span-2 md:col-span-1">
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Log Date</span>
+                  <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{dateObserved}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+            {/* 4.  UTILITY BAR */}
+            <div className="flex flex-wrap gap-3 bg-[var(--taupe)]/30 p-2 rounded-2xl border border-[var(--primary-color)]/5">
+              {userRole !== "Administrator" && (
                 <button 
-                  className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer"
+                  className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm group cursor-pointer"
                   onClick={() => setAddTreatmentOpen(true)}
                 >
-                  <FontAwesomeIcon icon={faPlus} className="w-4 h-4 text-[var(--accent-color)]" /> Add Treatment
+                  <FontAwesomeIcon icon={faPlus} className="group-hover:scale-125 transition-transform" /> Add Treatment
                 </button>
               )}
-              <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer">
-                <FontAwesomeIcon icon={faFilePdf} className="w-4 h-4 text-[var(--accent-color)]" /> Export PDF
-              </button>
-                <button
-                className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer"
-                onClick={() => (window.location.href = "/investigation/identification-history")}
-                >
-                <FontAwesomeIcon icon={faClockRotateLeft} className="w-4 h-4 text-[var(--accent-color)]" /> View Identification History
-                </button>
-              <button className="flex items-center gap-2 text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--background-color)] text-[var(--primary-color)] p-4 rounded-lg hover:bg-[var(--moldify-black)]/10 transition cursor-pointer"
-              onClick={() => (window.location.href = "/investigation/treatment-history")}
+              <button 
+                className={`font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase px-4 py-4 rounded-xl transition-all shadow-sm ${
+                  caseData?.status?.toLowerCase() === 'resolved'
+                    ? 'bg-white text-[var(--primary-color)] hover:bg-[var(--primary-color)] hover:text-white cursor-pointer'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
+                }`}
+                disabled={caseData?.status?.toLowerCase() !== 'resolved'}
+                title={caseData?.status?.toLowerCase() !== 'resolved' ? 'PDF export is only available for resolved cases' : 'Export case as PDF'}
               >
-                <FontAwesomeIcon icon={faSprayCan} className="w-4 h-4 text-[var(--accent-color)]" /> View Treatment History
+                <FontAwesomeIcon icon={faFilePdf} /> Export PDF
+              </button>
+              <button 
+                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
+                onClick={() => (window.location.href = "/investigation/identification-history")}
+              >
+                <FontAwesomeIcon icon={faClockRotateLeft} /> Identification History
+              </button>
+              <button 
+                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
+                onClick={() => (window.location.href = "/investigation/treatment-history")}
+              >
+                <FontAwesomeIcon icon={faSprayCan} /> Treatment History
               </button>
             </div>
-          </div>
-        </aside>
 
-        {/* Main Content */}
-        <main className="flex-1 px-2 mt-2 lg:mt-0">
-          <div className="flex items-center">
-            <h1 className="font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)] mr-5">{caseName}</h1>
-            <div className="flex gap-2">
-              <StatusBox status={status} />
-              {priority !== "------" && <StatusBox status={priority} />}
+            {/* 5. DATA TABS */}
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+              <TabBar tabs={tabs} initialIndex={0} />
             </div>
-          </div>
-
-          <div className="flex justify-between items-center mt-3 mb-10">
-            <div className="flex flex-col">
-              <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Crop Name:</p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{cropName}</h2>
-            </div>
-            <div className="flex flex-col">
-              <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Location:</p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{location}</h2>
-            </div>
-            <div className="flex flex-col">
-              <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Date First Observed:</p>
-              <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">{dateObserved}</h2>
-            </div>
-          </div>
-
-          <TabBar tabs={tabs} initialIndex={0} />
-        </main>
-      </div>
+          </section>
+        </div>
       )}
+      
 
       {/* Modals */}
       <AssignCaseModal
         isOpen={isAssignModalOpen}
         onClose={() => setAssignModalOpen(false)}
+        caseId={caseId || undefined}
         onAssign={handleAssignClick}
       />
 
@@ -520,7 +562,7 @@ function ViewCaseContent() {
         isOpen={isAddTreatmentOpen}
         onClose={() => setAddTreatmentOpen(false)}
       />
-    </div>
+    </main>
   );
 }
 

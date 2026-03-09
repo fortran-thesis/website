@@ -31,7 +31,7 @@ export default function StatusBox({ status, fontSize = "0.75rem" }: StatusBoxPro
   };
 
   const textColor =
-    ["pending", "low", "medium", "high"].includes(
+    ["pending", "low", "medium", "high", "unassigned"].includes(
       status.toLowerCase()
     )
       ? "var(--moldify-black)"
@@ -39,13 +39,13 @@ export default function StatusBox({ status, fontSize = "0.75rem" }: StatusBoxPro
 
   return (
     <div
-      className="inline-block py-1 px-7 rounded-full text-center"
+      className="inline-flex min-w-[120px] items-center justify-center py-1 px-7 rounded-full text-center"
       style={{
         backgroundColor: getStatusColor(status),
         color: textColor,
         fontSize: fontSize,
         fontFamily: "Bricolage Grotesque, sans-serif",
-        fontWeight: 700,
+        fontWeight: 500,
       }}
     >
       {status}

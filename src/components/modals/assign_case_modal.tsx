@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Image from 'next/image';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faCalendar } from "@fortawesome/free-solid-svg-icons";
+import StatusDropdown from "../StatusDropdown";
 
 
 {/* IMAGES */}
@@ -18,20 +19,20 @@ interface Mycologist {
 interface AssignCaseModalProps {
   isOpen: boolean;
   onClose: () => void;
+  caseId?: string; // Add case ID for assignment
   mycologists?: Mycologist[]; // Make optional since we'll fetch from backend
   onAssign?: (mycologist: Mycologist, priority: string, endDate: Date | null) => void; 
 }
 
 const CAPACITY_THRESHOLD = 8; // Mycologists with >= 8 cases are at capacity
 
-export default function AssignCaseModal({ isOpen, onClose, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
+export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
   const [filter, setFilter] = useState<"all" | "available" | "at-capacity">("all");
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [mycologists, setMycologists] = useState<Mycologist[]>(propMycologists || []);
   const [loading, setLoading] = useState(false);
-  const [isAssigned, setIsAssigned] = useState(false); 
 
 
   // Fetch mycologists and assigned cases when modal opens
@@ -43,24 +44,45 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
       try {
         // Fetch all mycologists
         const mycologistsRes = await fetch('/api/v1/users/mycologists', { cache: 'no-store' });
-        const mycologistsBody = await mycologistsRes.json();
         
-        // Fetch assigned cases
-        const assignedRes = await fetch('/api/v1/mold-reports/assigned', { cache: 'no-store' });
-        const assignedBody = await assignedRes.json();
+        if (!mycologistsRes.ok) {
+          throw new Error(`Failed to fetch mycologists: ${mycologistsRes.status}`);
+        }
 
-        if (mycologistsBody.success && assignedBody.success) {
+        const mycologistsText = await mycologistsRes.text();
+        const mycologistsBody = mycologistsText ? JSON.parse(mycologistsText) : { success: false, data: null };
+        
+        // Fetch mold-cases to count active assignments per mycologist
+        const moldCasesRes = await fetch('/api/v1/mold-cases', { cache: 'no-store' });
+        
+        if (!moldCasesRes.ok) {
+          console.warn('Failed to fetch mold-cases:', moldCasesRes.status);
+        }
+
+        const moldCasesText = await moldCasesRes.text();
+        const moldCasesBody = moldCasesText ? JSON.parse(moldCasesText) : { success: false, data: null };
+
+        console.log('🔍 Mycologists response:', mycologistsBody);
+        console.log('🔍 Mold cases response:', moldCasesBody);
+
+        if (mycologistsBody.success) {
           const mycologistsList = mycologistsBody.data.snapshot || [];
-          const assignedCases = assignedBody.data.snapshot || [];
+          const moldCases = (moldCasesBody.success ? moldCasesBody.data?.snapshot : []) || [];
 
-          // Count cases per mycologist
+          console.log('🔍 Mycologists list:', mycologistsList);
+          console.log('🔍 Mold cases list:', moldCases);
+
+          // Count active (non-archived) cases per mycologist
           const caseCounts: Record<string, number> = {};
-          assignedCases.forEach((report: any) => {
-            const mycologistId = report.assigned_mycologist_id;
-            if (mycologistId) {
+          moldCases.forEach((moldCase: any) => {
+            const mycologistId = moldCase.mycologist_id;
+            console.log('🔍 Processing case:', { mycologist_id: mycologistId, is_archived: moldCase.is_archived });
+            if (mycologistId && !moldCase.is_archived) {
               caseCounts[mycologistId] = (caseCounts[mycologistId] || 0) + 1;
             }
           });
+
+          console.log('📊 Case counts per mycologist:', caseCounts);
 
           // Transform mycologists with case counts and status
           const transformedMycologists: Mycologist[] = mycologistsList.map((m: any) => {
@@ -108,16 +130,14 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
     if (selectedMycologist) {
       if (onAssign) {
         onAssign(selectedMycologist, priority, endDate);
-        setIsAssigned(true);
       }
+      onClose();
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 overflow-hidden">
       <form
-        method="post"
-        action="/api/assign-case" 
         className="bg-[var(--background-color)] rounded-xl w-full max-w-md p-6 relative"
         onSubmit={handleSubmit}
       >
@@ -135,7 +155,7 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
             <button
                 type="button"
                 onClick={onClose}
-                className="absolute top-5 right-3 text-[var(--moldify-red)] hover:text-red-600 cursor-pointer font-black"
+                className="absolute top-5 right-3 text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
                 >
                 ✕
             </button>
@@ -175,42 +195,48 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
 
         {/* Mycologist dropdown */}
         <div className="mb-7">
-            {/* <label htmlFor="mycologist" className="text-[var(--primary-color)] text-sm font-semibold font-[family-name:var(--font-bricolage-grotesque)]">
-                Choose Mycologist:
-            </label> */}
-          <div className="flex items-center">
-            <select
-              aria-label="Choose Mycologist"
-              id="mycologist"
-              name="mycologist"
-              className="font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold text-[var(--primary-color)] flex-3 p-3 border-2 rounded-lg border-[var(--primary-color)] bg-[var(--background-color)] focus:outline-none cursor-pointer"
-              value={selectedMycologist?.name || ""}
-              onChange={(e) => {
-                const m = filteredMycologists.find(m => m.name === e.target.value);
-                setSelectedMycologist(m || null);
-              }}
-              required
-            >
-              <option value="">Choose Mycologist</option>
-              {filteredMycologists.map((m) => (
-                <option key={m.id} value={m.name} className="bg-[var(--background-color)]">
-                  {m.name} ({m.cases} cases)
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2">
+            <div className="flex-[3]">
+              <StatusDropdown
+                placeholder="Choose Mycologist"
+                backgroundColor="var(--background-color)"
+                textColor="var(--primary-color)"
+                borderColor="var(--primary-color)"
+                selectedValue={selectedMycologist?.id || selectedMycologist?.name}
+                options={filteredMycologists.map((m) => ({
+                  label: `${m.name} (${m.cases} cases)`,
+                  value: m.id || m.name,
+                  variant: m.status === "at-capacity" ? "danger" : "default"
+                }))}
+                onSelect={(value) => {
+                  const m = filteredMycologists.find(m => (m.id || m.name) === value);
+                  console.log('🔍 Selected mycologist:', m);
+                  setSelectedMycologist(m || null);
+                }}
+              />
+            </div>
 
             {/* Filter button */}
-            <select
-              aria-label="Filter Mycologists"
-              className="ml-2 flex-1 font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold text-[var(--primary-color)] p-3 border-2 rounded-lg border-[var(--primary-color)] bg-[var(--background-color)] focus:outline-none cursor-pointer"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as any)}
-            >  
-              <option value="all">All</option>
-              <option value="available">Available</option>
-              <option value="at-capacity">At Capacity</option>
-            </select>
+            <div className="flex-2">
+              <StatusDropdown
+                placeholder="Filter"
+                backgroundColor="var(--background-color)"
+                textColor="var(--primary-color)"
+                borderColor="var(--primary-color)"
+                selectedValue={filter}
+                options={[
+                  { label: "All", value: "all" },
+                  { label: "Available", value: "available" },
+                  { label: "At Capacity", value: "at-capacity", variant: "danger" }
+                ]}
+                onSelect={(value) => {
+                  console.log('🔍 Selected filter:', value);
+                  setFilter(value as any);
+                }}
+              />
+            </div>
           </div>
+          {!selectedMycologist && <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">* Please select a mycologist</p>}
         </div>
 
         {/* Priority Level */}
@@ -260,10 +286,10 @@ export default function AssignCaseModal({ isOpen, onClose, mycologists: propMyco
         </div>
         <button
           type="submit"
-          className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-lg hover:bg-[var(--hover-primary)] transition mt-5"
-          disabled={isAssigned} // Disable button if assigned
+          className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-xl hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!selectedMycologist}
         >
-          {isAssigned ? "Assigned" : "Assign Case"} {/* Change button text */}
+          Assign Case
         </button>
       </form>
     </div>
