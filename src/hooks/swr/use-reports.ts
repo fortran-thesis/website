@@ -52,6 +52,7 @@ export interface ReportSnapshot {
     description?: string;
     image?: string;
     cover_photo?: string;
+    author?: string;
   };
   image?: string;
   image_url?: string;

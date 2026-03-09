@@ -51,7 +51,7 @@ export function useFlagReportsInfinite(limit = 50, enabled = true) {
       if (pageIndex === 0) return apiUrl('/api/v1/flag-report', { limit });
       return apiUrl('/api/v1/flag-report', {
         limit,
-        pageToken: prev.data?.nextPageToken,
+        pageToken: prev?.data?.nextPageToken,
       });
     },
     { revalidateFirstPage: false },
