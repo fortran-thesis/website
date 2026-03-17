@@ -1,16 +1,56 @@
 "use client";
-import { useState, useEffect, useMemo } from 'react'; 
+import { useState, useEffect, useMemo, useRef } from 'react'; 
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { Navbar } from '@/components/navbar';
 import Footer from '@/components/footer';
-import { useMoldipediaArticle } from '@/hooks/swr';
+import { useMoldipediaArticle, type MoldipediaArticle } from '@/hooks/swr';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMicroscope, faChevronLeft, faArrowRight, faCompass } from '@fortawesome/free-solid-svg-icons';
 
 // --- Default Placeholders ---
 const DEFAULT_BANNER = "/assets/mold.jpg";
 const DEFAULT_AUTHOR = "/assets/default-fallback.png";
-const leaf = '/assets/leaf.svg';
+
+const EMPTY_HTML_FALLBACK = '<p>Content will be added here while dummy data is in use.</p>';
+
+type ArticleViewModel = {
+  id: string;
+  title: string;
+  author: string;
+  date: string;
+  bannerImage: string;
+  authorImage: string;
+  content: string;
+  treatment: string;
+  treatment_mechanical: string;
+  treatment_cultural: string;
+  treatment_biological: string;
+  treatment_physical: string;
+  treatment_chemical: string;
+  mold_type: string;
+  affected_crops: string;
+  symptoms: string;
+  disease_cycle: string;
+  impact: string;
+};
+
+type DossierField = 'affected_crops' | 'symptoms' | 'disease_cycle' | 'impact';
+type TreatmentField =
+  | 'treatment_mechanical'
+  | 'treatment_cultural'
+  | 'treatment_biological'
+  | 'treatment_physical'
+  | 'treatment_chemical';
+
+const TREATMENT_FIELD_BY_CONTROL: Record<TreatmentControlId, TreatmentField> = {
+  mechanical: 'treatment_mechanical',
+  cultural: 'treatment_cultural',
+  biological: 'treatment_biological',
+  physical: 'treatment_physical',
+  chemical: 'treatment_chemical',
+};
 
 // --- Treatment Control Types ---
 type TreatmentControlId = 'mechanical' | 'cultural' | 'biological' | 'physical' | 'chemical';
@@ -24,12 +64,21 @@ const TREATMENT_CONTROLS: Array<{ name: string; id: TreatmentControlId; desc: st
 ];
 
 const DISCOVERY_STAGES = [
-  { id: 1, title: "Initial Survey", content: "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat" },
-  { id: 2, title: "Air Sampling", content: "Quantitative data regarding fungal concentration... (Add your heavy data here)" },
-  { id: 3, title: "Surface Analysis", content: "Direct swabbing results from contaminated surfaces... (Add your heavy data here)" },
-  { id: 4, title: "Lab Culturing", content: "Incubation reports identifying specific strains... (Add your heavy data here)" },
-  { id: 5, title: "Toxicology", content: "Final synthesis of mycotoxin production levels... (Add your heavy data here)" },
+  { id: 1, title: "Initial Observation", content: "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat" },
+  { id: 2, title: "In Vivo", content: "Quantitative data regarding fungal concentration... (Add your heavy data here)" },
+  { id: 3, title: "In Vitro", content: "Direct swabbing results from contaminated surfaces... (Add your heavy data here)" },
+  
 ];
+
+function getHtmlField(
+  article: MoldipediaArticle,
+  fieldName: DossierField,
+  fallback = EMPTY_HTML_FALLBACK,
+): string {
+  // The API payload is still evolving, so normalize optional rich-text fields once here.
+  const value = article[fieldName];
+  return typeof value === 'string' && value.trim() ? value : fallback;
+}
 
 
 export default function ViewWikiMold() {
@@ -43,7 +92,7 @@ export default function ViewWikiMold() {
   const [bannerSrc, setBannerSrc] = useState(DEFAULT_BANNER);
   const [authorSrc, setAuthorSrc] = useState(DEFAULT_AUTHOR);
 
-  const article = useMemo(() => {
+  const article = useMemo<ArticleViewModel | null>(() => {
     const data = articleRes?.data;
     if (!data) return null;
 
@@ -72,9 +121,18 @@ export default function ViewWikiMold() {
       date: formattedDate,
       bannerImage: data.cover_photo || DEFAULT_BANNER,
       authorImage: data.author_photo || DEFAULT_AUTHOR,
-      content: data.body || data.description || data.content || 'No content available',
-      treatment: data.treatment || '<p>No treatment information available</p>',
+      content: data.body || data.description || data.content || EMPTY_HTML_FALLBACK,
+      treatment: data.treatment || '<p>No treatment information available yet.</p>',
+      treatment_mechanical: data.treatment_mechanical || '',
+      treatment_cultural: data.treatment_cultural || '',
+      treatment_biological: data.treatment_biological || '',
+      treatment_physical: data.treatment_physical || '',
+      treatment_chemical: data.treatment_chemical || '',
       mold_type: data.mold_type || 'Unknown Mold Type',
+      affected_crops: getHtmlField(data, 'affected_crops', '<p>Affected host data will be added here.</p>'),
+      symptoms: getHtmlField(data, 'symptoms', '<p>Symptom data will be added here.</p>'),
+      disease_cycle: getHtmlField(data, 'disease_cycle', '<p>Transmission details will be added here.</p>'),
+      impact: getHtmlField(data, 'impact', '<p>Impact analysis will be added here.</p>'),
     };
   }, [articleRes]);
 
@@ -92,15 +150,52 @@ export default function ViewWikiMold() {
 
   const [activeStage, setActiveStage] = useState(0);
   const [activeTreatment, setActiveTreatment] = useState(0);
+  const [showExploreCasesCta, setShowExploreCasesCta] = useState(false);
+  const heroSectionRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const heroElement = heroSectionRef.current;
+    if (!heroElement || typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    // Show CTA only after the hero section leaves the viewport.
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowExploreCasesCta(!entry.isIntersecting);
+      },
+      { threshold: 0.15 },
+    );
+
+    observer.observe(heroElement);
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Fast Refresh can keep an old activeStage even when dummy stages change size.
+  const currentStageIndex = Math.min(Math.max(activeStage, 0), DISCOVERY_STAGES.length - 1);
+  const currentStage = DISCOVERY_STAGES[currentStageIndex];
 
   // Helper to get treatment HTML based on control type
   const getTreatmentHtml = (controlId: TreatmentControlId): string => {
-    const dynamicArticle = article as Record<string, string | undefined> | null;
-    return dynamicArticle?.[`treatment_${controlId}`] || article?.treatment || '';
+    if (!article) {
+      return '';
+    }
+
+    const treatmentField = TREATMENT_FIELD_BY_CONTROL[controlId];
+    return article[treatmentField] || article.treatment || '';
   };
 
 /** * SectionHeader Component (UNTOUCHED LOGIC, UPDATED STYLING) * Unified look for Description, Treatment, and Findings sections. */
-const SectionHeader = ({ number, title }: { number: string; title: string }) => (
+const SectionHeader = ({
+  number,
+  title,
+  subtitle,
+}: {
+  number: string;
+  title: string;
+  subtitle?: string;
+}) => (
   <div className="relative mb-20 flex flex-col md:flex-row items-start gap-4">
     <div className="hidden md:block absolute -left-12 -top-5 text-[8rem] font-black font-[family-name:var(--font-montserrat)] leading-none select-none opacity-5 text-[var(--primary-color)]">
       {number}
@@ -112,6 +207,11 @@ const SectionHeader = ({ number, title }: { number: string; title: string }) => 
       <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase tracking-tight leading-none">
         {title}
       </h2>
+      {subtitle ? (
+        <p className="mt-3 text-sm font-semibold uppercase tracking-[0.2em] text-[var(--moldify-black)]/60">
+          {subtitle}
+        </p>
+      ) : null}
     </div>
   </div>
 );
@@ -238,7 +338,7 @@ const ProseContent = ({
 
       <main className="flex-grow relative z-10">
         {/* --- HERO BANNER SECTION  --- */}
-        <section className="relative h-[50vh] md:h-[60vh] w-full overflow-hidden">
+        <section ref={heroSectionRef} className="relative h-[50vh] md:h-[60vh] w-full overflow-hidden">
           <motion.div style={{ y: yBanner }} className="relative h-full w-full">
             <Image
               src={bannerSrc}
@@ -313,7 +413,58 @@ const ProseContent = ({
             </motion.div>
           </section>
 
-        {/* --- 02. TREATMENT: The "Strata" Accordion (Solves "Many Info" + UI Repetition) --- */}
+          {/* --- 3. AGRICULTURAL INFO --- */}
+          <section className="my-32 px-16 py-28 rounded-[3.5rem] bg-[var(--primary-color)]/[0.02] border border-[var(--primary-color)]/10 relative overflow-hidden">
+            {/* The decorative leaf moved to the far background */}
+            <div className="absolute top-12 right-12 opacity-[0.07] pointer-events-none">
+              <Image src="/assets/leaf.svg" alt="leaf" width={220} height={220} className="grayscale" />
+            </div>
+            
+            <SectionHeader 
+              number="02" 
+              title="Host & Pathogen Impact" 
+              subtitle="Technical Analysis & Observations" 
+            />
+
+            {/* Main content */}
+            <div className="mt-32 max-w-5xl mx-auto space-y-40">
+              {[
+                { title: "Affected Hosts", content: article.affected_crops },
+                { title: "Symptoms & Signs", content: article.symptoms },
+                { title: "Transmission Cycle", content: article.disease_cycle },
+                { title: "Impact Analysis", content: article.impact },
+              ].map((item, index) => (
+                <div key={index} className="relative flex flex-col md:flex-row gap-12 md:gap-24">
+                  
+                  {/* The Number*/}
+                  <div className="flex-shrink-0">
+                    <span className="text-5xl font-extrabold text-[var(--accent-color)]/80 font-[family-name:var(--font-montserrat)] leading-none select-none">
+                      0{index + 1}
+                    </span>
+                  </div>
+
+                  {/* The Content */}
+                  <div className="flex-grow space-y-8 pt-2">
+                    <div className="flex items-center gap-4">
+                      <div className="h-[2px] w-8 bg-[var(--accent-color)]/40" />
+                      <h4 className="text-2xl font-black uppercase text-[var(--primary-color)] tracking-tight font-[family-name:var(--font-montserrat)]">
+                        {item.title}
+                      </h4>
+                    </div>
+                    
+                    <div className="md:pl-12">
+                      <ProseContent 
+                        html={item.content} 
+                        className="text-lg leading-relaxed text-[var(--primary-color)]/70 font-light" 
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+          
+        {/* --- 02. TREATMENT --- */}
           <section className="mb-30 relative max-w-5xl mx-auto">
             <SectionHeader number="02" title="Treatment Protocols" />
             
@@ -372,7 +523,6 @@ const ProseContent = ({
                           transition={{ duration: 0.5, ease: [0.04, 0.62, 0.23, 0.98] }}
                         >
                           <div className="px-10 md:px-24 pb-12 pt-2 relative">
-                            {/* Decorative Background Texture for open state */}
                             <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--accent-color)]/[0.03] blur-[80px] rounded-full -z-10" />
                             
                             <div className="border-l-2 border-[var(--accent-color)]/20 pl-8">
@@ -391,13 +541,12 @@ const ProseContent = ({
             </div>
           </section>
 
-          {/* --- 03. FINDINGS: Typography Specimen & Interactive Stages --- */}
+          {/* --- 4. FINDINGS: Typography Specimen & Interactive Stages --- */}
          <section className="max-w-6xl mx-auto selection:bg-[var(--accent-color)] selection:text-white">
-            <SectionHeader number="03" title="Specimen ID & Findings" />
+            <SectionHeader number="04" title="Specimen ID & Findings" />
        
             <div className="mb-22 -mt-10 relative py-16 px-6 md:px-12 border-b-2 border-[var(--primary-color)]/10 overflow-hidden group">
               
-              {/* Animated Biological Background "Nuclei" - Strictly using your colors */}
               <div className="absolute inset-0 opacity-[0.2] -z-10 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
                   <svg width="100%" height="100%" viewBox="0 0 100 100">
                       <defs>
@@ -432,9 +581,7 @@ const ProseContent = ({
               </div>
             </div>
 
-            {/* --- 02. INTERACTIVE FINDINGS FINDINGS SECTION ---
-                Keeping your logic for activeStage/setActiveStage but integrating it into an editorial layout.
-            */}
+          
             <div className="flex flex-col lg:flex-row gap-10 items-stretch">
               {/* Slim Navigation Sidebar */}
               <div className="w-full lg:w-[28%] space-y-2 sticky top-32 z-20">
@@ -459,12 +606,12 @@ const ProseContent = ({
                 
                 {/* Dynamic Background Ghost Number (Using low opacity Primary Color creatively) --- */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[30rem] font-black text-[var(--primary-color)]/[0.01] select-none pointer-events-none font-[family-name:var(--font-montserrat)] leading-none z-0">
-                  {activeStage + 1}
+                  {currentStageIndex + 1}
                 </div>
                 
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={activeStage}
+                    key={currentStage.id}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
@@ -474,7 +621,7 @@ const ProseContent = ({
                     {/* Phase Header with organic accent dot */}
                     <div className="mb-12 border-b-2 border-[var(--primary-color)]/10 pb-8 flex justify-between gap-4">
                       <h4 className="text-4xl md:text-6xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase tracking-tighter mb-2 leading-none">
-                            {DISCOVERY_STAGES[activeStage].title}
+                            {currentStage.title}
                       </h4>
                       <div className="shrink-0 pt-2 flex gap-1">
                         <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-color)] opacity-50" />
@@ -485,7 +632,7 @@ const ProseContent = ({
                     {/* Immersive text handling inside prose container - handles large data easily --- */}
                     <div className="flex-grow">
                       <ProseContent 
-                        html={DISCOVERY_STAGES[activeStage].content}
+                        html={currentStage.content}
                         className="text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-justify"
                       />
                     </div>
@@ -494,6 +641,33 @@ const ProseContent = ({
               </div>
             </div>
           </section>
+
+          {/* Explore Similar Cases Button */}
+          {showExploreCasesCta ? (
+          <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50">
+            <button className="group relative flex items-center gap-4 bg-[var(--accent-color)]/10 backdrop-blur-md border border-[var(--accent-color)]/30 p-2 pr-6 rounded-full transition-all duration-500 hover:bg-[var(--accent-color)]/20 hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.2)]">
+              
+              <div className="absolute inset-0 rounded-full border border-[var(--accent-color)]/50 animate-pulse group-hover:hidden" />
+
+              <div className="w-10 h-10 rounded-full bg-[var(--accent-color)] flex items-center justify-center text-white shadow-lg">
+                <FontAwesomeIcon icon={faCompass} className="text-sm" />
+              </div>
+
+              <div className="flex flex-col items-start leading-none">
+                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--accent-color)] opacity-80 mb-1">
+                  Explore
+                </span>
+                <span className="text-[13px] font-bold text-[var(--primary-color)] tracking-tight font-[family-name:var(--font-montserrat)]">
+                  Similar Cases
+                </span>
+              </div>
+
+              <div className="w-0 overflow-hidden opacity-0 group-hover:w-4 group-hover:opacity-100 transition-all duration-500">
+                <FontAwesomeIcon icon={faArrowRight} className="text-xs text-[var(--accent-color)]" />
+              </div>
+            </button>
+          </div>
+          ) : null}
         </article>
       </main>
       <Footer />
