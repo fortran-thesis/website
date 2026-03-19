@@ -9,11 +9,12 @@ import TabBar from "@/components/tab_bar";
 import CaseStatusCard from "@/components/CaseStatusCard";
 import AssignCaseModal from "@/components/modals/assign_case_modal";
 import ConfirmModal from "@/components/modals/confirmation_modal";
-import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus, faEye } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import CaseDetailsTab from "../investigation-tabs/case_details";
 import InVitroTab from "../investigation-tabs/in_vitro";
 import InVivoTab from "../investigation-tabs/in_vivo";
+import InitialObservationTab from "../investigation-tabs/initial_observation";
 import AddTreatmentModal from "@/components/modals/add_treatment_modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useMoldReport, useMoldCaseByReport, useUser } from "@/hooks/swr";
@@ -339,6 +340,82 @@ function ViewCaseContent() {
     );
   };
 
+  /**
+   * getInitialObservationContent
+   * 
+   * Prepares and returns the InitialObservationTab component with formatted data from the mold case.
+   * 
+   * Currently uses mock data for UI visualization. When backend ready, replace mockInitialObs
+   * with actual API data from moldCase.cultivation_details.initial_observations
+   * 
+   * Expected backend data structure:
+   * moldCase.cultivation_details = {
+   *   initial_observations?: {
+   *     microscopic_image_path: string
+   *     identified_mold: string
+   *     confidence: string
+   *     macroscopic_image_path: string
+   *     macro_color: string
+   *     macro_texture: string
+   *     macro_symptoms: string
+   *     macro_characteristics: string
+   *   }
+   * }
+   * 
+   * TODO: Remove mockInitialObs and replace with:
+   * const initialObs = (moldCase?.cultivation_details as any)?.initial_observations || {};
+   * 
+   * @returns {JSX.Element} InitialObservationTab with microscopic/macroscopic baseline data
+   */
+  const getInitialObservationContent = () => {
+    /**
+     * MOCK DATA FOR UI VISUALIZATION
+     * Replace this entire mockInitialObs object with real data from backend when ready
+     */
+    const mockInitialObs = {
+      microscopic_image_path: "/assets/images/microscopic-sample-001.jpg",
+      identified_mold: "Aspergillus fumigatus",
+      confidence: "92%",
+      macroscopic_image_path: "/assets/images/macroscopic-sample-001.jpg",
+      macro_color: "White with yellow discoloration",
+      macro_texture: "Powdery, granular appearance",
+      macro_symptoms: "Leaf necrosis, wilting, stunted growth",
+      macro_characteristics: "Rapid spread, airborne spores, warm weather preference",
+    };
+
+    /**
+     * TODO: FETCH-READY SWAP
+     * When backend is ready, uncomment this line and remove mockInitialObs usage:
+     * const initialObs = (moldCase?.cultivation_details as any)?.initial_observations || {};
+     * 
+     * Then replace all mockInitialObs references below with initialObs
+     */
+
+    const microscopicImagePath = mockInitialObs.microscopic_image_path || "";
+    const identifiedMold = mockInitialObs.identified_mold || "";
+    const confidence = mockInitialObs.confidence || "";
+    const macroscopicImagePath = mockInitialObs.macroscopic_image_path || "";
+    const macroColor = mockInitialObs.macro_color || "";
+    const macroTexture = mockInitialObs.macro_texture || "";
+    const macroSymptoms = mockInitialObs.macro_symptoms || "";
+    const macroCharacteristics = mockInitialObs.macro_characteristics || "";
+
+    return (
+      <InitialObservationTab
+        microscopicImagePath={microscopicImagePath}
+        macroscopicImagePath={macroscopicImagePath}
+        identifiedMold={identifiedMold}
+        confidence={confidence}
+        macroColor={macroColor}
+        macroTexture={macroTexture}
+        macroSymptoms={macroSymptoms}
+        macroCharacteristics={macroCharacteristics}
+        emptyMicroscopicMessage="No microscopic analysis recorded"
+        emptyMacroscopicMessage="No macroscopic analysis recorded"
+      />
+    );
+  };
+
   // Tabs
   const tabs = [
     {
@@ -349,6 +426,11 @@ function ViewCaseContent() {
           entries={caseDetailsEntries}
         />
       ),
+    },
+    {
+      label: "Initial Observation",
+      icon: faEye,
+      content: getInitialObservationContent(),
     },
     {
       label: "In Vitro",
