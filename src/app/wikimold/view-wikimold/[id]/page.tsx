@@ -164,7 +164,7 @@ export default function ViewWikiMold() {
       ([entry]) => {
         setShowExploreCasesCta(!entry.isIntersecting);
       },
-      { threshold: 0.15 },
+      { threshold: 0 },
     );
 
     observer.observe(heroElement);
@@ -643,7 +643,6 @@ const ProseContent = ({
           </section>
 
           {/* Explore Similar Cases Button */}
-          {showExploreCasesCta ? (
           <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50">
             <button className="group relative flex items-center gap-4 bg-[var(--accent-color)]/10 backdrop-blur-md border border-[var(--accent-color)]/30 p-2 pr-6 rounded-full transition-all duration-500 hover:bg-[var(--accent-color)]/20 hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.2)]">
               
@@ -667,7 +666,6 @@ const ProseContent = ({
               </div>
             </button>
           </div>
-          ) : null}
         </article>
       </main>
       <Footer />
