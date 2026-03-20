@@ -534,18 +534,7 @@ function ViewCaseContent() {
               >
                 <FontAwesomeIcon icon={faFilePdf} /> Export PDF
               </button>
-              <button 
-                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
-                onClick={() => (window.location.href = "/investigation/identification-history")}
-              >
-                <FontAwesomeIcon icon={faClockRotateLeft} /> Identification History
-              </button>
-              <button 
-                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
-                onClick={() => (window.location.href = "/investigation/treatment-history")}
-              >
-                <FontAwesomeIcon icon={faSprayCan} /> Treatment History
-              </button>
+             
             </div>
 
             {/* 5. DATA TABS */}
