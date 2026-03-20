@@ -7,9 +7,9 @@ import {
   faHeartPulse,
   faFlask,
 } from "@fortawesome/free-solid-svg-icons";
-import ObservationImageViewer from "./initial_observation_components/observation_image_viewer";
-import ObservationDataTile from "./initial_observation_components/observation_data_tile";
-import ObservationEmptyStateCard from "./initial_observation_components/observation_empty_state_card";
+import ObservationImageViewer from "../../../components/tiles/initial_observation_components/observation_image_viewer";
+import ObservationDataTile from "../../../components/tiles/initial_observation_components/observation_data_tile";
+import ObservationEmptyStateCard from "../../../components/tiles/initial_observation_components/observation_empty_state_card";
 
 /**
  * InitialObservationTabProps
@@ -28,8 +28,8 @@ import ObservationEmptyStateCard from "./initial_observation_components/observat
  * @property {string} [confidence] - Confidence percentage (e.g., "87%")
  * @property {string} [macroColor] - Macroscopic colony color observation
  * @property {string} [macroTexture] - Macroscopic texture characteristics
- * @property {string} [macroSymptoms] - Comma-separated host symptoms observed
- * @property {string} [macroCharacteristics] - Comma-separated mold characteristics
+ * @property {string | string[]} [macroSymptoms] - Host symptoms (array recommended)
+ * @property {string | string[]} [macroCharacteristics] - Mold characteristics (array recommended)
  * @property {string} [emptyMicroscopicMessage] - Custom message for empty microscopic state
  * @property {string} [emptyMacroscopicMessage] - Custom message for empty macroscopic state
  */
@@ -40,8 +40,8 @@ interface InitialObservationTabProps {
   confidence?: string;
   macroColor?: string;
   macroTexture?: string;
-  macroSymptoms?: string;
-  macroCharacteristics?: string;
+  macroSymptoms?: string | string[];
+  macroCharacteristics?: string | string[];
   emptyMicroscopicMessage?: string;
   emptyMacroscopicMessage?: string;
 }
@@ -120,7 +120,7 @@ export default function InitialObservationTab({
         </h3>
 
         {hasMicroscopicImage ? (
-          <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-[var(--primary-color)]/[0.03] border-2 border-[var(--primary-color)]/10">
+          <div className="relative w-full aspect-video rounded-[2.5rem] overflow-hidden bg-[var(--primary-color)]/[0.03] border-2 border-[var(--primary-color)]/10">
             {/* Image container */}
             <ObservationImageViewer
               imagePath={microscopicImagePath}
@@ -129,14 +129,14 @@ export default function InitialObservationTab({
 
             {/* Identified mold overlay at bottom */}
             {(identifiedMold || confidence) && (
-              <div className="absolute bottom-0 left-0 right-0 backdrop-blur-sm bg-black/40 p-3 flex items-center justify-between">
-                <p className="text-xs font-semibold text-white flex-1">
+              <div className="absolute bottom-0 left-0 right-0 backdrop-blur-sm bg-black/40 px-5 py-4 flex items-center justify-between gap-3">
+                <p className="text-xs sm:text-sm font-semibold text-white flex-1 pr-2 font-[family-name:var(--font-bricolage-grotesque)]">
                   {(identifiedMold ?? "").trim().length > 0
                     ? identifiedMold
                     : "Pending Analysis"}
                 </p>
                 {(confidence ?? "").trim().length > 0 && (
-                  <p className="text-xs font-black text-[var(--accent-color)]">
+                  <p className="text-xs sm:text-sm font-black text-[var(--accent-color)] font-[family-name:var(--font-montserrat)] tracking-tight">
                     {confidence}
                   </p>
                 )}
@@ -160,7 +160,7 @@ export default function InitialObservationTab({
           Initial Macroscopic
         </h3>
 
-        <div className="rounded-3xl overflow-hidden border-2 border-[var(--primary-color)]/10 bg-[var(--moldify-light-bg)]">
+        <div className="rounded-[2.5rem] overflow-hidden border-2 border-[var(--primary-color)]/10 bg-[var(--background-color)]">
           {/* Macroscopic image */}
           {hasMacroscopicImage ? (
             <div className="relative w-full aspect-video overflow-hidden">
@@ -179,34 +179,27 @@ export default function InitialObservationTab({
           )}
 
           {/* Data tiles grid */}
-          <div className="p-5 space-y-3">
-            {/* First row: Color & Texture */}
-            <div className="flex items-stretch gap-3">
-              <ObservationDataTile
-                label="Color"
-                value={macroColor}
-                icon={faPalette}
-              />
-              <ObservationDataTile
-                label="Texture"
-                value={macroTexture}
-                icon={faCubes}
-              />
-            </div>
-
-            {/* Second row: Symptoms & Characteristics */}
-            <div className="flex items-stretch gap-3">
-              <ObservationDataTile
-                label="Symptoms"
-                value={macroSymptoms}
-                icon={faHeartPulse}
-              />
-              <ObservationDataTile
-                label="Characteristics"
-                value={macroCharacteristics}
-                icon={faFlask}
-              />
-            </div>
+          <div className="p-5 grid grid-cols-2 gap-3">
+            <ObservationDataTile
+              label="Color"
+              value={macroColor}
+              icon={faPalette}
+            />
+            <ObservationDataTile
+              label="Texture"
+              value={macroTexture}
+              icon={faCubes}
+            />
+            <ObservationDataTile
+              label="Symptoms"
+              value={macroSymptoms}
+              icon={faHeartPulse}
+            />
+            <ObservationDataTile
+              label="Characteristics"
+              value={macroCharacteristics}
+              icon={faFlask}
+            />
           </div>
         </div>
       </section>

@@ -18,9 +18,9 @@ export default function TabBar({ tabs, initialIndex = 0 }: TabBar) {
   const [activeIndex, setActiveIndex] = useState(initialIndex);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* --- TAB HEADER --- */}
-      <div className="flex border-b border-[var(--moldify-softGrey)]">
+      <div className="flex border-b border-[var(--moldify-softGrey)] flex-shrink-0">
         {tabs.map((tab, index) => {
           const isActive = index === activeIndex;
           return (
@@ -50,8 +50,12 @@ export default function TabBar({ tabs, initialIndex = 0 }: TabBar) {
       </div>
 
       {/* --- TAB CONTENT --- */}
-      <div className="flex-1 p-4">
-        {tabs[activeIndex]?.content}
+      <div 
+        className="flex-1 p-4 bg-[var(--background-color)] overflow-hidden"
+      >
+        <div key={activeIndex} className="h-full w-full overflow-y-auto">
+          {tabs[activeIndex]?.content}
+        </div>
       </div>
     </div>
   );

@@ -254,88 +254,32 @@ function ViewCaseContent() {
   });
 
   // In vitro content
+  /**
+   * In Vitro content handler - displays cultivation observations with microscopic & macroscopic data
+   * TODO: Map real observations from moldCase.cultivation_details?.vitro_observations when backend ready
+   */
   const getInVitroContent = () => {
-    if (!isAssigned) {
-      return (
-        <InVitroTab
-          dateTime=""
-          growthMedium=""
-          incubationTemperature=""
-          inVitroEntries={[]}
-          emptyMessage="No mycologist assigned to this case yet"
-        />
-      );
-    }
-    
-    if (!moldCase || !moldCase.cultivation_logs || moldCase.cultivation_logs.length === 0) {
-      return (
-        <InVitroTab
-          dateTime=""
-          growthMedium={moldCase?.cultivation_details?.in_vitro_details?.growthMedium || ""}
-          incubationTemperature={moldCase?.cultivation_details?.in_vitro_details?.incubationTemperature || ""}
-          inVitroEntries={[]}
-          emptyMessage="Mycologist assigned. No cultivation activity recorded yet."
-        />
-      );
-    }
-    
-    const vitroLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vitro");
-    const vitroEntries = vitroLogs.map((log: any) => ({
-      date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
-      sizeValue: log.characteristics?.size || "N/A",
-      colorValue: log.characteristics?.color || "N/A",
-      notes: log.additional_info || "",
-    }));
-    
+    const startDate = moldCase?.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : "";
     return (
       <InVitroTab
-        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
-        growthMedium={moldCase.cultivation_details?.in_vitro_details?.growthMedium || ""}
-        incubationTemperature={moldCase.cultivation_details?.in_vitro_details?.incubationTemperature || ""}
-        inVitroEntries={vitroEntries}
+        dateTime={startDate}
+        observations={[]}
+        emptyMessage="No in vitro observations recorded yet"
       />
     );
   };
 
-  // In vivo content
+  /**
+   * In Vivo content handler - displays field observations with microscopic & macroscopic data
+   * TODO: Map real observations from moldCase.cultivation_details?.vivo_observations when backend ready
+   */
   const getInVivoContent = () => {
-    if (!isAssigned) {
-      return (
-        <InVivoTab
-          dateTime=""
-          environmentalTemperature=""
-          inVivoEntries={[]}
-          emptyMessage="No mycologist assigned to this case yet"
-        />
-      );
-    }
-    
-    if (!moldCase || !moldCase.cultivation_logs || moldCase.cultivation_logs.length === 0) {
-      return (
-        <InVivoTab
-          dateTime=""
-          environmentalTemperature={moldCase?.cultivation_details?.in_vivo_details?.environmentalTemperature || ""}
-          inVivoEntries={[]}
-          emptyMessage="Mycologist assigned. No cultivation activity recorded yet."
-        />
-      );
-    }
-    
-    const vivoLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vivo");
-    const vivoEntries = vivoLogs.map((log: any) => ({
-      date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
-      sizeValue: log.characteristics?.size || "N/A",
-      colorValue: log.characteristics?.color || "N/A",
-      notes: log.additional_info || "",
-    }));
-    
+    const observationPeriod = moldCase?.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : "";
     return (
       <InVivoTab
-        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
-        environmentalTemperature={moldCase.cultivation_details?.in_vivo_details?.environmentalTemperature || ""}
-        inVivoEntries={vivoEntries}
+        dateTime={observationPeriod}
+        observations={[]}
+        emptyMessage="No in vivo observations recorded yet"
       />
     );
   };
@@ -473,7 +417,7 @@ function ViewCaseContent() {
           <aside className="xl:col-span-4 space-y-6">
             
             {/* Farmer Profile Card - Earthy & Modern */}
-            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5">
               <div className="flex flex-col items-center text-center">
                 <div className="relative w-32 h-32 rounded-3xl overflow-hidden mb-4 border-4 border-[var(--taupe)] shadow-md">
                    <Image
@@ -544,7 +488,7 @@ function ViewCaseContent() {
           </div>
 
           {/* THE ACTUAL HERO CARD - Now completely clean */}
-          <div className="bg-[var(--primary-color)] text-[var(--background-color)] rounded-[2.5rem] p-12 relative shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)] overflow-hidden">
+          <div className="bg-[var(--primary-color)] text-[var(--background-color)] rounded-[2.5rem] p-12 relative overflow-hidden">
             <FontAwesomeIcon icon={faSeedling} className="absolute -right-10 -bottom-10 text-white/5 text-[18rem]" />
             
             <div className="relative z-10">
@@ -605,7 +549,7 @@ function ViewCaseContent() {
             </div>
 
             {/* 5. DATA TABS */}
-            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5">
               <TabBar tabs={tabs} initialIndex={0} />
             </div>
           </section>

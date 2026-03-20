@@ -5,23 +5,8 @@ import { faFlaskVial } from "@fortawesome/free-solid-svg-icons";
 
 /**
  * ObservationEmptyStateCard
- * 
- * A reusable empty-state component displayed when observation sections
- * have no data available. Provides visual feedback with an icon and
- * instructional message to guide users.
- * 
- * @component
- * @interface
- * @property {string} message - Instructional or contextual text displayed below the icon
- * @property {number} [height] - Card height in pixels (default: 100px)
- * 
- * @example
- * ```tsx
- * <ObservationEmptyStateCard
- *   message="No microscopic analysis recorded yet"
- *   height={120}
- * />
- * ```
+ * * A reusable empty-state component displayed when observation sections
+ * have no data available.
  */
 interface ObservationEmptyStateCardProps {
   message: string;
@@ -35,16 +20,16 @@ export default function ObservationEmptyStateCard({
   return (
     <div
       style={{ height: `${height}px` }}
-      className="w-full rounded-2xl border-2 border-dashed border-[var(--primary-color)]/10 bg-[var(--primary-color)]/[0.03] flex flex-col items-center justify-center gap-2"
+      className="w-full rounded-[2.5rem] border-2 border-dashed border-[var(--primary-color)]/10 bg-[var(--primary-color)]/[0.02] flex flex-col items-center justify-center gap-3 group relative overflow-hidden"
     >
-      {/* Icon */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary-color)]/[0.03] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+      
       <FontAwesomeIcon
         icon={faFlaskVial}
-        className="w-8 h-8 text-[var(--primary-color)]/40"
+        className="w-7 h-7 text-[var(--primary-color)]/20 group-hover:rotate-12 transition-transform duration-500"
       />
 
-      {/* Message */}
-      <p className="text-sm text-[var(--primary-color)]/50 text-center px-4 leading-relaxed">
+      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--primary-color)]/40 text-center px-10 leading-relaxed font-[family-name:var(--font-bricolage-grotesque)]">
         {message}
       </p>
     </div>
