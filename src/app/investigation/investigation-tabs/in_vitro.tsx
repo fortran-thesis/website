@@ -81,52 +81,10 @@ export default function InVitroTab({
   observations = [],
   emptyMessage = "No in vitro cultivation observations recorded",
 }: InVitroTabProps) {
-  /**
-   * MOCK DATA FOR UI VISUALIZATION
-   * Each entry shows how microscopic and macroscopic observations change over cultivation period
-   * TODO: Replace with real backend data when ready
-   */
-  const mockObservations: InVitroObservation[] = [
-    {
-      date: "March 10, 2024 - 09:30 AM",
-      microscopicImagePath: "/assets/mold.jpg",
-      identifiedMold: "Aspergillus fumigatus",
-      confidence: "88%",
-      macroscopicImagePath: "/assets/mold1.jpg",
-      macroColor: "White, powdery",
-      macroTexture: "Granular, uniform",
-      macroSymptoms: "Minimal growth, inoculation site visible",
-      macroCharacteristics: "Young culture, spore production starting",
-    },
-    {
-      date: "March 13, 2024 - 02:15 PM",
-      microscopicImagePath: "/assets/mold-fruit-1.jpg",
-      identifiedMold: "Aspergillus fumigatus",
-      confidence: "92%",
-      macroscopicImagePath: "/assets/mold2.JPG",
-      macroColor: "White to pale yellow",
-      macroTexture: "Aerial mycelium visible",
-      macroSymptoms: "Rapid growth, medium fully colonized",
-      macroCharacteristics: "Dense mycelial mat forming, conidiophores visible",
-    },
-    {
-      date: "March 16, 2024 - 10:45 AM",
-      microscopicImagePath: "/assets/mold.jpg",
-      identifiedMold: "Aspergillus fumigatus",
-      confidence: "95%",
-      macroscopicImagePath: "/assets/mold-fruit-1.jpg",
-      macroColor: "Deep yellow with green sporulation",
-      macroTexture: "Velvety, dense aerial hyphae",
-      macroSymptoms: "Mature culture, heavy sporulation",
-      macroCharacteristics: "Abundant conidia, reverse side darkened",
-    },
-  ];
-
-  const mockDatetime = "Started: March 10, 2024";
-
-  // TODO: FETCH-READY SWAP - Replace mock observations with real backend data when ready
-  const displayDatetime = dateTime || mockDatetime;
-  const displayObservations = (observations ?? []).length > 0 ? observations : mockObservations;
+  const displayDatetime = (dateTime ?? "").trim().length > 0
+    ? dateTime
+    : "Cultivation observations timeline";
+  const displayObservations = observations ?? [];
 
   return (
     <div className="overflow-y-auto space-y-8">

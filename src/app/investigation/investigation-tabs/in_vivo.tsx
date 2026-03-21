@@ -81,52 +81,10 @@ export default function InVivoTab({
   observations = [],
   emptyMessage = "No in vivo field observations recorded",
 }: InVivoTabProps) {
-  /**
-   * MOCK DATA FOR UI VISUALIZATION
-   * Each entry shows microscopic identification and macroscopic field observations over time
-   * TODO: Replace with real backend data when ready
-   */
-  const mockObservations: InVivoObservation[] = [
-    {
-      date: "March 10, 2024 - 10:15 AM",
-      microscopicImagePath: "/assets/mold1.jpg",
-      identifiedMold: "Aspergillus fumigatus",
-      confidence: "85%",
-      macroscopicImagePath: "/assets/farm.jpg",
-      macroColor: "Brown with yellow halo",
-      macroTexture: "Smooth, slightly sunken",
-      macroSymptoms: "Slight wilting, localized necrosis",
-      macroCharacteristics: "Initial lesion formation, 5mm diameter",
-    },
-    {
-      date: "March 15, 2024 - 02:30 PM",
-      microscopicImagePath: "/assets/mold-fruit-1.jpg",
-      identifiedMold: "Aspergillus fumigatus",
-      confidence: "91%",
-      macroscopicImagePath: "/assets/farm2.jpg",
-      macroColor: "Dark brown, concentric rings visible",
-      macroTexture: "Necrotic center with target-like pattern",
-      macroSymptoms: "Expanding lesion, moderate leaf yellowing",
-      macroCharacteristics: "Concentric ring pattern, 15mm diameter",
-    },
-    {
-      date: "March 20, 2024 - 09:00 AM",
-      microscopicImagePath: "/assets/mold2.JPG",
-      identifiedMold: "Aspergillus fumigatus",
-      confidence: "94%",
-      macroscopicImagePath: "/assets/mold-fruit-1.jpg",
-      macroColor: "Very dark brown, necrotic center black",
-      macroTexture: "Advanced necrosis, sporulating surface",
-      macroSymptoms: "Severe leaf damage, adjacent tissues infected",
-      macroCharacteristics: "Mature lesion with secondary spread, 28mm diameter",
-    },
-  ];
-
-  const mockDatetime = "March 10 - April 5, 2024";
-
-  // TODO: FETCH-READY SWAP - Replace mock observations with real backend data when ready
-  const displayDatetime = dateTime || mockDatetime;
-  const displayObservations = (observations ?? []).length > 0 ? observations : mockObservations;
+  const displayDatetime = (dateTime ?? "").trim().length > 0
+    ? dateTime
+    : "Field observations timeline";
+  const displayObservations = observations ?? [];
 
   return (
     <div className="overflow-y-auto space-y-8">
