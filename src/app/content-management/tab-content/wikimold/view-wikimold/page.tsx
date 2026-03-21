@@ -27,6 +27,12 @@ type WikiMoldDetail = {
   author?: string;
   tags?: string[];
   mold_type: string;
+  // Host & Pathogen Impact fields
+  affected_hosts?: string; // List of affected crops/hosts (HTML from editor)
+  symptoms?: string; // Visual symptoms and signs of infection (HTML from editor)
+  disease_cycle?: string; // How disease spreads and lifecycle info (HTML from editor)
+  impact?: string; // Economic/health impact analysis (HTML from editor)
+  prevention?: string; // Prevention strategies (HTML from editor)
   treatments: {
     mechanical: string;
     cultural: string;
@@ -74,6 +80,12 @@ function ViewWikiMoldContent() {
     datePublished: new Date().toISOString().split("T")[0],
     tags: [],
     mold_type: "",
+    // Host & Pathogen Impact fields initialization
+    affected_hosts: "",
+    symptoms: "",
+    disease_cycle: "",
+    impact: "",
+    prevention: "",
     treatments: {
       mechanical: "",
       cultural: "",
@@ -119,6 +131,12 @@ function ViewWikiMoldContent() {
       author: typeof data.author === "string" ? data.author : "",
       tags: Array.isArray(data.tags) ? data.tags : [],
       mold_type: typeof source["mold_type"] === "string" ? (source["mold_type"] as string) : "",
+      // Host & Pathogen Impact field mappings
+      affected_hosts: typeof source["affected_hosts"] === "string" ? (source["affected_hosts"] as string) : "",
+      symptoms: typeof source["symptoms"] === "string" ? (source["symptoms"] as string) : "",
+      disease_cycle: typeof source["disease_cycle"] === "string" ? (source["disease_cycle"] as string) : "",
+      impact: typeof source["impact"] === "string" ? (source["impact"] as string) : "",
+      prevention: typeof source["prevention"] === "string" ? (source["prevention"] as string) : "",
       treatments: {
         mechanical: typeof source["treatment_mechanical"] === "string" ? (source["treatment_mechanical"] as string) : "",
         cultural: typeof source["treatment_cultural"] === "string" ? (source["treatment_cultural"] as string) : "",
@@ -183,6 +201,12 @@ function ViewWikiMoldContent() {
         author_id,
         tags: wikiMoldInfo.tags ?? [],
         mold_type: wikiMoldInfo.mold_type.trim(),
+        // Host & Pathogen Impact fields
+        affected_hosts: wikiMoldInfo.affected_hosts?.trim() ?? "",
+        symptoms: wikiMoldInfo.symptoms?.trim() ?? "",
+        disease_cycle: wikiMoldInfo.disease_cycle?.trim() ?? "",
+        impact: wikiMoldInfo.impact?.trim() ?? "",
+        prevention: wikiMoldInfo.prevention?.trim() ?? "",
         treatments: {
           mechanical: wikiMoldInfo.treatments.mechanical.trim(),
           cultural: wikiMoldInfo.treatments.cultural.trim(),
@@ -277,9 +301,10 @@ function ViewWikiMoldContent() {
 
 
   const navItems = [
-    { id: 'description', label: '01. Description' },
-    { id: 'treatments', label: '02. Treatment Control' },
-    { id: 'findings', label: '03. Findings' },
+    { id: 'description', label: 'Description' },
+    { id: 'analysis', label: 'Fungal Analysis' },
+    { id: 'prevention', label: 'Prevention' },
+    { id: 'treatments', label: 'Treatments' },
   ];
 
   return (
@@ -351,7 +376,7 @@ function ViewWikiMoldContent() {
                   value={wikiMoldInfo.title ?? ""}
                   onChange={(e) => setWikiMoldInfo((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder="Enter Title..."
-                  className="w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-5xl font-black placeholder:opacity-10 focus:outline-none transition-all uppercase tracking-tighter"
+                  className="w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-5xl font-black placeholder:opacity-10 focus:outline-none transition-all tracking-tighter"
                 />
                 {/* THE LINE: Static light gray, becomes Accent Color on focus */}
                 <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--primary-color)]/10 group-focus-within:bg-[var(--accent-color)] transition-colors duration-300" />
@@ -359,30 +384,6 @@ function ViewWikiMoldContent() {
               
               <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--primary-color)]/30 mt-4 italic">
                 Public Facing Database Heading
-              </p>
-            </div>
-
-            {/* Column 2: Mold Genus */}
-            <div className="flex-1 w-full group">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--accent-color)]">02. Genus Name</span>
-              </div>
-
-              <div className="relative">
-                <input
-                  id="mold_type"
-                  type="text"
-                  value={wikiMoldInfo.mold_type ?? ""}
-                  onChange={(e) => setWikiMoldInfo((prev) => ({ ...prev, mold_type: e.target.value }))}
-                  placeholder="Genus Species..."
-                  className="w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-5xl font-black italic placeholder:opacity-10 focus:outline-none transition-all tracking-tight"
-                />
-                {/* THE LINE: Static light gray, becomes Accent Color on focus */}
-                <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--primary-color)]/10 group-focus-within:bg-[var(--accent-color)] transition-colors duration-300" />
-              </div>
-              
-              <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--primary-color)]/30 mt-4 italic">
-                Scientific Pathogen Identification
               </p>
             </div>
           </div>
@@ -413,10 +414,103 @@ function ViewWikiMoldContent() {
             </div>
           </section>
 
-          {/* 02. TREATMENT CONTROLS: separate remediation strategies per control category. */}
-          <section id="treatments" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
+          {/* 02. HOST & PATHOGEN IMPACT SECTION */}
+          {/* 4 Fields: Affected Hosts, Symptoms, Disease Cycle, Impact in 2x2 grid */}
+          <section id="analysis" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
             <div className="flex flex-col gap-2 mb-8">
                 <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 02</label>
+                <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Host & Pathogen Impact</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+              {/* AFFECTED HOSTS/CROPS */}
+              <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tight">Affected Crops / Hosts</h3>
+                </div>
+                <div className="space-y-4">
+                  <ReactQuill
+                    value={wikiMoldInfo.affected_hosts ?? ""}
+                    onChange={(val) => setWikiMoldInfo((prev) => ({ ...prev, affected_hosts: val }))}
+                    theme="snow"
+                    placeholder="List of crops that are affected..."
+                  />
+                </div>
+              </div>
+
+              {/* SYMPTOMS & SIGNS */}
+              <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tight">Symptoms & Signs</h3>
+                </div>
+                <div className="space-y-4">
+                  <ReactQuill
+                    value={wikiMoldInfo.symptoms ?? ""}
+                    onChange={(val) => setWikiMoldInfo((prev) => ({ ...prev, symptoms: val }))}
+                    theme="snow"
+                    placeholder="Visual symptoms and how to distinguish from other diseases..."
+                  />
+                </div>
+              </div>
+
+              {/* DISEASE CYCLE & SPREAD */}
+              <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tight">Disease Cycle / Spread</h3>
+                </div>
+                <div className="space-y-4">
+                  <ReactQuill
+                    value={wikiMoldInfo.disease_cycle ?? ""}
+                    onChange={(val) => setWikiMoldInfo((prev) => ({ ...prev, disease_cycle: val }))}
+                    theme="snow"
+                    placeholder="Transmission methods and favorable environmental conditions..."
+                  />
+                </div>
+              </div>
+
+              {/* IMPACT ANALYSIS */}
+              <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tight">Impact</h3>
+                </div>
+                <div className="space-y-4">
+                  <ReactQuill
+                    value={wikiMoldInfo.impact ?? ""}
+                    onChange={(val) => setWikiMoldInfo((prev) => ({ ...prev, impact: val }))}
+                    theme="snow"
+                    placeholder="Economic damage and health risks (mycotoxins)..."
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 03. PREVENTION SECTION */}
+          {/* Prevention Strategies in separate section */}
+          <section id="prevention" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
+            <div className="flex flex-col gap-2 mb-8">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 03</label>
+                <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Prevention</h2>
+            </div>
+            <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
+              <div className="flex flex-col gap-2">
+                <h3 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tight">Prevention Strategies</h3>
+              </div>
+              <div className="space-y-4">
+                <ReactQuill
+                  value={wikiMoldInfo.prevention ?? ""}
+                  onChange={(val) => setWikiMoldInfo((prev) => ({ ...prev, prevention: val }))}
+                  theme="snow"
+                  placeholder="Cultural practices and environmental controls..."
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* 04. TREATMENT CONTROLS: separate remediation strategies per control category. */}
+          <section id="treatments" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
+            <div className="flex flex-col gap-2 mb-8">
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 04</label>
                 <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Remediation Protocols</h2>
             </div>
             
@@ -445,37 +539,6 @@ function ViewWikiMoldContent() {
                       }))}
                       theme="snow"
                       placeholder={`Detail the ${label.toLowerCase()} steps...`}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* 03. FINDINGS: chronological/discrete stage notes for investigative details. */}
-          <section id="findings" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
-             <div className="flex flex-col gap-2 mb-8">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 03</label>
-                <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Discovery Findings</h2>
-            </div>
-
-            <div className="space-y-12">
-              {wikiMoldInfo.findings.map((finding, index) => (
-                <div key={index} className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent transition-all hover:border-[var(--primary-color)]/10">
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Discovery Stage 0{index + 1}</label>
-                    <h3 className="font-black text-2xl text-[var(--primary-color)]">Stage {index + 1}</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Detailed Analysis</label>
-                    <ReactQuill
-                      value={finding.content || ""}
-                      onChange={(val) => setWikiMoldInfo((prev) => {
-                        const newFindings = [...prev.findings];
-                        newFindings[index] = { ...newFindings[index], content: val };
-                        return { ...prev, findings: newFindings };
-                      })}
-                      theme="snow"
                     />
                   </div>
                 </div>

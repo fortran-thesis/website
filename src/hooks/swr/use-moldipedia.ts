@@ -32,6 +32,15 @@ export interface MoldipediaArticle {
   tags?: string[];
   treatment?: string;
   mold_type?: string;
+  affected_crops?: string;
+  symptoms?: string;
+  disease_cycle?: string;
+  impact?: string;
+  treatment_mechanical?: string;
+  treatment_cultural?: string;
+  treatment_biological?: string;
+  treatment_physical?: string;
+  treatment_chemical?: string;
   metadata?: {
     created_at?: { _seconds: number } | string;
   };

@@ -53,7 +53,7 @@ export interface StatusCounts {
   pending: number;
   in_progress: number;
   resolved: number;
-  closed: number;
+  rejected: number;
 }
 
 export interface MonthlyCounts {
@@ -72,14 +72,19 @@ export interface PriorityCounts {
 /* ------------------------------------------------------------------ */
 
 /** Paginated mold-reports with infinite scroll. */
-export function useMoldReportsInfinite(limit = 10, enabled = true) {
+export function useMoldReportsInfinite(
+  limit = 10,
+  enabled = true,
+  scope?: 'own' | 'assigned' | 'all',
+) {
   return useSWRInfinite<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
     (pageIndex, prev) => {
       if (!enabled) return null;
       if (prev && !prev.data?.nextPageToken) return null;
-      if (pageIndex === 0) return apiUrl('/api/v1/mold-reports', { limit });
+      if (pageIndex === 0) return apiUrl('/api/v1/mold-reports', { limit, scope });
       return apiUrl('/api/v1/mold-reports', {
         limit,
+        scope,
         pageToken: prev!.data!.nextPageToken!,
       });
     },
@@ -116,7 +121,7 @@ export function useAssignedReports(
   );
 }
 
-/** Closed mold reports (includes rejected). */
+/** Closed mold reports. */
 export function useClosedReports(
   params?: { limit?: number; pageToken?: string },
   enabled = true,
@@ -191,14 +196,16 @@ export function useMoldReportSearch(params: {
   search?: string;
   priority?: string;
   status?: string;
+  scope?: 'own' | 'assigned' | 'all';
   limit?: number;
   pageToken?: string;
 }) {
-  const { priority, status, ...rest } = params;
+  const { priority, status, scope, ...rest } = params;
   return useSWR<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
     apiUrl('/api/v1/mold-reports/search', {
       ...rest,
       limit: rest.limit ?? 10,
+      scope,
       priority: priority !== 'all' ? priority : undefined,
       status: status !== 'all' ? status : undefined,
     }),

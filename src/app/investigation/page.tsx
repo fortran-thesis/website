@@ -48,11 +48,9 @@ export default function Investigation() {
             (pageIndex, prev) => {
                 if (authLoading) return null;
                 if (prev && !prev.data?.nextPageToken) return null;
-                const base = isAdministrator
-                    ? '/api/v1/mold-reports'
-                    : '/api/v1/mold-reports/assigned';
-                if (pageIndex === 0) return apiUrl(base, { limit: 100 });
-                return apiUrl(base, { limit: 100, pageToken: prev!.data!.nextPageToken! });
+                const scope = isAdministrator ? 'all' : 'assigned';
+                if (pageIndex === 0) return apiUrl('/api/v1/mold-reports', { limit: 100, scope });
+                return apiUrl('/api/v1/mold-reports', { limit: 100, scope, pageToken: prev!.data!.nextPageToken! });
             },
             { revalidateFirstPage: false },
         );
@@ -118,11 +116,11 @@ export default function Investigation() {
                     if (s === 'pending') acc.pending++;
                     else if (s === 'in progress') acc.in_progress++;
                     else if (s === 'resolved') acc.resolved++;
-                    else if (s === 'closed') acc.closed++;
+                    else if (s === 'rejected') acc.rejected++;
                     acc.total++;
                     return acc;
                 },
-                { total: 0, pending: 0, in_progress: 0, resolved: 0, closed: 0 },
+                { total: 0, pending: 0, in_progress: 0, resolved: 0, rejected: 0 },
             );
         }, [isAdministrator, adminStatsRes, cases]);
 
@@ -231,15 +229,14 @@ export default function Investigation() {
                                             { label: "All", value: "all" },
                                             { label: "In Progress", value: "in progress" },
                                             { label: "Resolved", value: "resolved" },
-                                            { label: "Closed", value: "closed" }
+                                            { label: "Rejected", value: "rejected" }
                                         ]
                                         : [
                                             { label: "All", value: "all" },
                                             { label: "Pending", value: "pending" },
                                             { label: "In Progress", value: "in progress" },
                                             { label: "Resolved", value: "resolved" },
-                                            { label: "Rejected", value: "rejected"},
-                                            { label: "Closed", value: "closed" }
+                                            { label: "Rejected", value: "rejected"}
                                         ]
                                 }
                                 onSelect={(value) => setStatusFilter(value)}

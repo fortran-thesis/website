@@ -63,6 +63,8 @@ export default function Reports() {
 
     const hasMore = reportPages?.[reportPages.length - 1]?.data?.nextPageToken;
     const error: string | null = null;
+    const isInitialLoading = loading && reports.length === 0;
+    const isLoadingMoreOnly = isLoadingMore && !isInitialLoading;
 
     // Derive stats from loaded data
     const stats = useMemo(() => {
@@ -186,9 +188,9 @@ export default function Reports() {
 
             {/* Submitted Cases Table */}
             <div className="mt-6 w-full">
-              {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading reports...</p>}
+              {isInitialLoading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading reports...</p>}
               {error && <p className="text-red-600">{error}</p>}
-              {!loading && !error && <ReportsTable data={filteredReports} 
+              {!isInitialLoading && !error && <ReportsTable data={filteredReports} 
                 onEdit={(c: Report) => {
                         window.location.href = `/reports/view-report?id=${c.id}`;
                     }}
@@ -196,7 +198,7 @@ export default function Reports() {
 
               {/* Infinite scroll trigger */}
               <div ref={loadMoreRef} className="py-4 text-center">
-                {isLoadingMore && <p className="text-sm text-[var(--moldify-grey)]">Loading more reports...</p>}
+                {isLoadingMoreOnly && <p className="text-sm text-[var(--moldify-grey)]">Loading more reports...</p>}
               </div>
             </div>
             

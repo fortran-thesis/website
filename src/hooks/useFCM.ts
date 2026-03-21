@@ -37,12 +37,26 @@ export function useFCM(): UseFCMReturn {
   const [latestMessage, setLatestMessage] = useState<MessagePayload | null>(null);
   const [isSupported, setIsSupported] = useState(false);
   const unsubRef = useRef<(() => void) | null>(null);
+  const inFlightRef = useRef<Promise<string | null> | null>(null);
 
   /* ── helpers ────────────────────────────────────────────── */
 
   const requestPermission = useCallback(async (): Promise<string | null> => {
+    if (inFlightRef.current) {
+      return inFlightRef.current;
+    }
+
+    inFlightRef.current = (async () => {
     try {
       if (typeof window === 'undefined' || !('Notification' in window)) return null;
+      if (!VAPID_KEY) {
+        console.warn('[FCM] Missing NEXT_PUBLIC_FIREBASE_VAPID_KEY; skipping token registration');
+        return null;
+      }
+      if (!('serviceWorker' in navigator) || !window.isSecureContext) {
+        console.warn('[FCM] Service worker or secure context unavailable for web push');
+        return null;
+      }
 
       const permission = await Notification.requestPermission();
       if (permission !== 'granted') {
@@ -52,8 +66,13 @@ export function useFCM(): UseFCMReturn {
 
       const app = getFirebaseApp();
       const messaging = getMessaging(app);
+      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+      await navigator.serviceWorker.ready;
 
-      const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+      const token = await getToken(messaging, {
+        vapidKey: VAPID_KEY,
+        serviceWorkerRegistration: registration,
+      });
 
       if (token) {
         setFcmToken(token);
@@ -69,7 +88,12 @@ export function useFCM(): UseFCMReturn {
     } catch (err) {
       console.error('[FCM] Error requesting permission / token:', err);
       return null;
+    } finally {
+      inFlightRef.current = null;
     }
+    })();
+
+    return inFlightRef.current;
   }, []);
 
   /* ── initialise on mount ────────────────────────────────── */

@@ -17,8 +17,8 @@ interface CaseData {
 
 /**
  * Case History Component
- * Displays a table of closed mold investigation cases
- * Only shows cases with status "Closed"
+ * Displays a table of rejected mold investigation cases
+ * Only shows cases with terminal rejected status
  */
 export default function CaseHistory() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -72,10 +72,10 @@ export default function CaseHistory() {
       ? priority.charAt(0).toUpperCase() + priority.slice(1)
       : "Unassigned";
 
-    const status = item.status || "Closed";
+    const status = item.status || "Rejected";
     const normalizedStatus = status
       ? status.charAt(0).toUpperCase() + status.slice(1)
-      : "Closed";
+      : "Rejected";
 
     return {
       caseName: item.id || "N/A",
@@ -112,14 +112,14 @@ export default function CaseHistory() {
     );
   }, [closedCases, search]);
 
-  const errorMessage = error ? "Failed to load closed cases." : null;
+  const errorMessage = error ? "Failed to load rejected cases." : null;
 
   /**
    * Handle view case - navigate to view case page
    * Since cases are closed, only viewing is allowed (no editing)
    */
   const handleViewCase = (caseItem: CaseData) => {
-    console.log("Viewing closed case:", caseItem.caseName);
+    console.log("Viewing rejected case:", caseItem.caseName);
     // Navigate to view case page using window.location (same as investigation page)
     const params = new URLSearchParams({
       id: caseItem.caseName,
@@ -134,7 +134,7 @@ export default function CaseHistory() {
         Case History
       </h2>
       <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mb-6">
-        Your record of closed mold investigations.
+        Your record of rejected mold investigations.
       </p>
 
       {/* Error Message Display */}
@@ -148,7 +148,7 @@ export default function CaseHistory() {
       <div className="flex flex-col lg:flex-row lg:items-center mt-10 gap-4 w-full">
         {/* Left Label */}
         <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold">
-            Closed Cases
+          Rejected Cases
         </p>
 
         {/* Right Section */}
@@ -161,7 +161,7 @@ export default function CaseHistory() {
 
             <input
               id="search"
-              placeholder="Search Closed Case"
+              placeholder="Search Rejected Case"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="font-[family-name:var(--font-bricolage-grotesque)]

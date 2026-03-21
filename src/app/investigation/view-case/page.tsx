@@ -9,14 +9,15 @@ import TabBar from "@/components/tab_bar";
 import CaseStatusCard from "@/components/CaseStatusCard";
 import AssignCaseModal from "@/components/modals/assign_case_modal";
 import ConfirmModal from "@/components/modals/confirmation_modal";
-import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus, faEye } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import CaseDetailsTab from "../investigation-tabs/case_details";
 import InVitroTab from "../investigation-tabs/in_vitro";
 import InVivoTab from "../investigation-tabs/in_vivo";
+import InitialObservationTab from "../investigation-tabs/initial_observation";
 import AddTreatmentModal from "@/components/modals/add_treatment_modal";
 import { useAuth } from "@/hooks/useAuth";
-import { useMoldReport, useMoldCaseByReport, useUser } from "@/hooks/swr";
+import { useMoldReport, useMoldCaseByReport, useMoldCaseLogs, useUser } from "@/hooks/swr";
 import { apiMutate } from "@/lib/api";
 import { mutate } from 'swr';
 
@@ -38,13 +39,15 @@ function ViewCaseContent() {
 
   const caseData = reportRes?.data ?? null;
   const moldCase = moldCaseRes?.data ?? null;
+  const moldCaseId = moldCase?.id;
+  const { data: logsRes, isLoading: logsLoading } = useMoldCaseLogs(moldCaseId, 200, !!moldCaseId);
   
   /* ── SWR: fetch mycologist by ID if assigned ── */
   const mycologistId = caseData?.assigned_mycologist_id;
   const { data: mycologistRes } = useUser(mycologistId);
   const mycologistData = mycologistRes?.data;
   
-  const loading = reportLoading || moldCaseLoading;
+  const loading = reportLoading || moldCaseLoading || (!!moldCaseId && logsLoading);
   const error = !caseId ? 'No case ID provided' : null;
 
   /* ── UI modal state ── */
@@ -66,31 +69,12 @@ function ViewCaseContent() {
     if (!pendingAssign || !caseId || !caseData) return;
 
     try {
-      // Step 1: PATCH to assign mycologist to the mold-report
+      // Assigning a report auto-creates the mold case on backend.
       await apiMutate(`/api/v1/mold-reports/${caseId}/assign`, {
         method: 'PATCH',
-        body: { assigned_mycologist_id: pendingAssign.mycologist.id },
-      });
-
-      // Step 2: POST to create a mold-case
-      await apiMutate('/api/v1/mold-cases', {
-        method: 'POST',
         body: {
-          mycologist_id: pendingAssign.mycologist.id,
-          name: caseData.case_name,
-          mold_report_id: caseId,
-          photo_url: caseData.case_details?.[0]?.cover_photo || "",
+          assigned_mycologist_id: pendingAssign.mycologist.id,
           priority: pendingAssign.priority,
-          start_date: new Date().toISOString(),
-          end_date: pendingAssign.endDate
-            ? pendingAssign.endDate.toISOString()
-            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          cultivation_details: {
-            in_vivo_details: {},
-            in_vitro_details: {},
-          },
-          cultivation_logs: [],
-          is_archived: false,
         },
       });
 
@@ -107,7 +91,7 @@ function ViewCaseContent() {
                 ...current,
                 data: {
                   ...current.data,
-                  status: 'in_progress',
+                  status: 'in progress',
                   assigned_mycologist_id: pendingAssign.mycologist.id,
                 },
               }
@@ -143,9 +127,15 @@ function ViewCaseContent() {
     if (!caseId) return;
 
     try {
+      const rejectionReason = window.prompt('Enter rejection reason:')?.trim();
+      if (!rejectionReason) {
+        alert('Rejection reason is required.');
+        return;
+      }
+
       await apiMutate(`/api/v1/mold-reports/${caseId}/reject`, {
         method: 'PATCH',
-        body: {},
+        body: { rejection_reason: rejectionReason },
       });
 
       setRejectModalOpen(false);
@@ -154,7 +144,7 @@ function ViewCaseContent() {
       await mutateReport(
         (current: any) =>
           current
-            ? { ...current, data: { ...current.data, status: 'closed' } }
+            ? { ...current, data: { ...current.data, status: 'rejected' } }
             : current,
         { revalidate: true },
       );
@@ -209,8 +199,6 @@ function ViewCaseContent() {
         return "var(--moldify-blue)";
       case "resolved":
         return "var(--primary-color)";
-      case "closed":
-        return "var(--moldify-grey)";
       case "rejected":
         return "var(--moldify-red)";
       default:
@@ -226,10 +214,8 @@ function ViewCaseContent() {
 
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
-  // Treat explicit 'rejected' as rejection. If status is 'closed' and a MoldCase exists
-  // (i.e. mycologist was assigned and worked the case), treat as approved/closed by farmer.
   const isRejected = caseData?.status === 'rejected';
-  const isApproved = caseData?.status === 'closed' && !!moldCase;
+  const isApproved = caseData?.status === 'resolved' && !!moldCase;
   
   // Get mycologist name from fetched user data
   const assignedMycologistName = 
@@ -252,89 +238,274 @@ function ViewCaseContent() {
     };
   });
 
+  const asText = (...values: unknown[]): string => {
+    for (const value of values) {
+      if (value === null || value === undefined) continue;
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (trimmed.length > 0) return trimmed;
+        continue;
+      }
+      if (typeof value === "number") {
+        return String(value);
+      }
+      if (typeof value === "boolean") {
+        return value ? "true" : "false";
+      }
+      if (Array.isArray(value)) {
+        const joined = value.map((item) => asText(item)).filter(Boolean).join(", ");
+        if (joined.length > 0) return joined;
+      }
+    }
+    return "";
+  };
+
+  const asTextList = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => asText(item))
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    const text = asText(value);
+    if (!text) return [];
+    return [text];
+  };
+
+  const formatLogDate = (value: unknown): string => {
+    if (!value) return "";
+    if (typeof value === "string") {
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? "" : d.toLocaleString();
+    }
+
+    if (typeof value === "object" && value !== null && "_seconds" in value) {
+      const seconds = (value as { _seconds?: number })._seconds;
+      if (typeof seconds === "number") {
+        return new Date(seconds * 1000).toLocaleString();
+      }
+    }
+
+    return "";
+  };
+
+  const confidenceText = (rawConfidence: unknown): string => {
+    if (rawConfidence === null || rawConfidence === undefined) return "";
+    if (typeof rawConfidence === "number") {
+      const value = rawConfidence <= 1 ? rawConfidence * 100 : rawConfidence;
+      return `${Math.round(value)}%`;
+    }
+
+    const text = asText(rawConfidence);
+    if (!text) return "";
+    return text.includes("%") ? text : `${text}%`;
+  };
+
+  const cultivationDetails = moldCase?.cultivation_details as Record<string, any> | undefined;
+  const cultivationLogsFromEndpoint = Array.isArray(logsRes?.data?.snapshot) ? logsRes!.data!.snapshot : [];
+  const cultivationLogsFromCase = Array.isArray(moldCase?.cultivation_logs) ? moldCase.cultivation_logs : [];
+  const cultivationLogs = cultivationLogsFromEndpoint.length > 0
+    ? cultivationLogsFromEndpoint
+    : cultivationLogsFromCase;
+  const startDateText = moldCase?.start_date
+    ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}`
+    : "";
+
+  const normalizeLogType = (rawType: unknown): string => {
+    const text = asText(rawType).toLowerCase().replace(/[_\s-]+/g, "");
+    if (text === "vivo" || text === "invivo") return "vivo";
+    if (text === "vitro" || text === "invitro") return "vitro";
+    return text;
+  };
+
   // In vitro content
+  /**
+   * In Vitro content handler - displays cultivation observations with microscopic & macroscopic data
+   * TODO: Map real observations from moldCase.cultivation_details?.vitro_observations when backend ready
+   */
   const getInVitroContent = () => {
-    if (!isAssigned) {
-      return (
-        <InVitroTab
-          dateTime=""
-          growthMedium=""
-          incubationTemperature=""
-          inVitroEntries={[]}
-          emptyMessage="No mycologist assigned to this case yet"
-        />
-      );
-    }
-    
-    if (!moldCase || !moldCase.cultivation_logs || moldCase.cultivation_logs.length === 0) {
-      return (
-        <InVitroTab
-          dateTime=""
-          growthMedium={moldCase?.cultivation_details?.in_vitro_details?.growthMedium || ""}
-          incubationTemperature={moldCase?.cultivation_details?.in_vitro_details?.incubationTemperature || ""}
-          inVitroEntries={[]}
-          emptyMessage="Mycologist assigned. No cultivation activity recorded yet."
-        />
-      );
-    }
-    
-    const vitroLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vitro");
-    const vitroEntries = vitroLogs.map((log: any) => ({
-      date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
-      sizeValue: log.characteristics?.size || "N/A",
-      colorValue: log.characteristics?.color || "N/A",
-      notes: log.additional_info || "",
-    }));
-    
+    const vitroLogs = cultivationLogs.filter((log: any) => normalizeLogType(log?.type) === "vitro");
+    const observations = vitroLogs.map((log: any) => {
+      const characteristics = (log?.characteristics ?? {}) as Record<string, any>;
+
+      return {
+        date: formatLogDate(log?.created_at) || formatLogDate(log?.metadata?.created_at),
+        microscopicImagePath: asText(
+          log?.microscopic_image_url,
+          characteristics?.microscopic_image_url,
+          log?.image_url,
+          Array.isArray(log?.image_urls) ? log.image_urls[0] : "",
+        ),
+        identifiedMold: asText(
+          characteristics?.identified_mold,
+          characteristics?.identifiedMold,
+          characteristics?.microscopic_identification,
+        ),
+        confidence: confidenceText(characteristics?.confidence),
+        macroscopicImagePath: asText(
+          log?.macroscopic_image_url,
+          characteristics?.macroscopic_image_url,
+          log?.image_url,
+          Array.isArray(log?.image_urls) ? log.image_urls[0] : "",
+        ),
+        macroColor: asText(characteristics?.macro_color, characteristics?.macroColor, characteristics?.color),
+        macroTexture: asText(characteristics?.macro_texture, characteristics?.macroTexture, characteristics?.texture),
+        macroSymptoms: asTextList(
+          characteristics?.macro_symptoms ?? characteristics?.macroSymptoms ?? characteristics?.symptoms,
+        ),
+        macroCharacteristics: asTextList(
+          characteristics?.macro_characteristics ??
+            characteristics?.macroCharacteristics ??
+            characteristics?.characteristics,
+        ),
+      };
+    });
+
     return (
       <InVitroTab
-        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
-        growthMedium={moldCase.cultivation_details?.in_vitro_details?.growthMedium || ""}
-        incubationTemperature={moldCase.cultivation_details?.in_vitro_details?.incubationTemperature || ""}
-        inVitroEntries={vitroEntries}
+        dateTime={startDateText}
+        observations={observations}
+        emptyMessage={
+          isAssigned
+            ? "Mycologist assigned. No in vitro observations recorded yet."
+            : "No mycologist assigned to this case yet"
+        }
       />
     );
   };
 
-  // In vivo content
+  /**
+   * In Vivo content handler - displays field observations with microscopic & macroscopic data
+   * TODO: Map real observations from moldCase.cultivation_details?.vivo_observations when backend ready
+   */
   const getInVivoContent = () => {
-    if (!isAssigned) {
-      return (
-        <InVivoTab
-          dateTime=""
-          environmentalTemperature=""
-          inVivoEntries={[]}
-          emptyMessage="No mycologist assigned to this case yet"
-        />
-      );
-    }
-    
-    if (!moldCase || !moldCase.cultivation_logs || moldCase.cultivation_logs.length === 0) {
-      return (
-        <InVivoTab
-          dateTime=""
-          environmentalTemperature={moldCase?.cultivation_details?.in_vivo_details?.environmentalTemperature || ""}
-          inVivoEntries={[]}
-          emptyMessage="Mycologist assigned. No cultivation activity recorded yet."
-        />
-      );
-    }
-    
-    const vivoLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vivo");
-    const vivoEntries = vivoLogs.map((log: any) => ({
-      date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
-      sizeValue: log.characteristics?.size || "N/A",
-      colorValue: log.characteristics?.color || "N/A",
-      notes: log.additional_info || "",
-    }));
-    
+    const vivoLogs = cultivationLogs.filter((log: any) => normalizeLogType(log?.type) === "vivo");
+    const observations = vivoLogs.map((log: any) => {
+      const characteristics = (log?.characteristics ?? {}) as Record<string, any>;
+
+      return {
+        date: formatLogDate(log?.created_at) || formatLogDate(log?.metadata?.created_at),
+        microscopicImagePath: asText(
+          log?.microscopic_image_url,
+          characteristics?.microscopic_image_url,
+          log?.image_url,
+          Array.isArray(log?.image_urls) ? log.image_urls[0] : "",
+        ),
+        identifiedMold: asText(
+          characteristics?.identified_mold,
+          characteristics?.identifiedMold,
+          characteristics?.microscopic_identification,
+        ),
+        confidence: confidenceText(characteristics?.confidence),
+        macroscopicImagePath: asText(
+          log?.macroscopic_image_url,
+          characteristics?.macroscopic_image_url,
+          log?.image_url,
+          Array.isArray(log?.image_urls) ? log.image_urls[0] : "",
+        ),
+        macroColor: asText(characteristics?.macro_color, characteristics?.macroColor, characteristics?.color),
+        macroTexture: asText(characteristics?.macro_texture, characteristics?.macroTexture, characteristics?.texture),
+        macroSymptoms: asTextList(
+          characteristics?.macro_symptoms ?? characteristics?.macroSymptoms ?? characteristics?.symptoms,
+        ),
+        macroCharacteristics: asTextList(
+          characteristics?.macro_characteristics ??
+            characteristics?.macroCharacteristics ??
+            characteristics?.characteristics,
+        ),
+      };
+    });
+
     return (
       <InVivoTab
-        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
-        environmentalTemperature={moldCase.cultivation_details?.in_vivo_details?.environmentalTemperature || ""}
-        inVivoEntries={vivoEntries}
+        dateTime={startDateText}
+        observations={observations}
+        emptyMessage={
+          isAssigned
+            ? "Mycologist assigned. No in vivo observations recorded yet."
+            : "No mycologist assigned to this case yet"
+        }
+      />
+    );
+  };
+
+  /**
+   * getInitialObservationContent
+   * 
+   * Prepares and returns the InitialObservationTab component with formatted data from the mold case.
+   * 
+   * Currently uses mock data for UI visualization. When backend ready, replace mockInitialObs
+   * with actual API data from moldCase.cultivation_details.initial_observations
+   * 
+   * Expected backend data structure:
+   * moldCase.cultivation_details = {
+   *   initial_observations?: {
+   *     microscopic_image_path: string
+   *     identified_mold: string
+   *     confidence: string
+   *     macroscopic_image_path: string
+   *     macro_color: string
+   *     macro_texture: string
+   *     macro_symptoms: string
+   *     macro_characteristics: string
+   *   }
+   * }
+   * 
+   * TODO: Remove mockInitialObs and replace with:
+   * const initialObs = (moldCase?.cultivation_details as any)?.initial_observations || {};
+   * 
+   * @returns {JSX.Element} InitialObservationTab with microscopic/macroscopic baseline data
+   */
+  const getInitialObservationContent = () => {
+    const initialObs = (cultivationDetails?.initial_observations ?? cultivationDetails ?? {}) as Record<string, any>;
+
+    const microscopicImagePath = asText(
+      initialObs?.initial_microscopic_image_url,
+      initialObs?.microscopic_image_path,
+      initialObs?.microscopic_image_url,
+    );
+    const identifiedMold = asText(
+      initialObs?.initial_microscopic,
+      initialObs?.identified_mold,
+      initialObs?.identifiedMold,
+      initialObs?.microscopic_ai_snapshot?.identified_mold,
+    );
+    const confidence = confidenceText(
+      initialObs?.confidence ?? initialObs?.microscopic_ai_snapshot?.confidence,
+    );
+    const macroscopicImagePath = asText(
+      initialObs?.initial_macroscopic_image_url,
+      initialObs?.macroscopic_image_path,
+      initialObs?.macroscopic_image_url,
+    );
+    const macroColor = asText(initialObs?.initial_macroscopic_color, initialObs?.macro_color, initialObs?.macroColor);
+    const macroTexture = asText(
+      initialObs?.initial_macroscopic_texture,
+      initialObs?.macro_texture,
+      initialObs?.macroTexture,
+    );
+    const macroSymptoms = asTextList(
+      initialObs?.initial_macroscopic_symptoms ?? initialObs?.macro_symptoms ?? initialObs?.initial_symptoms,
+    );
+    const macroCharacteristics = asTextList(
+      initialObs?.initial_macroscopic_characteristics ??
+        initialObs?.macro_characteristics ??
+        initialObs?.initial_characteristics,
+    );
+
+    return (
+      <InitialObservationTab
+        microscopicImagePath={microscopicImagePath}
+        macroscopicImagePath={macroscopicImagePath}
+        identifiedMold={identifiedMold}
+        confidence={confidence}
+        macroColor={macroColor}
+        macroTexture={macroTexture}
+        macroSymptoms={macroSymptoms}
+        macroCharacteristics={macroCharacteristics}
+        emptyMicroscopicMessage="No microscopic analysis recorded"
+        emptyMacroscopicMessage="No macroscopic analysis recorded"
       />
     );
   };
@@ -349,6 +520,11 @@ function ViewCaseContent() {
           entries={caseDetailsEntries}
         />
       ),
+    },
+    {
+      label: "Initial Observation",
+      icon: faEye,
+      content: getInitialObservationContent(),
     },
     {
       label: "In Vitro",
@@ -391,7 +567,7 @@ function ViewCaseContent() {
           <aside className="xl:col-span-4 space-y-6">
             
             {/* Farmer Profile Card - Earthy & Modern */}
-            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5">
               <div className="flex flex-col items-center text-center">
                 <div className="relative w-32 h-32 rounded-3xl overflow-hidden mb-4 border-4 border-[var(--taupe)] shadow-md">
                    <Image
@@ -462,7 +638,7 @@ function ViewCaseContent() {
           </div>
 
           {/* THE ACTUAL HERO CARD - Now completely clean */}
-          <div className="bg-[var(--primary-color)] text-[var(--background-color)] rounded-[2.5rem] p-12 relative shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)] overflow-hidden">
+          <div className="bg-[var(--primary-color)] text-[var(--background-color)] rounded-[2.5rem] p-12 relative overflow-hidden">
             <FontAwesomeIcon icon={faSeedling} className="absolute -right-10 -bottom-10 text-white/5 text-[18rem]" />
             
             <div className="relative z-10">
@@ -508,22 +684,11 @@ function ViewCaseContent() {
               >
                 <FontAwesomeIcon icon={faFilePdf} /> Export PDF
               </button>
-              <button 
-                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
-                onClick={() => (window.location.href = "/investigation/identification-history")}
-              >
-                <FontAwesomeIcon icon={faClockRotateLeft} /> Identification History
-              </button>
-              <button 
-                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
-                onClick={() => (window.location.href = "/investigation/treatment-history")}
-              >
-                <FontAwesomeIcon icon={faSprayCan} /> Treatment History
-              </button>
+             
             </div>
 
             {/* 5. DATA TABS */}
-            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5">
               <TabBar tabs={tabs} initialIndex={0} />
             </div>
           </section>
