@@ -37,6 +37,11 @@ export interface MoldCase {
     in_vivo_details?: {
       environmentalTemperature?: string;
     };
+    specimen_types?: string[];
+    specimen_quantities?: string[];
+    initial_symptoms?: string[];
+    initial_characteristics?: string[];
+    location_gathered?: string;
   };
   cultivation_logs?: CultivationLog[];
 }

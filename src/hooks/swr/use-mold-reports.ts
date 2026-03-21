@@ -53,6 +53,7 @@ export interface StatusCounts {
   pending: number;
   in_progress: number;
   resolved: number;
+  rejected: number;
   closed: number;
 }
 
@@ -116,7 +117,7 @@ export function useAssignedReports(
   );
 }
 
-/** Closed mold reports (includes rejected). */
+/** Closed mold reports. */
 export function useClosedReports(
   params?: { limit?: number; pageToken?: string },
   enabled = true,
