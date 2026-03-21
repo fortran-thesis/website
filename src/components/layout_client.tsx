@@ -1,6 +1,6 @@
 "use client";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "@/components/sidebar";
 import Footer from "@/components/footer";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,6 +25,7 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
   const { user: authUser } = useAuth();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const hasRequestedFcmRef = useRef(false);
   const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support") || pathname.startsWith("/wikimold") || pathname.startsWith("/faq") || pathname.startsWith("/terms-of-agreement") || pathname.startsWith("/privacy-policy") || pathname.startsWith("/about") || pathname == "/";
 
   // Determine user role - backend returns lowercase 'admin' or 'mycologist'
@@ -34,7 +35,8 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
   const { requestPermission } = useFCM();
 
   useEffect(() => {
-    if (authUser) {
+    if (authUser && !hasRequestedFcmRef.current) {
+      hasRequestedFcmRef.current = true;
       requestPermission();
     }
   }, [authUser, requestPermission]);
