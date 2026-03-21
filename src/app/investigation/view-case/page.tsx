@@ -9,11 +9,12 @@ import TabBar from "@/components/tab_bar";
 import CaseStatusCard from "@/components/CaseStatusCard";
 import AssignCaseModal from "@/components/modals/assign_case_modal";
 import ConfirmModal from "@/components/modals/confirmation_modal";
-import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus, faEye } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import CaseDetailsTab from "../investigation-tabs/case_details";
 import InVitroTab from "../investigation-tabs/in_vitro";
 import InVivoTab from "../investigation-tabs/in_vivo";
+import InitialObservationTab from "../investigation-tabs/initial_observation";
 import AddTreatmentModal from "@/components/modals/add_treatment_modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useMoldReport, useMoldCaseByReport, useUser } from "@/hooks/swr";
@@ -234,6 +235,10 @@ function ViewCaseContent() {
   });
 
   // In vitro content
+  /**
+   * In Vitro content handler - displays cultivation observations with microscopic & macroscopic data
+   * TODO: Map real observations from moldCase.cultivation_details?.vitro_observations when backend ready
+   */
   const getInVitroContent = () => {
     if (!isAssigned) {
       return (
@@ -268,17 +273,20 @@ function ViewCaseContent() {
       notes: log.additional_info || "",
     }));
     
+    // const startDate = moldCase?.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : "";
     return (
       <InVitroTab
-        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
-        growthMedium={moldCase.cultivation_details?.in_vitro_details?.growthMedium || ""}
-        incubationTemperature={moldCase.cultivation_details?.in_vitro_details?.incubationTemperature || ""}
-        inVitroEntries={vitroEntries}
+        dateTime={startDate}
+        observations={[]}
+        emptyMessage="No in vitro observations recorded yet"
       />
     );
   };
 
-  // In vivo content
+  /**
+   * In Vivo content handler - displays field observations with microscopic & macroscopic data
+   * TODO: Map real observations from moldCase.cultivation_details?.vivo_observations when backend ready
+   */
   const getInVivoContent = () => {
     if (!isAssigned) {
       return (
@@ -311,11 +319,88 @@ function ViewCaseContent() {
       notes: log.additional_info || "",
     }));
     
+    // const observationPeriod = moldCase?.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : "";
     return (
       <InVivoTab
-        dateTime={moldCase.start_date ? `Started: ${toDate(moldCase.start_date)?.toLocaleString() ?? ""}` : ""}
-        environmentalTemperature={moldCase.cultivation_details?.in_vivo_details?.environmentalTemperature || ""}
-        inVivoEntries={vivoEntries}
+        dateTime={observationPeriod}
+        observations={[]}
+        emptyMessage="No in vivo observations recorded yet"
+      />
+    );
+  };
+
+  /**
+   * getInitialObservationContent
+   * 
+   * Prepares and returns the InitialObservationTab component with formatted data from the mold case.
+   * 
+   * Currently uses mock data for UI visualization. When backend ready, replace mockInitialObs
+   * with actual API data from moldCase.cultivation_details.initial_observations
+   * 
+   * Expected backend data structure:
+   * moldCase.cultivation_details = {
+   *   initial_observations?: {
+   *     microscopic_image_path: string
+   *     identified_mold: string
+   *     confidence: string
+   *     macroscopic_image_path: string
+   *     macro_color: string
+   *     macro_texture: string
+   *     macro_symptoms: string
+   *     macro_characteristics: string
+   *   }
+   * }
+   * 
+   * TODO: Remove mockInitialObs and replace with:
+   * const initialObs = (moldCase?.cultivation_details as any)?.initial_observations || {};
+   * 
+   * @returns {JSX.Element} InitialObservationTab with microscopic/macroscopic baseline data
+   */
+  const getInitialObservationContent = () => {
+    /**
+     * MOCK DATA FOR UI VISUALIZATION
+     * Replace this entire mockInitialObs object with real data from backend when ready
+     */
+    const mockInitialObs = {
+      microscopic_image_path: "/assets/images/microscopic-sample-001.jpg",
+      identified_mold: "Aspergillus fumigatus",
+      confidence: "92%",
+      macroscopic_image_path: "/assets/images/macroscopic-sample-001.jpg",
+      macro_color: "White with yellow discoloration",
+      macro_texture: "Powdery, granular appearance",
+      macro_symptoms: "Leaf necrosis, wilting, stunted growth",
+      macro_characteristics: "Rapid spread, airborne spores, warm weather preference",
+    };
+
+    /**
+     * TODO: FETCH-READY SWAP
+     * When backend is ready, uncomment this line and remove mockInitialObs usage:
+     * const initialObs = (moldCase?.cultivation_details as any)?.initial_observations || {};
+     * 
+     * Then replace all mockInitialObs references below with initialObs
+     */
+
+    const microscopicImagePath = mockInitialObs.microscopic_image_path || "";
+    const identifiedMold = mockInitialObs.identified_mold || "";
+    const confidence = mockInitialObs.confidence || "";
+    const macroscopicImagePath = mockInitialObs.macroscopic_image_path || "";
+    const macroColor = mockInitialObs.macro_color || "";
+    const macroTexture = mockInitialObs.macro_texture || "";
+    const macroSymptoms = mockInitialObs.macro_symptoms || "";
+    const macroCharacteristics = mockInitialObs.macro_characteristics || "";
+
+    return (
+      <InitialObservationTab
+        microscopicImagePath={microscopicImagePath}
+        macroscopicImagePath={macroscopicImagePath}
+        identifiedMold={identifiedMold}
+        confidence={confidence}
+        macroColor={macroColor}
+        macroTexture={macroTexture}
+        macroSymptoms={macroSymptoms}
+        macroCharacteristics={macroCharacteristics}
+        emptyMicroscopicMessage="No microscopic analysis recorded"
+        emptyMacroscopicMessage="No macroscopic analysis recorded"
       />
     );
   };
@@ -330,6 +415,11 @@ function ViewCaseContent() {
           entries={caseDetailsEntries}
         />
       ),
+    },
+    {
+      label: "Initial Observation",
+      icon: faEye,
+      content: getInitialObservationContent(),
     },
     {
       label: "In Vitro",
@@ -372,7 +462,7 @@ function ViewCaseContent() {
           <aside className="xl:col-span-4 space-y-6">
             
             {/* Farmer Profile Card - Earthy & Modern */}
-            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5">
               <div className="flex flex-col items-center text-center">
                 <div className="relative w-32 h-32 rounded-3xl overflow-hidden mb-4 border-4 border-[var(--taupe)] shadow-md">
                    <Image
@@ -443,7 +533,7 @@ function ViewCaseContent() {
           </div>
 
           {/* THE ACTUAL HERO CARD - Now completely clean */}
-          <div className="bg-[var(--primary-color)] text-[var(--background-color)] rounded-[2.5rem] p-12 relative shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)] overflow-hidden">
+          <div className="bg-[var(--primary-color)] text-[var(--background-color)] rounded-[2.5rem] p-12 relative overflow-hidden">
             <FontAwesomeIcon icon={faSeedling} className="absolute -right-10 -bottom-10 text-white/5 text-[18rem]" />
             
             <div className="relative z-10">
@@ -489,22 +579,11 @@ function ViewCaseContent() {
               >
                 <FontAwesomeIcon icon={faFilePdf} /> Export PDF
               </button>
-              <button 
-                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
-                onClick={() => (window.location.href = "/investigation/identification-history")}
-              >
-                <FontAwesomeIcon icon={faClockRotateLeft} /> Identification History
-              </button>
-              <button 
-                className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm cursor-pointer"
-                onClick={() => (window.location.href = "/investigation/treatment-history")}
-              >
-                <FontAwesomeIcon icon={faSprayCan} /> Treatment History
-              </button>
+             
             </div>
 
             {/* 5. DATA TABS */}
-            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5 shadow-[0_20px_50px_-25px_rgba(62,92,10,0.05)]">
+            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5">
               <TabBar tabs={tabs} initialIndex={0} />
             </div>
           </section>
