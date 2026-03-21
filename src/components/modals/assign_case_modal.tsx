@@ -24,7 +24,7 @@ interface AssignCaseModalProps {
   onAssign?: (mycologist: Mycologist, priority: string, endDate: Date | null) => void; 
 }
 
-const CAPACITY_THRESHOLD = 8; // Mycologists with >= 8 cases are at capacity
+const CAPACITY_THRESHOLD = 2; // Mycologists with >2 active cases are at capacity
 
 export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
@@ -35,7 +35,7 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
   const [loading, setLoading] = useState(false);
 
 
-  // Fetch mycologists and assigned cases when modal opens
+  // Fetch mycologists and current workload counts when modal opens
   useEffect(() => {
     if (!isOpen) return;
 
@@ -52,43 +52,45 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
         const mycologistsText = await mycologistsRes.text();
         const mycologistsBody = mycologistsText ? JSON.parse(mycologistsText) : { success: false, data: null };
         
-        // Fetch mold-cases to count active assignments per mycologist
-        const moldCasesRes = await fetch('/api/v1/mold-cases', { cache: 'no-store' });
-        
-        if (!moldCasesRes.ok) {
-          console.warn('Failed to fetch mold-cases:', moldCasesRes.status);
-        }
-
-        const moldCasesText = await moldCasesRes.text();
-        const moldCasesBody = moldCasesText ? JSON.parse(moldCasesText) : { success: false, data: null };
-
         console.log('🔍 Mycologists response:', mycologistsBody);
-        console.log('🔍 Mold cases response:', moldCasesBody);
 
         if (mycologistsBody.success) {
           const mycologistsList = mycologistsBody.data.snapshot || [];
-          const moldCases = (moldCasesBody.success ? moldCasesBody.data?.snapshot : []) || [];
-
           console.log('🔍 Mycologists list:', mycologistsList);
-          console.log('🔍 Mold cases list:', moldCases);
 
-          // Count active (non-archived) cases per mycologist
           const caseCounts: Record<string, number> = {};
-          moldCases.forEach((moldCase: any) => {
-            const mycologistId = moldCase.mycologist_id;
-            console.log('🔍 Processing case:', { mycologist_id: mycologistId, is_archived: moldCase.is_archived });
-            if (mycologistId && !moldCase.is_archived) {
-              caseCounts[mycologistId] = (caseCounts[mycologistId] || 0) + 1;
-            }
-          });
+          await Promise.all(
+            mycologistsList.map(async (m: any) => {
+              const userId = m.id || m.user?.id;
+              if (!userId) return;
 
-          console.log('📊 Case counts per mycologist:', caseCounts);
+              try {
+                const countRes = await fetch(
+                  `/api/v1/mold-reports/assigned/count?id=${encodeURIComponent(userId)}`,
+                  { cache: 'no-store' },
+                );
+
+                if (!countRes.ok) {
+                  caseCounts[userId] = 0;
+                  return;
+                }
+
+                const countBody = await countRes.json();
+                caseCounts[userId] = Number(countBody?.data?.total ?? 0);
+              } catch (countErr) {
+                console.warn('Failed to fetch assigned count for mycologist:', userId, countErr);
+                caseCounts[userId] = 0;
+              }
+            }),
+          );
+
+          console.log('📊 Assigned active report counts per mycologist:', caseCounts);
 
           // Transform mycologists with case counts and status
           const transformedMycologists: Mycologist[] = mycologistsList.map((m: any) => {
             const userId = m.id || m.user?.id;
             const cases = caseCounts[userId] || 0;
-            const status = cases >= CAPACITY_THRESHOLD ? "at-capacity" : "available";
+            const status = cases > CAPACITY_THRESHOLD ? "at-capacity" : "available";
             
             return {
               name: m.details?.displayName || m.user?.username || "Unknown",
@@ -96,6 +98,13 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
               cases,
               id: userId, // Keep ID for later use
             };
+          });
+
+          transformedMycologists.sort((a, b) => {
+            if (a.status !== b.status) {
+              return a.status === 'at-capacity' ? -1 : 1;
+            }
+            return b.cases - a.cases;
           });
 
           setMycologists(transformedMycologists);
