@@ -66,31 +66,12 @@ function ViewCaseContent() {
     if (!pendingAssign || !caseId || !caseData) return;
 
     try {
-      // Step 1: PATCH to assign mycologist to the mold-report
+      // Assigning a report auto-creates the mold case on backend.
       await apiMutate(`/api/v1/mold-reports/${caseId}/assign`, {
         method: 'PATCH',
-        body: { assigned_mycologist_id: pendingAssign.mycologist.id },
-      });
-
-      // Step 2: POST to create a mold-case
-      await apiMutate('/api/v1/mold-cases', {
-        method: 'POST',
         body: {
-          mycologist_id: pendingAssign.mycologist.id,
-          name: caseData.case_name,
-          mold_report_id: caseId,
-          photo_url: caseData.case_details?.[0]?.cover_photo || "",
+          assigned_mycologist_id: pendingAssign.mycologist.id,
           priority: pendingAssign.priority,
-          start_date: new Date().toISOString(),
-          end_date: pendingAssign.endDate
-            ? pendingAssign.endDate.toISOString()
-            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          cultivation_details: {
-            in_vivo_details: {},
-            in_vitro_details: {},
-          },
-          cultivation_logs: [],
-          is_archived: false,
         },
       });
 
@@ -107,7 +88,7 @@ function ViewCaseContent() {
                 ...current,
                 data: {
                   ...current.data,
-                  status: 'in_progress',
+                  status: 'in progress',
                   assigned_mycologist_id: pendingAssign.mycologist.id,
                 },
               }
@@ -154,7 +135,7 @@ function ViewCaseContent() {
       await mutateReport(
         (current: any) =>
           current
-            ? { ...current, data: { ...current.data, status: 'closed' } }
+            ? { ...current, data: { ...current.data, status: 'rejected' } }
             : current,
         { revalidate: true },
       );
@@ -281,7 +262,7 @@ function ViewCaseContent() {
     const vitroLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vitro");
     const vitroEntries = vitroLogs.map((log: any) => ({
       date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
+      imagePath: log.image_url || "/images/placeholder.svg",
       sizeValue: log.characteristics?.size || "N/A",
       colorValue: log.characteristics?.color || "N/A",
       notes: log.additional_info || "",
@@ -324,7 +305,7 @@ function ViewCaseContent() {
     const vivoLogs = moldCase.cultivation_logs.filter((log: any) => log.type === "vivo");
     const vivoEntries = vivoLogs.map((log: any) => ({
       date: log.created_at ? new Date(log.created_at).toLocaleString() : "",
-      imagePath: log.image_urls?.[0] || "/images/placeholder.svg",
+      imagePath: log.image_url || "/images/placeholder.svg",
       sizeValue: log.characteristics?.size || "N/A",
       colorValue: log.characteristics?.color || "N/A",
       notes: log.additional_info || "",
