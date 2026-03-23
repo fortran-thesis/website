@@ -507,6 +507,14 @@ function ViewCaseContent() {
    */
   const getInitialObservationContent = () => {
     const initialObs = (cultivationDetails?.initial_observations ?? cultivationDetails ?? {}) as Record<string, any>;
+    const snapshot = (initialObs?.microscopic_ai_snapshot ?? cultivationDetails?.microscopic_ai_snapshot ?? {}) as Record<string, any>;
+    const snapshotTopPrediction = Array.isArray(snapshot?.top_predictions) && snapshot.top_predictions.length > 0
+      ? (snapshot.top_predictions[0] as Record<string, any>)
+      : undefined;
+    const reportLookupResults = (caseData as any)?.lookup_results;
+    const reportTopLookup = Array.isArray(reportLookupResults) && reportLookupResults.length > 0
+      ? (reportLookupResults[0] as Record<string, any>)
+      : undefined;
 
     const microscopicImagePath = asText(
       initialObs?.initial_microscopic_image_url,
@@ -519,11 +527,19 @@ function ViewCaseContent() {
       initialObs?.identified_mold,
       initialObs?.identifiedMold,
       initialObs?.microscopic_ai_snapshot?.identified_mold,
+      snapshot?.identified_mold,
+      snapshotTopPrediction?.moldName,
+      snapshotTopPrediction?.mold_name,
+      reportTopLookup?.moldName,
+      reportTopLookup?.mold_name,
     );
     const confidence = confidenceText(
       initialObs?.confidence ??
       initialObs?.microscopic_ai_snapshot?.confidence ??
-      cultivationDetails?.microscopic_ai_snapshot?.confidence,
+      cultivationDetails?.microscopic_ai_snapshot?.confidence ??
+      snapshot?.confidence ??
+      snapshotTopPrediction?.confidence ??
+      reportTopLookup?.confidence,
     );
     const macroscopicImagePath = asText(
       initialObs?.initial_macroscopic_image_url,
