@@ -12,9 +12,10 @@ interface MoldInfoProps {
   moldData: MoldGenus[];
   isLoading: boolean;
   onEditMold?: (mold: MoldGenus) => void;
+  onAddMold?: () => void;
 }
 
-export default function MoldInfo({ moldData = [], isLoading, onEditMold }: MoldInfoProps) {
+export default function MoldInfo({ moldData = [], isLoading, onEditMold, onAddMold }: MoldInfoProps) {
   const [search, setSearch] = useState("");
 
   // Unified client-side search: genusName, reviewedBy, dateReviewed
@@ -49,6 +50,13 @@ export default function MoldInfo({ moldData = [], isLoading, onEditMold }: MoldI
 
         {/* Right Section (Search Bar) */}
         <div className="flex flex-col md:flex-row md:ml-auto gap-x-2 gap-y-3 w-full md:w-auto">
+          <button
+            type="button"
+            onClick={onAddMold}
+            className="font-[family-name:var(--font-bricolage-grotesque)] font-bold text-sm px-4 py-2 rounded-full border-2 border-[var(--primary-color)] text-[var(--background-color)] bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] transition"
+          >
+            Add Mold Information
+          </button>
           <div className="relative flex items-center w-full md:w-100">
             <label htmlFor="search" className="sr-only">Search Mold Genus</label>
             <input

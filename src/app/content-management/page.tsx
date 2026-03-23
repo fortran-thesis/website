@@ -95,9 +95,7 @@
     // Sync SWR data into local state whenever it changes (e.g. after archive revalidation,
     // or returning from the add-wikimold page with a newly created article).
     useEffect(() => {
-      if (wikimoldDataFromApi.length > 0) {
-        setWikiMoldData(wikimoldDataFromApi);
-      }
+      setWikiMoldData(wikimoldDataFromApi);
     }, [wikimoldDataFromApi]);
     const [showArchiveModal, setShowArchiveModal] = useState(false);
     const [selectedWikiMold, setSelectedWikiMold] = useState<WikiMold | null>(null);
@@ -105,6 +103,10 @@
       
       const handleEditMold = (mold: MoldGenus) => {
         router.push(`/content-management/tab-content/mold-info/view-mold-info?id=${mold.id}`);
+      };
+
+      const handleAddMold = () => {
+        router.push('/content-management/tab-content/mold-info/view-mold-info');
       };
       
       const handleEditWikiMold = (wikimold: WikiMold) => {
@@ -143,6 +145,7 @@
               undefined,
               { revalidate: true },
             ),
+            mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
           ]);
 
           setShowArchiveModal(false);
@@ -165,6 +168,7 @@
             moldData={moldData} 
             isLoading={isMoldLoading}
             onEditMold={handleEditMold}
+            onAddMold={handleAddMold}
           />,
         },
         {

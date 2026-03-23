@@ -271,6 +271,7 @@ export default function AddWikiMold() {
         undefined,
         { revalidate: true },
       );
+      await mutate('/api/v1/dashboard/summary', undefined, { revalidate: true });
 
       setSuccessMessage("WikiMold article created successfully!");
         // Reset form and local image state after successful create.

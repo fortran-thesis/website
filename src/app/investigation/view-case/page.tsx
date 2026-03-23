@@ -56,11 +56,11 @@ function ViewCaseContent() {
   const [isConfirmAssignOpen, setConfirmAssignOpen] = useState(false);
   const [isAddTreatmentOpen, setAddTreatmentOpen] = useState(false);
 
-  const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; priority: string; endDate: Date | null } | null>(null);
+  const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; endDate: Date | null } | null>(null);
 
   // Called from AssignCaseModal -> opens confirmation modal
-  const handleAssignClick = (mycologist: Mycologist, priority: string, endDate: Date | null) => {
-    setPendingAssign({ mycologist, priority, endDate });
+  const handleAssignClick = (mycologist: Mycologist, endDate: Date | null) => {
+    setPendingAssign({ mycologist, endDate });
     setConfirmAssignOpen(true);
   };
 
@@ -74,7 +74,7 @@ function ViewCaseContent() {
         method: 'PATCH',
         body: {
           assigned_mycologist_id: pendingAssign.mycologist.id,
-          priority: pendingAssign.priority,
+          end_date: pendingAssign.endDate?.toISOString(),
         },
       });
 
@@ -116,6 +116,7 @@ function ViewCaseContent() {
           undefined,
           { revalidate: true },
         ),
+        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
       ]);
     } catch (err: any) {
       console.error('Assignment failed:', err);
@@ -302,6 +303,49 @@ function ViewCaseContent() {
     return text.includes("%") ? text : `${text}%`;
   };
 
+  const normalizeCharacteristics = (value: unknown): Record<string, any> => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      return value as Record<string, any>;
+    }
+    if (typeof value === "string") {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          return parsed as Record<string, any>;
+        }
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  };
+
+  const hasMicroscopicEvidence = (characteristics: Record<string, any>): boolean => {
+    return asText(
+      characteristics?.microscopic_identification,
+      characteristics?.identified_mold,
+      characteristics?.identifiedMold,
+      characteristics?.confidence,
+      characteristics?.top_predictions,
+    ).length > 0;
+  };
+
+  const hasMacroscopicEvidence = (characteristics: Record<string, any>): boolean => {
+    return asText(
+      characteristics?.size,
+      characteristics?.lesion_size,
+      characteristics?.colony_diameter,
+      characteristics?.color,
+      characteristics?.lesion_color,
+      characteristics?.colony_color,
+      characteristics?.texture,
+      characteristics?.lesion_texture,
+      characteristics?.colony_texture,
+      characteristics?.symptoms,
+      characteristics?.characteristics,
+    ).length > 0;
+  };
+
   const cultivationDetails = moldCase?.cultivation_details as Record<string, any> | undefined;
   const cultivationLogsFromEndpoint = Array.isArray(logsRes?.data?.snapshot) ? logsRes!.data!.snapshot : [];
   const cultivationLogsFromCase = Array.isArray(moldCase?.cultivation_logs) ? moldCase.cultivation_logs : [];
@@ -327,15 +371,17 @@ function ViewCaseContent() {
   const getInVitroContent = () => {
     const vitroLogs = cultivationLogs.filter((log: any) => normalizeLogType(log?.type) === "vitro");
     const observations = vitroLogs.map((log: any) => {
-      const characteristics = (log?.characteristics ?? {}) as Record<string, any>;
+      const characteristics = normalizeCharacteristics(log?.characteristics);
+      const isMicro = hasMicroscopicEvidence(characteristics);
+      const isMacro = hasMacroscopicEvidence(characteristics);
 
       return {
         date: formatLogDate(log?.created_at) || formatLogDate(log?.metadata?.created_at),
         microscopicImagePath: asText(
           log?.microscopic_image_url,
           characteristics?.microscopic_image_url,
-          log?.image_url,
-          Array.isArray(log?.image_urls) ? log.image_urls[0] : "",
+          isMicro ? log?.image_url : "",
+          Array.isArray(log?.microscopic_image_urls) ? log.microscopic_image_urls[0] : "",
         ),
         identifiedMold: asText(
           characteristics?.identified_mold,
@@ -346,7 +392,7 @@ function ViewCaseContent() {
         macroscopicImagePath: asText(
           log?.macroscopic_image_url,
           characteristics?.macroscopic_image_url,
-          log?.image_url,
+          isMacro ? log?.image_url : "",
           Array.isArray(log?.image_urls) ? log.image_urls[0] : "",
         ),
         macroColor: asText(characteristics?.macro_color, characteristics?.macroColor, characteristics?.color),
@@ -382,15 +428,17 @@ function ViewCaseContent() {
   const getInVivoContent = () => {
     const vivoLogs = cultivationLogs.filter((log: any) => normalizeLogType(log?.type) === "vivo");
     const observations = vivoLogs.map((log: any) => {
-      const characteristics = (log?.characteristics ?? {}) as Record<string, any>;
+      const characteristics = normalizeCharacteristics(log?.characteristics);
+      const isMicro = hasMicroscopicEvidence(characteristics);
+      const isMacro = hasMacroscopicEvidence(characteristics);
 
       return {
         date: formatLogDate(log?.created_at) || formatLogDate(log?.metadata?.created_at),
         microscopicImagePath: asText(
           log?.microscopic_image_url,
           characteristics?.microscopic_image_url,
-          log?.image_url,
-          Array.isArray(log?.image_urls) ? log.image_urls[0] : "",
+          isMicro ? log?.image_url : "",
+          Array.isArray(log?.microscopic_image_urls) ? log.microscopic_image_urls[0] : "",
         ),
         identifiedMold: asText(
           characteristics?.identified_mold,
@@ -401,7 +449,7 @@ function ViewCaseContent() {
         macroscopicImagePath: asText(
           log?.macroscopic_image_url,
           characteristics?.macroscopic_image_url,
-          log?.image_url,
+          isMacro ? log?.image_url : "",
           Array.isArray(log?.image_urls) ? log.image_urls[0] : "",
         ),
         macroColor: asText(characteristics?.macro_color, characteristics?.macroColor, characteristics?.color),
@@ -464,6 +512,7 @@ function ViewCaseContent() {
       initialObs?.initial_microscopic_image_url,
       initialObs?.microscopic_image_path,
       initialObs?.microscopic_image_url,
+      cultivationDetails?.initial_microscopic_image_url,
     );
     const identifiedMold = asText(
       initialObs?.initial_microscopic,
@@ -472,12 +521,15 @@ function ViewCaseContent() {
       initialObs?.microscopic_ai_snapshot?.identified_mold,
     );
     const confidence = confidenceText(
-      initialObs?.confidence ?? initialObs?.microscopic_ai_snapshot?.confidence,
+      initialObs?.confidence ??
+      initialObs?.microscopic_ai_snapshot?.confidence ??
+      cultivationDetails?.microscopic_ai_snapshot?.confidence,
     );
     const macroscopicImagePath = asText(
       initialObs?.initial_macroscopic_image_url,
       initialObs?.macroscopic_image_path,
       initialObs?.macroscopic_image_url,
+      cultivationDetails?.initial_macroscopic_image_url,
     );
     const macroColor = asText(initialObs?.initial_macroscopic_color, initialObs?.macro_color, initialObs?.macroColor);
     const macroTexture = asText(

@@ -245,6 +245,7 @@ function ViewWikiMoldContent() {
           undefined,
           { revalidate: true },
         ),
+        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
       ]);
 
       setSuccessMessage("WikiMold article updated successfully!");
@@ -286,6 +287,7 @@ function ViewWikiMoldContent() {
           undefined,
           { revalidate: true },
         ),
+        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
       ]);
 
       setSuccessMessage("WikiMold article archived successfully!");
