@@ -5,3 +5,7 @@ export const GET = createProxyHandler({
   upstream: endpoints.mold.list,
   forwardParams: ['limit', 'pageToken'],
 });
+
+export const POST = createProxyHandler({
+  upstream: endpoints.mold.create,
+});
