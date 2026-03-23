@@ -113,6 +113,24 @@ export default function InVitroTab({
               key={idx}
               className={`relative pl-7 space-y-6 ${idx !== displayObservations.length - 1 ? "mb-8" : ""}`}
             >
+              {(() => {
+                const hasMicroscopicEvidence =
+                  (obs.microscopicImagePath ?? "").trim().length > 0 ||
+                  (obs.identifiedMold ?? "").trim().length > 0 ||
+                  (obs.confidence ?? "").trim().length > 0;
+                const hasMacroscopicEvidence =
+                  (obs.macroscopicImagePath ?? "").trim().length > 0 ||
+                  (obs.macroColor ?? "").trim().length > 0 ||
+                  (obs.macroTexture ?? "").trim().length > 0 ||
+                  (Array.isArray(obs.macroSymptoms)
+                    ? obs.macroSymptoms.length > 0
+                    : (obs.macroSymptoms ?? "").trim().length > 0) ||
+                  (Array.isArray(obs.macroCharacteristics)
+                    ? obs.macroCharacteristics.length > 0
+                    : (obs.macroCharacteristics ?? "").trim().length > 0);
+
+                return (
+                  <>
               {/* Timeline dot and connector */}
               <div className="absolute left-0 top-0 w-3 h-3 rounded-full bg-[var(--primary-color)]"></div>
               {idx !== displayObservations.length - 1 && (
@@ -124,6 +142,7 @@ export default function InVitroTab({
               </p>
 
               {/* MICROSCOPIC SECTION */}
+              {hasMicroscopicEvidence && (
               <section className="space-y-3">
                 <h3 className="font-semibold text-base text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
                   Microscopic Analysis
@@ -159,8 +178,10 @@ export default function InVitroTab({
                   />
                 )}
               </section>
+              )}
 
               {/* MACROSCOPIC SECTION */}
+              {hasMacroscopicEvidence && (
               <section className="space-y-3">
                 <h3 className="font-semibold text-base text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
                   Macroscopic Characteristics
@@ -207,6 +228,17 @@ export default function InVitroTab({
                   />
                 )}
               </section>
+              )}
+
+              {!hasMicroscopicEvidence && !hasMacroscopicEvidence && (
+                <ObservationEmptyStateCard
+                  message="No microscopic or macroscopic evidence in this log"
+                  height={120}
+                />
+              )}
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>

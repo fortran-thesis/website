@@ -21,7 +21,7 @@ interface AssignCaseModalProps {
   onClose: () => void;
   caseId?: string; // Add case ID for assignment
   mycologists?: Mycologist[]; // Make optional since we'll fetch from backend
-  onAssign?: (mycologist: Mycologist, priority: string, endDate: Date | null) => void; 
+  onAssign?: (mycologist: Mycologist, endDate: Date | null) => void; 
 }
 
 const CAPACITY_THRESHOLD = 2; // Mycologists with >2 active cases are at capacity
@@ -29,7 +29,6 @@ const CAPACITY_THRESHOLD = 2; // Mycologists with >2 active cases are at capacit
 export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
   const [filter, setFilter] = useState<"all" | "available" | "at-capacity">("all");
-  const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [mycologists, setMycologists] = useState<Mycologist[]>(propMycologists || []);
   const [loading, setLoading] = useState(false);
@@ -124,21 +123,13 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
   const filteredMycologists = mycologists.filter((m) => 
     filter === "all" ? true : (filter === "available" ? m.status === "available" : m.status === "at-capacity")
   );
-
-  const priorityColor = {
-    low: "bg-[var(--moldify-light-green)]",
-    medium: "bg-[var(--moldify-light-yellow)]",
-    high: "bg-[var(--moldify-light-red)]",
-  };
-
    const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("🔍 Modal - Selected priority:", priority);
     console.log("🔍 Modal - Selected mycologist:", selectedMycologist);
     console.log("🔍 Modal - End date:", endDate);
     if (selectedMycologist) {
       if (onAssign) {
-        onAssign(selectedMycologist, priority, endDate);
+        onAssign(selectedMycologist, endDate);
       }
       onClose();
     }
@@ -246,26 +237,6 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
             </div>
           </div>
           {!selectedMycologist && <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">* Please select a mycologist</p>}
-        </div>
-
-        {/* Priority Level */}
-        <div className="mb-7 mt-2">
-          <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold text-[var(--primary-color)] mb-2">Choose Priority Level:</p>
-          <div className="w-full flex gap-2 ">
-            {["low", "medium", "high"].map((level) => (
-              <button
-                key={level}
-                type="button"
-                className={`flex-1 px-4 py-2 rounded-lg font-semibold cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--moldify-black)] ${
-                  priority === level ? priorityColor[level as keyof typeof priorityColor] : "bg-transparent border-2 border-[var(--moldify-softGrey)]"
-                }`}
-                onClick={() => setPriority(level as any)}
-              >
-                {level.charAt(0).toUpperCase() + level.slice(1)}
-              </button>
-            ))}
-          </div>
-          <input type="hidden" name="priority" value={priority} />
         </div>
 
         {/* End Date */}

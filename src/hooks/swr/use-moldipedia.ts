@@ -85,8 +85,8 @@ export function useMoldipediaInfinite(limit = 50) {
       });
     },
     {
-      revalidateFirstPage: false,
-      revalidateIfStale: false,
+      revalidateFirstPage: true,
+      revalidateIfStale: true,
       dedupingInterval: MOLDIPEDIA_CACHE_MS,
       persistSize: true,
     },
@@ -99,7 +99,7 @@ export function useMoldipediaArticle(id: string | undefined) {
     id ? `/api/v1/moldipedia/${id}` : null,
     {
       dedupingInterval: MOLDIPEDIA_CACHE_MS,
-      revalidateIfStale: false,
+      revalidateIfStale: true,
     },
   );
 }
@@ -110,7 +110,7 @@ export function useMoldipediaList(limit = 1000, enabled = true) {
     enabled ? apiUrl('/api/v1/moldipedia', { limit }) : null,
     {
       dedupingInterval: MOLDIPEDIA_CACHE_MS,
-      revalidateIfStale: false,
+      revalidateIfStale: true,
       keepPreviousData: true,
     },
   );
