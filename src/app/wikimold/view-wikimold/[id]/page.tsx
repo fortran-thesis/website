@@ -34,9 +34,10 @@ type ArticleViewModel = {
   symptoms: string;
   disease_cycle: string;
   impact: string;
+  prevention: string;
 };
 
-type DossierField = 'affected_crops' | 'symptoms' | 'disease_cycle' | 'impact';
+type DossierField = 'affected_crops' | 'symptoms' | 'disease_cycle' | 'impact' | 'prevention';
 type TreatmentField =
   | 'treatment_mechanical'
   | 'treatment_cultural'
@@ -122,17 +123,18 @@ export default function ViewWikiMold() {
       bannerImage: data.cover_photo || DEFAULT_BANNER,
       authorImage: data.author_photo || DEFAULT_AUTHOR,
       content: data.body || data.description || data.content || EMPTY_HTML_FALLBACK,
-      treatment: data.treatment || '<p>No treatment information available yet.</p>',
-      treatment_mechanical: data.treatment_mechanical || '',
-      treatment_cultural: data.treatment_cultural || '',
-      treatment_biological: data.treatment_biological || '',
-      treatment_physical: data.treatment_physical || '',
-      treatment_chemical: data.treatment_chemical || '',
+      treatment: data.treatment || (data.treatments && (data.treatments.mechanical || data.treatments.cultural || data.treatments.biological || data.treatments.physical || data.treatments.chemical) ? '<p>Treatment details available in specific categories.</p>' : '<p>No treatment information available yet.</p>'),
+      treatment_mechanical: data.treatment_mechanical || (data.treatments?.mechanical as string | undefined) || '',
+      treatment_cultural: data.treatment_cultural || (data.treatments?.cultural as string | undefined) || '',
+      treatment_biological: data.treatment_biological || (data.treatments?.biological as string | undefined) || '',
+      treatment_physical: data.treatment_physical || (data.treatments?.physical as string | undefined) || '',
+      treatment_chemical: data.treatment_chemical || (data.treatments?.chemical as string | undefined) || '',
       mold_type: data.mold_type || 'Unknown Mold Type',
       affected_crops: getHtmlField(data, 'affected_crops', '<p>Affected host data will be added here.</p>'),
       symptoms: getHtmlField(data, 'symptoms', '<p>Symptom data will be added here.</p>'),
       disease_cycle: getHtmlField(data, 'disease_cycle', '<p>Transmission details will be added here.</p>'),
       impact: getHtmlField(data, 'impact', '<p>Impact analysis will be added here.</p>'),
+      prevention: getHtmlField(data, 'prevention', '<p>Prevention strategies will be added here.</p>'),
     };
   }, [articleRes]);
 
@@ -433,6 +435,7 @@ const ProseContent = ({
                 { title: "Symptoms & Signs", content: article.symptoms },
                 { title: "Transmission Cycle", content: article.disease_cycle },
                 { title: "Impact Analysis", content: article.impact },
+                { title: "Prevention Strategies", content: article.prevention },
               ].map((item, index) => (
                 <div key={index} className="relative flex flex-col md:flex-row gap-12 md:gap-24">
                   
