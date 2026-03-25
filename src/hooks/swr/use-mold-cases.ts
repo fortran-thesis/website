@@ -44,7 +44,10 @@ export interface CultivationLog {
     symptoms?: string | string[];
     characteristics?: string | string[];
   };
-  additional_info?: string;
+  additional_info?:
+    | string
+    | Array<{ title?: string; description?: string; content?: string }>
+    | Record<string, unknown>;
 }
 
 export interface CultivationLogsPage {

@@ -8,6 +8,11 @@ import ConfirmModal from '@/components/modals/confirmation_modal';
 import { faInfoCircle, faLeaf } from '@fortawesome/free-solid-svg-icons';
 import { useMoldById } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
+import {
+  buildCanonicalAdditionalInfo,
+  normalizeInfoSections,
+  unwrapMoldResponse,
+} from '@/lib/mold-detail-normalizer';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
 interface MoldInfoFormData {
@@ -99,41 +104,17 @@ function ViewMoldInfoContent() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const normalizeLabel = (value: string) =>
-      value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-
-    const additionalInfoValue = (
-      rows: Array<{ title?: string; description?: string }> | undefined,
-      aliases: string[],
-    ) => {
-      if (!Array.isArray(rows)) return '';
-      const normalizedAliases = aliases.map(normalizeLabel);
-
-      for (const row of rows) {
-        const normalizedTitle = normalizeLabel(String(row?.title ?? ''));
-        const content = String(row?.description ?? '').trim();
-        if (!normalizedTitle || !content) continue;
-
-        for (const alias of normalizedAliases) {
-          if (normalizedTitle === alias || normalizedTitle.includes(alias)) {
-            return content;
-          }
-        }
-      }
-
-      return '';
-    };
-
     // SWR: fetch mold data
     const { data: moldSwr, isLoading } = useMoldById(moldId ?? undefined);
 
     // Sync SWR data → form state when data first arrives
     useEffect(() => {
-      const mold = (moldSwr as any)?.data;
-      if (!mold) return;
-      const apiTax = mold.mold_details?.info?.taxonomy || {};
-      const info = mold.mold_details?.info || {};
-      const additionalInfoRows = Array.isArray(info.additional_info) ? info.additional_info : [];
+      const responseData = (moldSwr as any)?.data;
+      const mold = unwrapMoldResponse(responseData);
+      if (!mold || Object.keys(mold).length === 0) return;
+      const apiTax = mold.mold_details?.info?.taxonomy || mold.info?.taxonomy || {};
+      const info = mold.mold_details?.info || mold.info || {};
+      const additionalInfo = normalizeInfoSections(info as Record<string, unknown>);
 
       setMoldInfo(prev => ({
         ...prev,
@@ -145,12 +126,12 @@ function ViewMoldInfoContent() {
         signs: Array.isArray(mold.signs) ? mold.signs.join(', ') : '',
         characteristics: Array.isArray(mold.characteristics) ? mold.characteristics.join(', ') : '',
         additionalInfo: {
-          overview: (info.overview as string) || additionalInfoValue(additionalInfoRows, ['overview']),
-          healthRisks: (info.health_risks as string) || additionalInfoValue(additionalInfoRows, ['health risks', 'health risk', 'risk']),
-          affectedHosts: (info.affected_hosts as string) || additionalInfoValue(additionalInfoRows, ['affected hosts', 'affected crops', 'hosts', 'host']),
-          symptomsSigns: (info.symptoms_and_signs as string) || additionalInfoValue(additionalInfoRows, ['symptoms signs', 'symptoms and signs', 'symptoms', 'signs']),
-          diseaseCycleImpact: (info.disease_cycle_spread_impact as string) || additionalInfoValue(additionalInfoRows, ['disease cycle spread', 'disease cycle', 'spread', 'impact']),
-          preventionSummary: (info.prevention_summary as string) || additionalInfoValue(additionalInfoRows, ['prevention summary', 'prevention']),
+          overview: additionalInfo.overview,
+          healthRisks: additionalInfo.healthRisks,
+          affectedHosts: additionalInfo.affectedHosts,
+          symptomsSigns: additionalInfo.symptomsSigns,
+          diseaseCycleImpact: additionalInfo.diseaseCycleImpact,
+          preventionSummary: additionalInfo.preventionSummary,
         },
         taxonomy: {
           kingdom: apiTax.kingdom ?? prev.taxonomy.kingdom ?? '',
@@ -225,14 +206,7 @@ function ViewMoldInfoContent() {
       setIsSaving(true);
       setError(null);
       try {
-        const additionalInfoPayload = [
-          { title: 'Overview', description: moldInfo.additionalInfo.overview.trim() },
-          { title: 'Health Risks', description: moldInfo.additionalInfo.healthRisks.trim() },
-          { title: 'Affected Hosts', description: moldInfo.additionalInfo.affectedHosts.trim() },
-          { title: 'Symptoms & Signs', description: moldInfo.additionalInfo.symptomsSigns.trim() },
-          { title: 'Disease Cycle / Spread / Impact', description: moldInfo.additionalInfo.diseaseCycleImpact.trim() },
-          { title: 'Prevention Summary', description: moldInfo.additionalInfo.preventionSummary.trim() },
-        ].filter((entry) => entry.description.length > 0);
+        const additionalInfoPayload = buildCanonicalAdditionalInfo(moldInfo.additionalInfo);
 
         const symptomsArray = parseCommaList(moldInfo.symptoms);
         const signsArray = parseCommaList(moldInfo.signs);
