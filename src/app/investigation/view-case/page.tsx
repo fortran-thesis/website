@@ -19,7 +19,7 @@ import AddTreatmentModal from "@/components/modals/add_treatment_modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useMoldReport, useMoldCaseByReport, useMoldCaseLogs, useUser } from "@/hooks/swr";
 import { apiMutate } from "@/lib/api";
-import { mutate } from 'swr';
+import { invalidateMoldReports } from '@/utils/cache-invalidation';
 
 type Mycologist = {
   name: string;
@@ -99,25 +99,8 @@ function ViewCaseContent() {
         { revalidate: true }, // confirm with a background refetch once Redis is cleared
       );
 
-      // Revalidate list-level caches — include $inf$ prefix for useSWRInfinite keys
-      await Promise.all([
-        mutateMoldCase(undefined, { revalidate: true }),
-        mutate(
-          (key: unknown) =>
-            typeof key === 'string' &&
-            (key.startsWith('/api/v1/mold-reports') || key.startsWith('$inf$/api/v1/mold-reports')),
-          undefined,
-          { revalidate: true },
-        ),
-        mutate(
-          (key: unknown) =>
-            typeof key === 'string' &&
-            (key.startsWith('/api/v1/mold-cases') || key.startsWith('$inf$/api/v1/mold-cases')),
-          undefined,
-          { revalidate: true },
-        ),
-        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
-      ]);
+      await mutateMoldCase(undefined, { revalidate: true });
+      await invalidateMoldReports();
     } catch (err: any) {
       console.error('Assignment failed:', err);
       alert(err?.message || 'Failed to assign case');
@@ -150,14 +133,7 @@ function ViewCaseContent() {
         { revalidate: true },
       );
 
-      // Revalidate list caches — include $inf$ prefix for useSWRInfinite
-      await mutate(
-        (key: unknown) =>
-          typeof key === 'string' &&
-          (key.startsWith('/api/v1/mold-reports') || key.startsWith('$inf$/api/v1/mold-reports')),
-        undefined,
-        { revalidate: true },
-      );
+      await invalidateMoldReports();
     } catch (err: any) {
       console.error('Rejection failed:', err);
       alert(err?.message || 'Failed to reject case');

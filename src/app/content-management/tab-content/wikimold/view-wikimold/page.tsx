@@ -11,7 +11,7 @@ import { faPen, faArchive } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { useMoldipediaArticle } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
-import { mutate } from 'swr';
+import { invalidateMoldipedia } from '@/utils/cache-invalidation';
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
@@ -236,17 +236,7 @@ function ViewWikiMoldContent() {
       setCoverImageFile(null);
       titleEditedRef.current = false;
 
-      // Revalidate detail + list caches so UI reflects server truth after update.
-      await Promise.all([
-        mutate(`/api/v1/moldipedia/${articleId}`),
-        // Revalidate list-level caches (include $inf$ prefix for useSWRInfinite keys)
-        mutate(
-          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
-          undefined,
-          { revalidate: true },
-        ),
-        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
-      ]);
+      await invalidateMoldipedia();
 
       setSuccessMessage("WikiMold article updated successfully!");
       setTimeout(() => setSuccessMessage(''), 5000);
@@ -278,17 +268,7 @@ function ViewWikiMoldContent() {
 
       setIsArchiveModalOpen(false);
 
-      // Revalidate SWR cache to refresh UI with fresh data
-      await Promise.all([
-        mutate(`/api/v1/moldipedia/${articleId}`),
-        // Revalidate list-level caches (include $inf$ prefix for useSWRInfinite keys)
-        mutate(
-          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
-          undefined,
-          { revalidate: true },
-        ),
-        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
-      ]);
+      await invalidateMoldipedia();
 
       setSuccessMessage("WikiMold article archived successfully!");
       setTimeout(() => setSuccessMessage(''), 5000);

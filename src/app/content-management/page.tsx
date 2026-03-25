@@ -12,8 +12,7 @@
   import { useAuth } from '@/hooks/useAuth';
   import { useMoldList, useMoldipediaList } from '@/hooks/swr';
   import { apiMutate, ApiError } from '@/lib/api';
-  import { mutate } from 'swr';
-
+import { invalidateMoldipedia } from '@/utils/cache-invalidation';
   export default function ContentManagement() {
       console.log('🚀 ContentManagement component rendering');
       const router = useRouter();
@@ -136,17 +135,7 @@
           // Remove from local state
           setWikiMoldData(wikimoldData.filter(w => w.id !== selectedWikiMold.id));
 
-          // Revalidate SWR cache to ensure consistency
-          await Promise.all([
-            mutate(`/api/v1/moldipedia/${selectedWikiMold.id}`),
-            // Revalidate list-level caches (include $inf$ prefix for useSWRInfinite keys)
-            mutate(
-              (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
-              undefined,
-              { revalidate: true },
-            ),
-            mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
-          ]);
+          await invalidateMoldipedia();
 
           setShowArchiveModal(false);
           setSelectedWikiMold(null);

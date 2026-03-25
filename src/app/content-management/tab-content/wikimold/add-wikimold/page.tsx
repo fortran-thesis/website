@@ -9,7 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { apiMutate } from '@/lib/api';
-import { mutate } from 'swr';
+import { invalidateMoldipedia } from '@/utils/cache-invalidation';
 import { StickyDossierNav } from "@/components/dossier_nav";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
@@ -264,14 +264,7 @@ export default function AddWikiMold() {
         formData,
       });
 
-      // Revalidate list caches so newly created article appears immediately.
-      // This tells SWR to refetch all moldipedia list endpoints
-      await mutate(
-        (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/moldipedia') || key.startsWith('$inf$/api/v1/moldipedia')),
-        undefined,
-        { revalidate: true },
-      );
-      await mutate('/api/v1/dashboard/summary', undefined, { revalidate: true });
+      await invalidateMoldipedia();
 
       setSuccessMessage("WikiMold article created successfully!");
         // Reset form and local image state after successful create.
