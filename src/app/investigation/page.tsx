@@ -88,10 +88,6 @@ export default function Investigation() {
                 location,
                 submittedBy,
                 dateSubmitted,
-                priority: (() => {
-                    const p = it.priority;
-                    return p ? (p.charAt(0).toUpperCase() + p.slice(1)) : 'Unassigned';
-                })(),
                 status: it.status
                     ? it.status.charAt(0).toUpperCase() + it.status.slice(1)
                     : 'Pending',
@@ -126,7 +122,6 @@ export default function Investigation() {
 
         /* ── Search & filter state ── */
         const [searchQuery, setSearchQuery] = useState('');
-        const [priorityFilter, setPriorityFilter] = useState('');
         const [statusFilter, setStatusFilter] = useState('');
 
         const filteredCases = useMemo(() => {
@@ -138,13 +133,11 @@ export default function Investigation() {
                     c.location?.toLowerCase().includes(searchLower) ||
                     c.submittedBy?.toLowerCase().includes(searchLower) ||
                     c.description?.toLowerCase().includes(searchLower) ||
-                    c.status?.toLowerCase().includes(searchLower) ||
-                    c.priority?.toLowerCase().includes(searchLower);
-                const matchesPriority = !priorityFilter || priorityFilter === 'all' || c.priority?.toLowerCase() === priorityFilter;
+                    c.status?.toLowerCase().includes(searchLower);
                 const matchesStatus = !statusFilter || statusFilter === 'all' || c.status?.toLowerCase() === statusFilter;
-                return matchesSearch && matchesPriority && matchesStatus;
+                return matchesSearch && matchesStatus;
             });
-        }, [cases, searchQuery, priorityFilter, statusFilter]);
+        }, [cases, searchQuery, statusFilter]);
 
         /* ── Derived loading / has-more flags ── */
         const loading = authLoading || casesLoading;
@@ -201,22 +194,6 @@ export default function Investigation() {
 
                     {/* Filter Dropdowns */}
                     <div className="flex gap-2 w-full lg:w-auto">
-                        {/* Filter by Priority */}
-                        <div className="w-full lg:w-auto">
-                            <StatusDropdown
-                                placeholder="Filter By Priority"
-                                backgroundColor="var(--accent-color)"
-                                textColor="var(--moldify-black)"
-                                options={[
-                                    { label: "All", value: "all" },
-                                    { label: "Low Priority", value: "low" },
-                                    { label: "Medium Priority", value: "medium" },
-                                    { label: "High Priority", value: "high" }
-                                ]}
-                                onSelect={(value) => setPriorityFilter(value)}
-                            />
-                        </div>
-
                         {/* Filter by Status */}
                         <div className="w-full lg:w-auto">
                             <StatusDropdown
@@ -255,10 +232,7 @@ export default function Investigation() {
                         <CaseTable
                             cases={filteredCases}
                             onEdit={(c: any) => {
-                                const params = new URLSearchParams({
-                                    id: c.id,
-                                    priority: c.priority || "",
-                                });
+                                const params = new URLSearchParams({ id: c.id });
                                 window.location.href = `/investigation/view-case?${params.toString()}`;
                             }}
                         />

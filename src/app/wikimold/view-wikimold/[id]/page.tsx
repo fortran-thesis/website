@@ -247,6 +247,31 @@ const ProseContent = ({
 }) => (
   <div className={`prose prose-xl max-w-none ${className}`}>
     <style>{`
+      .prose {
+        max-width: 100% !important;
+      }
+      .prose p,
+      .prose li,
+      .prose div,
+      .prose span {
+        text-align: justify !important;
+        text-align-last: left;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        hyphens: auto;
+      }
+      .prose img,
+      .prose video,
+      .prose table,
+      .prose pre,
+      .prose code {
+        max-width: 100% !important;
+      }
+      .prose pre,
+      .prose code {
+        white-space: pre-wrap !important;
+      }
       .prose ul, .prose ol {
         list-style-position: inside !important;
         list-style-type: disc !important;
@@ -410,7 +435,7 @@ const ProseContent = ({
             <motion.div className="relative z-10">
               <ProseContent 
                 html={article.content} 
-                className="text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-justify"
+                className="text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-left"
               />
             </motion.div>
           </section>
@@ -531,7 +556,7 @@ const ProseContent = ({
                             <div className="border-l-2 border-[var(--accent-color)]/20 pl-8">
                               <ProseContent 
                                 html={getTreatmentHtml(ctrl.id)}
-                                className="text-[var(--moldify-black)]/80 font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-justify"
+                                className="text-[var(--moldify-black)]/80 font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-left"
                               />
                             </div>
                           </div>
@@ -636,7 +661,7 @@ const ProseContent = ({
                     <div className="flex-grow">
                       <ProseContent 
                         html={currentStage.content}
-                        className="text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-justify"
+                        className="text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-left"
                       />
                     </div>
                   </motion.div>

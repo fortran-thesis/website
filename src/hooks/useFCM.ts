@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { getMessaging, getToken, onMessage, type MessagePayload } from 'firebase/messaging';
+import { mutate } from 'swr';
 import { getFirebaseApp } from '@/lib/firebase';
 import { registerDeviceToken } from '@/hooks/swr/use-notifications';
 
@@ -78,10 +79,18 @@ export function useFCM(): UseFCMReturn {
         setFcmToken(token);
         setIsSupported(true);
 
-        // Register with backend (fire-and-forget)
-        registerDeviceToken(token, 'web').catch((err) =>
-          console.error('[FCM] Failed to register device token:', err),
-        );
+        try {
+          await registerDeviceToken(token, 'web');
+          await mutate(
+            (key: unknown) =>
+              typeof key === 'string' &&
+              (key.startsWith('/api/v1/notification') || key.startsWith('$inf$/api/v1/notification')),
+            undefined,
+            { revalidate: true },
+          );
+        } catch (err) {
+          console.error('[FCM] Failed to register device token:', err);
+        }
       }
 
       return token;

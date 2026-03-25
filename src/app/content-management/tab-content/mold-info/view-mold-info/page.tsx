@@ -8,7 +8,7 @@ import ConfirmModal from '@/components/modals/confirmation_modal';
 import { faInfoCircle, faLeaf } from '@fortawesome/free-solid-svg-icons';
 import { useMoldById } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
-import { mutate } from 'swr';
+import { invalidateMolds } from '@/utils/cache-invalidation';
 
 interface MoldInfoFormData {
   moldName: string;
@@ -262,13 +262,7 @@ function ViewMoldInfoContent() {
         const url = moldId ? `/api/v1/mold/${moldId}` : '/api/v1/mold';
         await apiMutate(url, { method: method as 'POST' | 'PATCH', body: payload });
 
-        // Revalidate SWR caches so mold lists and detail views reflect the change
-        await mutate(
-          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/mold') || key.startsWith('$inf$/api/v1/mold')),
-          undefined,
-          { revalidate: true },
-        );
-        await mutate('/api/v1/dashboard/summary', undefined, { revalidate: true });
+        await invalidateMolds();
 
         // Success handled via UI state; removed intrusive alert dialog.
       } catch (err) {

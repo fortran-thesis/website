@@ -14,7 +14,7 @@ import FlagHistory from "./tab_contents/flag-history";
 import type { FlaggedHistory } from "@/components/tables/flagged_history_table";
 import { useFlagReportsInfinite } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
-import { mutate } from 'swr';
+import { invalidateUsers } from '@/utils/cache-invalidation';
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
@@ -196,18 +196,7 @@ export default function Settings() {
       });
 
       setSuccessMessage('Profile updated successfully');
-
-      // Revalidate SWR caches so user management lists reflect the updated profile
-      await Promise.all([
-        mutate('/api/v1/users/counts/roles', undefined, { revalidate: true }),
-        mutate('/api/v1/users/mycologists', undefined, { revalidate: true }),
-        mutate('/api/v1/users/counts/disabled', undefined, { revalidate: true }),
-        mutate(
-          (key: unknown) => typeof key === 'string' && (key.startsWith('/api/v1/users') || key.startsWith('$inf$/api/v1/users')),
-          undefined,
-          { revalidate: true },
-        ),
-      ]);
+      await invalidateUsers();
 
       try { await refreshUser(true); setProfileFile(null); } catch { /* ignore */ }
     } catch (err) {
@@ -271,6 +260,9 @@ export default function Settings() {
         method: 'POST',
         body,
       });
+
+      // Force-refresh auth profile so any session/user state changes are reflected immediately.
+      await refreshUser(true);
 
       setSuccessMessage(res?.data || res?.message || 'Password updated successfully');
     } catch (err) {
