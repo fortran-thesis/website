@@ -11,14 +11,12 @@ interface CaseData {
   location: string;
   submittedBy: string;
   dateSubmitted: string;
-  priority: string;
   status: string;
 }
 
 interface CaseTableProps {
   cases: CaseData[];
   onEdit?: (caseItem: CaseData) => void;
-  showPriority?: boolean;
   showStatus?: boolean;
   showAction?: boolean;
   useViewIcon?: boolean;
@@ -27,7 +25,6 @@ interface CaseTableProps {
 export default function CaseTable({
   cases,
   onEdit,
-  showPriority = true,
   showStatus = true,
   showAction = true,
   useViewIcon = false,
@@ -70,7 +67,6 @@ export default function CaseTable({
               <th className="py-3 px-4">Location</th>
               <th className="py-3 px-4">Submitted By</th>
               <th className="py-3 px-4">Date Submitted</th>
-              {showPriority && <th className="py-3 px-4">Priority</th>}
               {showStatus && <th className="py-3 px-4">Status</th>}
               {showAction && <th className="py-3 px-4 rounded-tr-xl text-center">Action</th>}
             </tr>
@@ -87,15 +83,6 @@ export default function CaseTable({
                 <td className="py-3 px-4 truncate max-w-[160px]">{item.location}</td>
                 <td className="py-3 px-4 truncate max-w-[140px]">{item.submittedBy}</td>
                 <td className="py-3 px-4 truncate max-w-[140px]">{item.dateSubmitted}</td>
-                {showPriority && (
-                  <td className="py-3 px-4">
-                    {item.priority && item.priority !== "------" ? (
-                      <StatusBox status={item.priority} fontSize="0.75rem" />
-                    ) : (
-                      <span className="text-gray-400">------</span>
-                    )}
-                  </td>
-                )}
                 {showStatus && (
                   <td className="py-3 px-4">
                     <StatusBox status={item.status} fontSize="0.75rem" />

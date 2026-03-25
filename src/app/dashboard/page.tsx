@@ -7,7 +7,6 @@ import { faBacterium, faBell, faBookOpen, faHourglassHalf, faSeedling, faTriangl
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import MonthlyCasesChart from '@/components/charts/monthly-chart';
-import PriorityBreakdown from '@/components/tiles/priority_breakdown_tile';
 import CaseTable from '@/components/tables/case_table';
 import AuthDebug from '@/components/auth-debug';
 import NotificationsPanel from '@/components/notifications_panel';
@@ -102,24 +101,53 @@ export default function Home() {
     const wikimoldCount = summary?.moldipediaCount ?? 0;
 
     /* ─── Derived dashboard values ─── */
+    const formatReportDate = (item: any): string => {
+      const fromObserved = item?.date_observed;
+      const fromMetadata = item?.metadata?.created_at;
+      const candidate = fromObserved ?? fromMetadata;
+
+      if (!candidate) return 'N/A';
+
+      let date: Date | null = null;
+
+      if (typeof candidate === 'string') {
+        const parsed = new Date(candidate);
+        if (!Number.isNaN(parsed.getTime())) {
+          date = parsed;
+        }
+      } else if (typeof candidate === 'object') {
+        if (typeof candidate._seconds === 'number') {
+          date = new Date(candidate._seconds * 1000);
+        } else if (typeof candidate.seconds === 'number') {
+          date = new Date(candidate.seconds * 1000);
+        } else if (typeof candidate.toDate === 'function') {
+          const converted = candidate.toDate();
+          if (converted instanceof Date && !Number.isNaN(converted.getTime())) {
+            date = converted;
+          }
+        }
+      }
+
+      if (!date || Number.isNaN(date.getTime())) return 'N/A';
+
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: '2-digit',
+      });
+    };
+
     const transformCasesForTable = (snapshot: any[]) =>
       snapshot
         .filter((item: any) => (item.status || '').toLowerCase() !== 'rejected')
         .map((item: any) => {
-          const timestamp = item.date_observed?._seconds
-            ? new Date(item.date_observed._seconds * 1000).toISOString().split('T')[0]
-            : 'N/A';
-          // Check multiple possible paths for priority
-          const pri = item.mold_case?.priority || item.priority || item.case?.priority;
-          console.log('Item structure:', { id: item.id, has_mold_case: !!item.mold_case, has_priority: !!item.priority, extracted_pri: pri });
           return {
             id: item.id,
             caseName: item.case_name || 'N/A',
             cropName: item.host || 'N/A',
             location: item.host || 'N/A',
             submittedBy: item.user_id || 'N/A',
-            dateSubmitted: timestamp,
-            priority: pri ? pri.charAt(0).toUpperCase() + pri.slice(1) : 'Unassigned',
+            dateSubmitted: formatReportDate(item),
             status: item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Pending',
           };
         });
@@ -134,30 +162,10 @@ export default function Home() {
     const assignedCases = useMemo(
       () => {
         const transformed = transformCasesForTable(assignedRes?.data?.snapshot ?? []);
-        // Debug: log the first item to see the structure
-        if (assignedRes?.data?.snapshot && assignedRes.data.snapshot.length > 0) {
-          console.log('Full assigned case from API:', JSON.stringify(assignedRes.data.snapshot[0], null, 2));
-        }
         return transformed;
       },
       [assignedRes],
     );
-
-    // Priority breakdown (now uses assignedCases which is defined above)
-    const priorityData = useMemo(() => {
-      if (isMycologist && assignedCases.length > 0) {
-        // For mycologists: calculate from their assigned cases only
-        const high = assignedCases.filter((c: any) => (c.priority || '').toLowerCase() === 'high').length;
-        const medium = assignedCases.filter((c: any) => (c.priority || '').toLowerCase() === 'medium').length;
-        const low = assignedCases.filter((c: any) => (c.priority || '').toLowerCase() === 'low').length;
-        return { high, medium, low };
-      }
-      // For admins: use batch summary, or 0s if no data
-      if (isAdministrator) {
-        return summary?.priorityCounts ?? { high: 0, medium: 0, low: 0 };
-      }
-      return { high: 0, medium: 0, low: 0 };
-    }, [isMycologist, isAdministrator, summary, assignedCases]);
 
     const totalCases = isAdministrator ? totalCasesAdmin : assignedCases.length;
     const inProgressCases = assignedCases.filter((c: any) => (c.status || '').toLowerCase() === 'in progress').length;
@@ -317,44 +325,34 @@ export default function Home() {
                 </div>
             )}
             
-            {/* Line Chart & Priority Level Breakdown */}
+            {/* Monthly Cases Chart */}
             {isAdministrator && (
-                <div className = "w-full my-8 flex flex-col lg:flex-row gap-x-10 gap-y-10">
-                    <div className="w-full lg:w-2/3">
-                        <MonthlyCasesChart data={chartData.length > 0 ? chartData : fallbackChartData} />
-                    </div>
-                    <div className="w-full lg:w-1/3">
-                        <PriorityBreakdown data={priorityData} />
-                    </div>
+              <div className = "w-full my-8">
+                <div className="w-full">
+                  <MonthlyCasesChart data={chartData.length > 0 ? chartData : fallbackChartData} />
+                </div>
                 </div>
             )}
 
             {isMycologist && (
-                <div className = "w-full my-8 flex flex-col lg:flex-row gap-x-10 gap-y-10">
-                    <div className="w-full lg:w-2/3">
-                        <MonthlyCasesChart data={chartData.length > 0 ? chartData : fallbackChartData} />
-                    </div>
-                    <div className="w-full lg:w-1/3">
-                        <PriorityBreakdown data={priorityData} />
-                    </div>
+              <div className = "w-full my-8">
+                <div className="w-full">
+                  <MonthlyCasesChart data={chartData.length > 0 ? chartData : fallbackChartData} />
+                </div>
                 </div>
             )}            
             
-            {/* Line Chart & Priority Level Breakdown */}
+            {/* Cases Chart Section */}
             <div className="mt-6 w-full">
                 <h2 className="font-[family-name:var(--font-bricolage-grotesque)] font-extrabold text-[var(--primary-color)] mb-2">
                     {isAdministrator ? 'Unassigned Mold Cases' : 'Assigned Mold Cases'}
                 </h2>
                 <CaseTable 
                     cases={isAdministrator ? unassignedCases : assignedCases} 
-                    showPriority={isMycologist}
                     showStatus={isMycologist}
                     showAction={true}
                     onEdit={(c: any) => {
-                      const params = new URLSearchParams({
-                        id: c.id,
-                        priority: c.priority || "",
-                      });
+                      const params = new URLSearchParams({ id: c.id });
                       window.location.href = `/investigation/view-case?${params.toString()}`;
                   }}
                 />
