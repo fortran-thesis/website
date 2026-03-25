@@ -32,10 +32,20 @@ export interface MoldipediaArticle {
   tags?: string[];
   treatment?: string;
   mold_type?: string;
+  affected_hosts?: string;
   affected_crops?: string;
   symptoms?: string;
   disease_cycle?: string;
   impact?: string;
+  prevention?: string;
+  treatments?: {
+    mechanical?: string;
+    cultural?: string;
+    biological?: string;
+    physical?: string;
+    chemical?: string;
+  };
+  findings?: Array<{ title?: string; content?: string }>;
   treatment_mechanical?: string;
   treatment_cultural?: string;
   treatment_biological?: string;
@@ -104,6 +114,23 @@ export function useMoldipediaArticle(id: string | undefined) {
   );
 }
 
+export interface MoldCaseSummary {
+  id?: string;
+  name?: string;
+  mold_report_id?: string;
+  user_id?: string;
+  priority?: 'low' | 'medium' | 'high';
+  is_archived?: boolean;
+  final_verdict?: {
+    moldId?: string;
+    moldName?: string;
+    confidence?: number;
+    moldipedia_id?: string;
+    mycologist_notes?: string;
+    verdict_timestamp?: { _seconds: number } | string;
+  };
+}
+
 /** Fetch moldipedia listing (flat, single page — for dashboard count / content-management). */
 export function useMoldipediaList(limit = 1000, enabled = true) {
   return useSWR<ApiResponse<PaginatedResponse<MoldipediaArticle>>>(
@@ -112,6 +139,17 @@ export function useMoldipediaList(limit = 1000, enabled = true) {
       dedupingInterval: MOLDIPEDIA_CACHE_MS,
       revalidateIfStale: true,
       keepPreviousData: true,
+    },
+  );
+}
+
+/** Fetch mold cases linked to a moldipedia article. */
+export function useMoldipediaCases(moldipediaId: string | undefined) {
+  return useSWR<ApiResponse<MoldCaseSummary[]>>(
+    moldipediaId ? apiUrl(`/api/v1/moldipedia/${moldipediaId}/cases`) : null,
+    {
+      dedupingInterval: MOLDIPEDIA_CACHE_MS,
+      revalidateIfStale: true,
     },
   );
 }

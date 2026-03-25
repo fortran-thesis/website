@@ -133,6 +133,7 @@ export const endpoints = {
     archive: (id: string) => `${API_PREFIX}/moldipedia/${id}/archive`,
     archived: `${API_PREFIX}/moldipedia/archive`,
     restore: (id: string) => `${API_PREFIX}/moldipedia/${id}/unarchive`,
+    casesById: (id: string) => `${API_PREFIX}/moldipedia/${id}/cases`,
   },
 
   // Flag Reports

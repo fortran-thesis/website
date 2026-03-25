@@ -138,16 +138,31 @@ function ViewWikiMoldContent() {
       impact: typeof source["impact"] === "string" ? (source["impact"] as string) : "",
       prevention: typeof source["prevention"] === "string" ? (source["prevention"] as string) : "",
       treatments: {
-        mechanical: typeof source["treatment_mechanical"] === "string" ? (source["treatment_mechanical"] as string) : "",
-        cultural: typeof source["treatment_cultural"] === "string" ? (source["treatment_cultural"] as string) : "",
-        biological: typeof source["treatment_biological"] === "string" ? (source["treatment_biological"] as string) : "",
-        physical: typeof source["treatment_physical"] === "string" ? (source["treatment_physical"] as string) : "",
-        chemical: typeof source["treatment_chemical"] === "string" ? (source["treatment_chemical"] as string) : "",
+        mechanical: (source["treatments"] && typeof (source["treatments"] as any).mechanical === "string")
+          ? (source["treatments"] as any).mechanical
+          : (typeof source["treatment_mechanical"] === "string" ? (source["treatment_mechanical"] as string) : ""),
+        cultural: (source["treatments"] && typeof (source["treatments"] as any).cultural === "string")
+          ? (source["treatments"] as any).cultural
+          : (typeof source["treatment_cultural"] === "string" ? (source["treatment_cultural"] as string) : ""),
+        biological: (source["treatments"] && typeof (source["treatments"] as any).biological === "string")
+          ? (source["treatments"] as any).biological
+          : (typeof source["treatment_biological"] === "string" ? (source["treatment_biological"] as string) : ""),
+        physical: (source["treatments"] && typeof (source["treatments"] as any).physical === "string")
+          ? (source["treatments"] as any).physical
+          : (typeof source["treatment_physical"] === "string" ? (source["treatment_physical"] as string) : ""),
+        chemical: (source["treatments"] && typeof (source["treatments"] as any).chemical === "string")
+          ? (source["treatments"] as any).chemical
+          : (typeof source["treatment_chemical"] === "string" ? (source["treatment_chemical"] as string) : ""),
       },
-      findings: [1, 2, 3, 4, 5].map((num) => ({
-        title: typeof source[`finding_title_${num}`] === "string" ? (source[`finding_title_${num}`] as string) : "",
-        content: typeof source[`finding_content_${num}`] === "string" ? (source[`finding_content_${num}`] as string) : "",
-      })),
+      findings: Array.isArray(source["findings"])
+        ? (source["findings"] as Array<{ title?: string; content?: string }>).map((f) => ({
+            title: typeof f.title === "string" ? f.title : "",
+            content: typeof f.content === "string" ? f.content : "",
+          }))
+        : [1, 2, 3, 4, 5].map((num) => ({
+            title: typeof source[`finding_title_${num}`] === "string" ? (source[`finding_title_${num}`] as string) : "",
+            content: typeof source[`finding_content_${num}`] === "string" ? (source[`finding_content_${num}`] as string) : "",
+          })),
     };
 
     setWikiMoldInfo((prev) => ({

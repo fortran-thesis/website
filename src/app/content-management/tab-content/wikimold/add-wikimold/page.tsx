@@ -240,6 +240,11 @@ export default function AddWikiMold() {
         // TODO: This nested shape is cleaner for frontend, but verify backend contract accepts this structure.
         // If backend expects flat keys (e.g., treatment_mechanical), add a mapper before submit.
         mold_type: wikiMoldData.mold_type.trim(),
+        affected_hosts: wikiMoldData.affected_hosts?.trim() ?? "",
+        symptoms: wikiMoldData.symptoms?.trim() ?? "",
+        disease_cycle: wikiMoldData.disease_cycle?.trim() ?? "",
+        impact: wikiMoldData.impact?.trim() ?? "",
+        prevention: wikiMoldData.prevention?.trim() ?? "",
         treatments: {
           mechanical: wikiMoldData.treatments.mechanical.trim(),
           cultural: wikiMoldData.treatments.cultural.trim(),
