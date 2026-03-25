@@ -5,9 +5,9 @@
  * Ensures consistent revalidation across all mutation callers.
  *
  * Usage:
- *   import { invalidateUsers, invalidateMoldipedia } from '@/utils/cache-invalidation';
- *   await invalidateMoldipedia();
- *   await invalidateUsers();
+ *   import { useInvalidationFunctions } from '@/utils/cache-invalidation';
+ *   const { invalidateMolds } = useInvalidationFunctions();
+ *   await invalidateMolds();
  */
 
 import { useSWRConfig } from 'swr';
@@ -23,119 +23,93 @@ function createPattern(endpoint: string): (key: unknown) => boolean {
 }
 
 /**
- * Invalidate all user-domain caches:
- * - role counts, mycologist lists, disabled counts
- * - all users lists (with infinite-scroll support)
- * - dashboard summary
+ * Hook to get all cache invalidation functions.
+ * Must be called from within a function component (or another hook).
+ * This solves the React error #321 by ensuring hooks are called correctly.
  */
-export async function invalidateUsers() {
+export function useInvalidationFunctions() {
   const { mutate } = useSWRConfig();
 
-  await Promise.all([
-    mutate('/api/v1/users/counts/roles', undefined, { revalidate: true }),
-    mutate('/api/v1/users/mycologists', undefined, { revalidate: true }),
-    mutate('/api/v1/users/counts/disabled', undefined, { revalidate: true }),
-    mutate(createPattern('/api/v1/users'), undefined, { revalidate: true }),
-    mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
-  ]);
-}
+  return {
+    /**
+     * Invalidate all user-domain caches
+     */
+    invalidateUsers: async () => {
+      await Promise.all([
+        mutate('/api/v1/users/counts/roles', undefined, { revalidate: true }),
+        mutate('/api/v1/users/mycologists', undefined, { revalidate: true }),
+        mutate('/api/v1/users/counts/disabled', undefined, { revalidate: true }),
+        mutate(createPattern('/api/v1/users'), undefined, { revalidate: true }),
+        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
+      ]);
+    },
 
-/**
- * Invalidate all notification-domain caches:
- * - notification lists (with infinite-scroll support)
- * - unread counts
- */
-export async function invalidateNotifications() {
-  const { mutate } = useSWRConfig();
+    /**
+     * Invalidate all notification-domain caches
+     */
+    invalidateNotifications: async () => {
+      await mutate(
+        (key: unknown) =>
+          typeof key === 'string' &&
+          (key.startsWith('/api/v1/notification') || key.startsWith('$inf$/api/v1/notification')),
+        undefined,
+        { revalidate: true },
+      );
+    },
 
-  await mutate(
-    (key: unknown) =>
-      typeof key === 'string' &&
-      (key.startsWith('/api/v1/notification') || key.startsWith('$inf$/api/v1/notification')),
-    undefined,
-    { revalidate: true },
-  );
-}
+    /**
+     * Invalidate all mold-report domain caches
+     */
+    invalidateMoldReports: async () => {
+      await Promise.all([
+        mutate(createPattern('/api/v1/mold-reports'), undefined, { revalidate: true }),
+        mutate(createPattern('/api/v1/mold-cases'), undefined, { revalidate: true }),
+        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
+      ]);
+    },
 
-/**
- * Invalidate all mold-report domain caches:
- * - report lists (with infinite-scroll support)
- * - report counts and aggregates
- * - related mold-case lists
- * - dashboard summary
- */
-export async function invalidateMoldReports() {
-  const { mutate } = useSWRConfig();
+    /**
+     * Invalidate all mold-case domain caches
+     */
+    invalidateMoldCases: async () => {
+      await Promise.all([
+        mutate(createPattern('/api/v1/mold-cases'), undefined, { revalidate: true }),
+        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
+      ]);
+    },
 
-  await Promise.all([
-    mutate(createPattern('/api/v1/mold-reports'), undefined, { revalidate: true }),
-    mutate(createPattern('/api/v1/mold-cases'), undefined, { revalidate: true }),
-    mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
-  ]);
-}
+    /**
+     * Invalidate all moldipedia domain caches
+     */
+    invalidateMoldipedia: async () => {
+      await Promise.all([
+        mutate(createPattern('/api/v1/moldipedia'), undefined, { revalidate: true }),
+        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
+      ]);
+    },
 
-/**
- * Invalidate all mold-case domain caches:
- * - case lists (with infinite-scroll support)
- * - case details
- * - cultivation logs
- * - dashboard summary
- */
-export async function invalidateMoldCases() {
-  const { mutate } = useSWRConfig();
+    /**
+     * Invalidate all mold domain caches
+     */
+    invalidateMolds: async () => {
+      await Promise.all([
+        mutate(createPattern('/api/v1/mold'), undefined, { revalidate: true }),
+        mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
+      ]);
+    },
 
-  await Promise.all([
-    mutate(createPattern('/api/v1/mold-cases'), undefined, { revalidate: true }),
-    mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
-  ]);
-}
+    /**
+     * Invalidate flag-report domain caches
+     */
+    invalidateFlagReports: async () => {
+      await mutate(createPattern('/api/v1/flag-report'), undefined, { revalidate: true });
+    },
 
-/**
- * Invalidate all moldipedia domain caches:
- * - article lists (with infinite-scroll support)
- * - article details
- * - dashboard summary
- */
-export async function invalidateMoldipedia() {
-  const { mutate } = useSWRConfig();
-
-  await Promise.all([
-    mutate(createPattern('/api/v1/moldipedia'), undefined, { revalidate: true }),
-    mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
-  ]);
-}
-
-/**
- * Invalidate all mold domain caches:
- * - mold lists (with infinite-scroll support)
- * - mold details
- * - dashboard summary
- */
-export async function invalidateMolds() {
-  const { mutate } = useSWRConfig();
-
-  await Promise.all([
-    mutate(createPattern('/api/v1/mold'), undefined, { revalidate: true }),
-    mutate('/api/v1/dashboard/summary', undefined, { revalidate: true }),
-  ]);
-}
-
-/**
- * Invalidate flag-report domain caches:
- * - flag lists (with infinite-scroll support)
- * - flag details
- */
-export async function invalidateFlagReports() {
-  const { mutate } = useSWRConfig();
-
-  await mutate(createPattern('/api/v1/flag-report'), undefined, { revalidate: true });
-}
-
-/**
- * Invalidate all caches across all domains.
- * Use sparingly; prefer domain-specific invalidation when possible.
- */
-export async function invalidateAll() {
-  const { mutate } = useSWRConfig();
-  await mutate(() => true, undefined, { revalidate: true });
+    /**
+     * Invalidate all caches across all domains
+     */
+    invalidateAll: async () => {
+      await mutate(() => true, undefined, { revalidate: true });
+    },
+  };
 }

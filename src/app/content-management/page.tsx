@@ -12,11 +12,12 @@
   import { useAuth } from '@/hooks/useAuth';
   import { useMoldList, useMoldipediaList } from '@/hooks/swr';
   import { apiMutate, ApiError } from '@/lib/api';
-import { invalidateMoldipedia } from '@/utils/cache-invalidation';
+import { useInvalidationFunctions } from '@/utils/cache-invalidation';
   export default function ContentManagement() {
       console.log('🚀 ContentManagement component rendering');
       const router = useRouter();
       const { user: authUser, loading: authLoading } = useAuth();
+      const { invalidateMoldipedia } = useInvalidationFunctions();
       console.log('🔐 Auth state:', { authUser, authLoading });
       
       // Map auth user data  

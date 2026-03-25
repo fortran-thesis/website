@@ -14,10 +14,11 @@ import FlagHistory from "./tab_contents/flag-history";
 import type { FlaggedHistory } from "@/components/tables/flagged_history_table";
 import { useFlagReportsInfinite } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
-import { invalidateUsers } from '@/utils/cache-invalidation';
+import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
+  const { invalidateUsers } = useInvalidationFunctions();
 
   const [userRole, setUserRole] = useState<"Administrator" | "Mycologist" | null>(null);
   const [isLoading, setIsLoading] = useState(true);

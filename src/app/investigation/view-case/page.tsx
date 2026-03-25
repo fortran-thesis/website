@@ -19,7 +19,7 @@ import AddTreatmentModal from "@/components/modals/add_treatment_modal";
 import { useAuth } from "@/hooks/useAuth";
 import { useMoldReport, useMoldCaseByReport, useMoldCaseLogs, useUser } from "@/hooks/swr";
 import { apiMutate } from "@/lib/api";
-import { invalidateMoldReports } from '@/utils/cache-invalidation';
+import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
 type Mycologist = {
   name: string;
@@ -31,6 +31,7 @@ type Mycologist = {
 function ViewCaseContent() {
   const searchParams = useSearchParams();
   const caseId = searchParams.get('id');
+  const { invalidateMoldReports } = useInvalidationFunctions();
   
   /* ── SWR: mold report + mold case ── */
   const { data: reportRes, isLoading: reportLoading, mutate: mutateReport } = useMoldReport(caseId ?? undefined);

@@ -7,7 +7,7 @@ import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import { apiMutate, ApiError } from '@/lib/api';
-import { invalidateUsers } from '@/utils/cache-invalidation';
+import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
 export interface MycoFormData {
   firstName: string;
@@ -21,6 +21,7 @@ export interface MycoFormData {
 export default function CreateMycologist() {
   const router = useRouter();
   const userRole = "Administrator";
+  const { invalidateUsers } = useInvalidationFunctions();
 
   const [formData, setFormData] = useState<MycoFormData>({
     firstName: "",

@@ -8,7 +8,7 @@ import ConfirmModal from '@/components/modals/confirmation_modal';
 import { faInfoCircle, faLeaf } from '@fortawesome/free-solid-svg-icons';
 import { useMoldById } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
-import { invalidateMolds } from '@/utils/cache-invalidation';
+import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
 interface MoldInfoFormData {
   moldName: string;
@@ -56,6 +56,7 @@ function ViewMoldInfoContent() {
     const userRole = "Mycologist";
     const searchParams = useSearchParams();
     const moldId = searchParams.get('id');
+    const { invalidateMolds } = useInvalidationFunctions();
 
     // Form state for General Information tab
     const [moldInfo, setMoldInfo] = useState<MoldInfoFormData>({

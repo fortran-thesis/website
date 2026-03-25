@@ -9,7 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { apiMutate } from '@/lib/api';
-import { invalidateMoldipedia } from '@/utils/cache-invalidation';
+import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 import { StickyDossierNav } from "@/components/dossier_nav";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
@@ -101,6 +101,7 @@ const EMPTY_WIKIMOLD_DATA: WikiMoldData = {
 export default function AddWikiMold() {
   // UI State: Show confirmation modal before publishing
   const [showBackConfirm, setShowBackConfirm] = useState(false);
+  const { invalidateMoldipedia } = useInvalidationFunctions();
   // Message States: Feedback to user
   const [infoMessage, setInfoMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState(''); // Shown when article published successfully

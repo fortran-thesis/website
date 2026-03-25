@@ -11,7 +11,7 @@ import { faPen, faArchive } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { useMoldipediaArticle } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
-import { invalidateMoldipedia } from '@/utils/cache-invalidation';
+import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
@@ -65,6 +65,7 @@ function ViewWikiMoldContent() {
   const searchParams = useSearchParams();
   const wikimoldId = searchParams.get("id") ?? '';
   const userRole = "Mycologist";
+  const { invalidateMoldipedia } = useInvalidationFunctions();
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
