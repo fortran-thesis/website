@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
@@ -101,6 +102,7 @@ const EMPTY_WIKIMOLD_DATA: WikiMoldData = {
 export default function AddWikiMold() {
   // UI State: Show confirmation modal before publishing
   const [showBackConfirm, setShowBackConfirm] = useState(false);
+  const router = useRouter();
   const { invalidateMoldipedia } = useInvalidationFunctions();
   // Message States: Feedback to user
   const [infoMessage, setInfoMessage] = useState('');
@@ -273,11 +275,15 @@ export default function AddWikiMold() {
       await invalidateMoldipedia();
 
       setSuccessMessage("WikiMold article created successfully!");
-        // Reset form and local image state after successful create.
-        setWikiMoldData(EMPTY_WIKIMOLD_DATA);
+      // Reset form and local image state after successful create.
+      setWikiMoldData(EMPTY_WIKIMOLD_DATA);
       setCoverImagePreview("");
       setCoverImageFile(null);
-      setTimeout(() => setSuccessMessage(''), 5000);
+      
+      // Navigate back to wikimold list page after successful submission
+      setTimeout(() => {
+        router.push('../');
+      }, 1000);
     } catch (error) {
       console.error("Error creating WikiMold:", error);
       const errorMsg = "Failed to create WikiMold article. " + (error instanceof Error ? error.message : "Please try again.");

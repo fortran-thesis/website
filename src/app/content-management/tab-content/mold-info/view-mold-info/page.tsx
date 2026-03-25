@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import BackButton from '@/components/buttons/back_button';
 import TabBar from '@/components/tab_bar';
@@ -55,6 +55,7 @@ export default function ViewMoldInfo() {
 function ViewMoldInfoContent() {
     const userRole = "Mycologist";
     const searchParams = useSearchParams();
+    const router = useRouter();
     const moldId = searchParams.get('id');
     const { invalidateMolds } = useInvalidationFunctions();
 
@@ -264,6 +265,11 @@ function ViewMoldInfoContent() {
         await apiMutate(url, { method: method as 'POST' | 'PATCH', body: payload });
 
         await invalidateMolds();
+
+        // Navigate back to mold info list page after successful submission
+        setTimeout(() => {
+          router.push('./');
+        }, 500);
 
         // Success handled via UI state; removed intrusive alert dialog.
       } catch (err) {
