@@ -13,6 +13,19 @@ import { mutate } from 'swr';
 interface MoldInfoFormData {
   moldName: string;
   description: string;
+  predictedClassId: string;
+  predictedClassName: string;
+  symptoms: string;
+  signs: string;
+  characteristics: string;
+  additionalInfo: {
+    overview: string;
+    healthRisks: string;
+    affectedHosts: string;
+    symptomsSigns: string;
+    diseaseCycleImpact: string;
+    preventionSummary: string;
+  };
   taxonomy: {
     kingdom: string;
     phylum: string;
@@ -48,6 +61,19 @@ function ViewMoldInfoContent() {
     const [moldInfo, setMoldInfo] = useState<MoldInfoFormData>({
       moldName: '',
       description: '',
+      predictedClassId: '',
+      predictedClassName: '',
+      symptoms: '',
+      signs: '',
+      characteristics: '',
+      additionalInfo: {
+        overview: '',
+        healthRisks: '',
+        affectedHosts: '',
+        symptomsSigns: '',
+        diseaseCycleImpact: '',
+        preventionSummary: '',
+      },
       taxonomy: {
         kingdom: 'Fungi', 
         phylum: 'Ascomycota', 
@@ -71,6 +97,31 @@ function ViewMoldInfoContent() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    const normalizeLabel = (value: string) =>
+      value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+    const additionalInfoValue = (
+      rows: Array<{ title?: string; description?: string }> | undefined,
+      aliases: string[],
+    ) => {
+      if (!Array.isArray(rows)) return '';
+      const normalizedAliases = aliases.map(normalizeLabel);
+
+      for (const row of rows) {
+        const normalizedTitle = normalizeLabel(String(row?.title ?? ''));
+        const content = String(row?.description ?? '').trim();
+        if (!normalizedTitle || !content) continue;
+
+        for (const alias of normalizedAliases) {
+          if (normalizedTitle === alias || normalizedTitle.includes(alias)) {
+            return content;
+          }
+        }
+      }
+
+      return '';
+    };
+
     // SWR: fetch mold data
     const { data: moldSwr, isLoading } = useMoldById(moldId ?? undefined);
 
@@ -79,10 +130,26 @@ function ViewMoldInfoContent() {
       const mold = (moldSwr as any)?.data;
       if (!mold) return;
       const apiTax = mold.mold_details?.info?.taxonomy || {};
+      const info = mold.mold_details?.info || {};
+      const additionalInfoRows = Array.isArray(info.additional_info) ? info.additional_info : [];
+
       setMoldInfo(prev => ({
         ...prev,
         moldName: mold.name || '',
-        description: mold.mold_details?.info?.description || '',
+        description: info.description || '',
+        predictedClassId: info.predicted_class_id !== undefined ? String(info.predicted_class_id) : '',
+        predictedClassName: info.predicted_class_name || '',
+        symptoms: Array.isArray(mold.symptoms) ? mold.symptoms.join(', ') : '',
+        signs: Array.isArray(mold.signs) ? mold.signs.join(', ') : '',
+        characteristics: Array.isArray(mold.characteristics) ? mold.characteristics.join(', ') : '',
+        additionalInfo: {
+          overview: (info.overview as string) || additionalInfoValue(additionalInfoRows, ['overview']),
+          healthRisks: (info.health_risks as string) || additionalInfoValue(additionalInfoRows, ['health risks', 'health risk', 'risk']),
+          affectedHosts: (info.affected_hosts as string) || additionalInfoValue(additionalInfoRows, ['affected hosts', 'affected crops', 'hosts', 'host']),
+          symptomsSigns: (info.symptoms_and_signs as string) || additionalInfoValue(additionalInfoRows, ['symptoms signs', 'symptoms and signs', 'symptoms', 'signs']),
+          diseaseCycleImpact: (info.disease_cycle_spread_impact as string) || additionalInfoValue(additionalInfoRows, ['disease cycle spread', 'disease cycle', 'spread', 'impact']),
+          preventionSummary: (info.prevention_summary as string) || additionalInfoValue(additionalInfoRows, ['prevention summary', 'prevention']),
+        },
         taxonomy: {
           kingdom: apiTax.kingdom ?? prev.taxonomy.kingdom ?? '',
           phylum: apiTax.phylum ?? prev.taxonomy.phylum ?? '',
@@ -125,6 +192,19 @@ function ViewMoldInfoContent() {
       }));
     };
 
+    const handleAdditionalInfoChange = (
+      field: keyof MoldInfoFormData['additionalInfo'],
+      value: string,
+    ) => {
+      setMoldInfo(prev => ({
+        ...prev,
+        additionalInfo: {
+          ...prev.additionalInfo,
+          [field]: value,
+        },
+      }));
+    };
+
     // Handle form submission
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
@@ -132,20 +212,51 @@ function ViewMoldInfoContent() {
     };
 
     // Handle confirmed publish
+    const parseCommaList = (value: string): string[] =>
+      value
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+
     const handleConfirmPublish = async () => {
       setShowConfirmModal(false);
       setIsSaving(true);
       setError(null);
       try {
+        const additionalInfoPayload = [
+          { title: 'Overview', description: moldInfo.additionalInfo.overview.trim() },
+          { title: 'Health Risks', description: moldInfo.additionalInfo.healthRisks.trim() },
+          { title: 'Affected Hosts', description: moldInfo.additionalInfo.affectedHosts.trim() },
+          { title: 'Symptoms & Signs', description: moldInfo.additionalInfo.symptomsSigns.trim() },
+          { title: 'Disease Cycle / Spread / Impact', description: moldInfo.additionalInfo.diseaseCycleImpact.trim() },
+          { title: 'Prevention Summary', description: moldInfo.additionalInfo.preventionSummary.trim() },
+        ].filter((entry) => entry.description.length > 0);
+
+        const symptomsArray = parseCommaList(moldInfo.symptoms);
+        const signsArray = parseCommaList(moldInfo.signs);
+        const characteristicsArray = parseCommaList(moldInfo.characteristics);
+
         const payload = {
           moldName: moldInfo.moldName,
           details: {
             info: {
               description: moldInfo.description,
               taxonomy: moldInfo.taxonomy,
+              predicted_class_id: moldInfo.predictedClassId.trim() ? Number(moldInfo.predictedClassId.trim()) : undefined,
+              predicted_class_name: moldInfo.predictedClassName.trim() || undefined,
+              overview: moldInfo.additionalInfo.overview.trim(),
+              health_risks: moldInfo.additionalInfo.healthRisks.trim(),
+              affected_hosts: moldInfo.additionalInfo.affectedHosts.trim(),
+              symptoms_and_signs: moldInfo.additionalInfo.symptomsSigns.trim(),
+              disease_cycle_spread_impact: moldInfo.additionalInfo.diseaseCycleImpact.trim(),
+              prevention_summary: moldInfo.additionalInfo.preventionSummary.trim(),
+              additional_info: additionalInfoPayload,
             },
             prevention: moldManagement,
           },
+          ...(symptomsArray.length ? { symptoms: symptomsArray } : {}),
+          ...(signsArray.length ? { signs: signsArray } : {}),
+          ...(characteristicsArray.length ? { characteristics: characteristicsArray } : {}),
         };
         const method = moldId ? 'PATCH' : 'POST';
         const url = moldId ? `/api/v1/mold/${moldId}` : '/api/v1/mold';
@@ -157,6 +268,7 @@ function ViewMoldInfoContent() {
           undefined,
           { revalidate: true },
         );
+        await mutate('/api/v1/dashboard/summary', undefined, { revalidate: true });
 
         // Success handled via UI state; removed intrusive alert dialog.
       } catch (err) {
@@ -186,6 +298,80 @@ function ViewMoldInfoContent() {
             className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
             placeholder="Enter detailed description of the mold genus..."
           />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="predictedClassId" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+              Predicted Class ID
+            </label>
+            <input
+              id="predictedClassId"
+              type="text"
+              value={moldInfo.predictedClassId}
+              onChange={(e) => setMoldInfo({ ...moldInfo, predictedClassId: e.target.value })}
+              className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+              placeholder="Enter predicted class id"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="predictedClassName" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+              Predicted Class Name
+            </label>
+            <input
+              id="predictedClassName"
+              type="text"
+              value={moldInfo.predictedClassName}
+              onChange={(e) => setMoldInfo({ ...moldInfo, predictedClassName: e.target.value })}
+              className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+              placeholder="Enter predicted class name"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label htmlFor="symptoms" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+              Symptoms (comma-separated)
+            </label>
+            <input
+              id="symptoms"
+              type="text"
+              value={moldInfo.symptoms}
+              onChange={(e) => setMoldInfo({ ...moldInfo, symptoms: e.target.value })}
+              className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+              placeholder="eg. yellowing, spotting"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="signs" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+              Signs (comma-separated)
+            </label>
+            <input
+              id="signs"
+              type="text"
+              value={moldInfo.signs}
+              onChange={(e) => setMoldInfo({ ...moldInfo, signs: e.target.value })}
+              className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+              placeholder="eg. white coating, mold colonies"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="characteristics" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+              Characteristics (comma-separated)
+            </label>
+            <input
+              id="characteristics"
+              type="text"
+              value={moldInfo.characteristics}
+              onChange={(e) => setMoldInfo({ ...moldInfo, characteristics: e.target.value })}
+              className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+              placeholder="eg. rapid spread, high humidity"
+            />
+          </div>
         </div>
 
         {/* Taxonomy Section */}
@@ -282,6 +468,99 @@ function ViewMoldInfoContent() {
                 onChange={(e) => handleTaxonomyChange('genus', e.target.value)}
                 className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
                 placeholder="Genus"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Information Section */}
+        <div>
+          <h3 className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-bold text-lg mb-4">
+            Additional Information
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="overview" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Overview
+              </label>
+              <textarea
+                id="overview"
+                value={moldInfo.additionalInfo.overview}
+                onChange={(e) => handleAdditionalInfoChange('overview', e.target.value)}
+                rows={3}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Short background and context"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="healthRisks" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Health Risks
+              </label>
+              <textarea
+                id="healthRisks"
+                value={moldInfo.additionalInfo.healthRisks}
+                onChange={(e) => handleAdditionalInfoChange('healthRisks', e.target.value)}
+                rows={3}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Known risks and safety concerns"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="affectedHosts" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Affected Hosts
+              </label>
+              <textarea
+                id="affectedHosts"
+                value={moldInfo.additionalInfo.affectedHosts}
+                onChange={(e) => handleAdditionalInfoChange('affectedHosts', e.target.value)}
+                rows={3}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Crops, hosts, and contexts affected"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="symptomsSigns" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Symptoms and Signs
+              </label>
+              <textarea
+                id="symptomsSigns"
+                value={moldInfo.additionalInfo.symptomsSigns}
+                onChange={(e) => handleAdditionalInfoChange('symptomsSigns', e.target.value)}
+                rows={3}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Field-visible symptoms and signs"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="diseaseCycleImpact" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Disease Cycle / Spread / Impact
+              </label>
+              <textarea
+                id="diseaseCycleImpact"
+                value={moldInfo.additionalInfo.diseaseCycleImpact}
+                onChange={(e) => handleAdditionalInfoChange('diseaseCycleImpact', e.target.value)}
+                rows={4}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Lifecycle, spread behavior, and practical impact"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="preventionSummary" className="block font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm font-medium mb-2">
+                Prevention Summary
+              </label>
+              <textarea
+                id="preventionSummary"
+                value={moldInfo.additionalInfo.preventionSummary}
+                onChange={(e) => handleAdditionalInfoChange('preventionSummary', e.target.value)}
+                rows={3}
+                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none"
+                placeholder="Quick prevention summary for operators"
               />
             </div>
           </div>
