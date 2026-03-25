@@ -31,7 +31,6 @@ type Mycologist = {
 function ViewCaseContent() {
   const searchParams = useSearchParams();
   const caseId = searchParams.get('id');
-  const priorityFromQuery = searchParams.get('priority');
   
   /* ── SWR: mold report + mold case ── */
   const { data: reportRes, isLoading: reportLoading, mutate: mutateReport } = useMoldReport(caseId ?? undefined);
@@ -186,10 +185,6 @@ function ViewCaseContent() {
     return d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "Loading...";
   })();
   const status = caseData?.status ? caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1) : "Pending";
-  const priorityValue = moldCase?.priority || caseData?.mold_case?.priority || caseData?.priority || priorityFromQuery || "";
-  const priority = priorityValue
-    ? priorityValue.charAt(0).toUpperCase() + priorityValue.slice(1)
-    : "Unknown";
   
   // Helper function to get status color (matching status_tile.tsx)
   const getStatusColor = (status: string) => {
@@ -346,7 +341,7 @@ function ViewCaseContent() {
     ).length > 0;
   };
 
-  const cultivationDetails = moldCase?.cultivation_details as Record<string, any> | undefined;
+  const cultivationDetails = normalizeCharacteristics(moldCase?.cultivation_details);
   const cultivationLogsFromEndpoint = Array.isArray(logsRes?.data?.snapshot) ? logsRes!.data!.snapshot : [];
   const cultivationLogsFromCase = Array.isArray(moldCase?.cultivation_logs) ? moldCase.cultivation_logs : [];
   const cultivationLogs = cultivationLogsFromEndpoint.length > 0
@@ -506,60 +501,95 @@ function ViewCaseContent() {
    * @returns {JSX.Element} InitialObservationTab with microscopic/macroscopic baseline data
    */
   const getInitialObservationContent = () => {
-    const initialObs = (cultivationDetails?.initial_observations ?? cultivationDetails ?? {}) as Record<string, any>;
-    const snapshot = (initialObs?.microscopic_ai_snapshot ?? cultivationDetails?.microscopic_ai_snapshot ?? {}) as Record<string, any>;
+    const initialObs = normalizeCharacteristics(cultivationDetails?.initial_observations ?? cultivationDetails);
+    const snapshot = normalizeCharacteristics(initialObs?.microscopic_ai_snapshot ?? cultivationDetails?.microscopic_ai_snapshot);
     const snapshotTopPrediction = Array.isArray(snapshot?.top_predictions) && snapshot.top_predictions.length > 0
-      ? (snapshot.top_predictions[0] as Record<string, any>)
-      : undefined;
-    const reportLookupResults = (caseData as any)?.lookup_results;
-    const reportTopLookup = Array.isArray(reportLookupResults) && reportLookupResults.length > 0
-      ? (reportLookupResults[0] as Record<string, any>)
-      : undefined;
+      ? normalizeCharacteristics(snapshot.top_predictions[0])
+      : {};
+
+    const initialLog = cultivationLogs.find((log: any) => {
+      const normalized = normalizeLogType(log?.type);
+      return normalized === "initial" || normalized === "initialobservation" || normalized === "initialobs";
+    }) as Record<string, any> | undefined;
+    const initialLogCharacteristics = normalizeCharacteristics(initialLog?.characteristics);
 
     const microscopicImagePath = asText(
       initialObs?.initial_microscopic_image_url,
       initialObs?.microscopic_image_path,
       initialObs?.microscopic_image_url,
       cultivationDetails?.initial_microscopic_image_url,
+      initialLog?.microscopic_image_url,
+      initialLogCharacteristics?.microscopic_image_url,
+      initialLog?.image_url,
     );
     const identifiedMold = asText(
       initialObs?.initial_microscopic,
+      cultivationDetails?.initial_microscopic,
       initialObs?.identified_mold,
       initialObs?.identifiedMold,
       initialObs?.microscopic_ai_snapshot?.identified_mold,
       snapshot?.identified_mold,
       snapshotTopPrediction?.moldName,
       snapshotTopPrediction?.mold_name,
-      reportTopLookup?.moldName,
-      reportTopLookup?.mold_name,
+      initialLogCharacteristics?.microscopic_identification,
+      initialLogCharacteristics?.identified_mold,
+      initialLogCharacteristics?.identifiedMold,
     );
     const confidence = confidenceText(
       initialObs?.confidence ??
       initialObs?.microscopic_ai_snapshot?.confidence ??
       cultivationDetails?.microscopic_ai_snapshot?.confidence ??
+      cultivationDetails?.confidence ??
       snapshot?.confidence ??
       snapshotTopPrediction?.confidence ??
-      reportTopLookup?.confidence,
+      initialLogCharacteristics?.confidence,
     );
     const macroscopicImagePath = asText(
       initialObs?.initial_macroscopic_image_url,
       initialObs?.macroscopic_image_path,
       initialObs?.macroscopic_image_url,
       cultivationDetails?.initial_macroscopic_image_url,
+      initialLog?.macroscopic_image_url,
+      initialLogCharacteristics?.macroscopic_image_url,
+      initialLog?.image_url,
     );
-    const macroColor = asText(initialObs?.initial_macroscopic_color, initialObs?.macro_color, initialObs?.macroColor);
+    const macroColor = asText(
+      initialObs?.initial_macroscopic_color,
+      initialObs?.macro_color,
+      initialObs?.macroColor,
+      cultivationDetails?.initial_macroscopic_color,
+      initialLogCharacteristics?.macro_color,
+      initialLogCharacteristics?.macroColor,
+      initialLogCharacteristics?.color,
+    );
     const macroTexture = asText(
       initialObs?.initial_macroscopic_texture,
       initialObs?.macro_texture,
       initialObs?.macroTexture,
+      cultivationDetails?.initial_macroscopic_texture,
+      initialLogCharacteristics?.macro_texture,
+      initialLogCharacteristics?.macroTexture,
+      initialLogCharacteristics?.texture,
     );
     const macroSymptoms = asTextList(
-      initialObs?.initial_macroscopic_symptoms ?? initialObs?.macro_symptoms ?? initialObs?.initial_symptoms,
+      initialObs?.initial_macroscopic_symptoms ??
+      initialObs?.macro_symptoms ??
+      initialObs?.initial_symptoms ??
+      cultivationDetails?.initial_macroscopic_symptoms ??
+      cultivationDetails?.initial_symptoms ??
+      initialLogCharacteristics?.macro_symptoms ??
+      initialLogCharacteristics?.macroSymptoms ??
+      initialLogCharacteristics?.symptoms,
     );
     const macroCharacteristics = asTextList(
       initialObs?.initial_macroscopic_characteristics ??
-        initialObs?.macro_characteristics ??
-        initialObs?.initial_characteristics,
+      initialObs?.macro_characteristics ??
+      initialObs?.initial_characteristics ??
+      cultivationDetails?.initial_macroscopic_characteristics ??
+      cultivationDetails?.initial_characteristics ??
+      initialLogCharacteristics?.macro_characteristics ??
+      initialLogCharacteristics?.macroCharacteristics ??
+      initialLogCharacteristics?.characteristics,
     );
 
     return (
@@ -692,15 +722,6 @@ function ViewCaseContent() {
               />
               <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--primary-color)]">
                 {status}
-              </span>
-            </div>
-            
-            <div className="w-[1px] h-3 bg-[var(--primary-color)]/20" />
-            
-            <div className="flex items-center gap-2">
-              <span className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.2em] opacity-60">Priority:</span>
-              <span className={`text-xs font-black uppercase tracking-[0.2em] ${priority === 'High' ? 'text-red-700' : 'text-[var(--primary-color)]'}`}>
-                {priority}
               </span>
             </div>
           </div>

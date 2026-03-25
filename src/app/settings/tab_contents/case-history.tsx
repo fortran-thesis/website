@@ -11,7 +11,6 @@ interface CaseData {
   location: string;
   submittedBy: string;
   dateSubmitted: string;
-  priority: string;
   status: string;
 }
 
@@ -67,11 +66,6 @@ export default function CaseHistory() {
           });
     }
 
-    const priority = item.priority || item.mold_case?.priority || "Unassigned";
-    const normalizedPriority = priority
-      ? priority.charAt(0).toUpperCase() + priority.slice(1)
-      : "Unassigned";
-
     const status = item.status || "Rejected";
     const normalizedStatus = status
       ? status.charAt(0).toUpperCase() + status.slice(1)
@@ -83,7 +77,6 @@ export default function CaseHistory() {
       location: item.location || item.mold_case?.location || item.reporter?.address || "N/A",
       submittedBy: item.reporter?.name || 'N/A',
       dateSubmitted: formattedDate,
-      priority: normalizedPriority,
       status: normalizedStatus,
     };
   };
@@ -104,7 +97,6 @@ export default function CaseHistory() {
         item.location,
         item.submittedBy,
         item.dateSubmitted,
-        item.priority,
         item.status,
       ]
         .filter(Boolean)
@@ -121,10 +113,7 @@ export default function CaseHistory() {
   const handleViewCase = (caseItem: CaseData) => {
     console.log("Viewing rejected case:", caseItem.caseName);
     // Navigate to view case page using window.location (same as investigation page)
-    const params = new URLSearchParams({
-      id: caseItem.caseName,
-      priority: caseItem.priority || "",
-    });
+    const params = new URLSearchParams({ id: caseItem.caseName });
     window.location.href = `/investigation/view-case?${params.toString()}`;
   };
 
@@ -188,7 +177,6 @@ export default function CaseHistory() {
         <CaseTable
           cases={filteredClosedCases}
           onEdit={handleViewCase}
-          showPriority={true}
           showStatus={true}
           showAction={true}
           useViewIcon={true}
