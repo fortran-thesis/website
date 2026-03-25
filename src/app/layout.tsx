@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat, Bricolage_Grotesque } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import LayoutClient from "@/components/layout_client";
 
@@ -27,6 +29,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${montserrat.variable} ${bricolageGrotesque.variable} antialiased`}>
         <LayoutClient>{children}</LayoutClient>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
