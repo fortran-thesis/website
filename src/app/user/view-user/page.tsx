@@ -23,6 +23,7 @@ type UserDetails = {
   address: string;
   role: string;
   is_active: boolean;
+  occupation?: string;
 };
 
 
@@ -60,6 +61,7 @@ function ViewUserContent() {
       address: user.address || '',
       role: user.role || 'Farmer',
       is_active: !details.disabled && !user.is_banned,
+      occupation: user.occupation,
     } as UserDetails;
   }, [userSwr, userId]);
 
@@ -173,7 +175,7 @@ function ViewUserContent() {
             <StatusBox status={userStatus} />
           </div>
           <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)] text-sm mr-5">
-            {userRole}
+            {userRole === "Farmer" && userDetails?.occupation ? userDetails.occupation : userRole}
           </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6 my-3 w-full">
