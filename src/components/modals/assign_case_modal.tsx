@@ -30,8 +30,65 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
   const [filter, setFilter] = useState<"all" | "available" | "at-capacity">("all");
   const [endDate, setEndDate] = useState<Date | null>(null);
+  const [endDateError, setEndDateError] = useState<string>("");
   const [mycologists, setMycologists] = useState<Mycologist[]>(propMycologists || []);
   const [loading, setLoading] = useState(false);
+
+  // Calculate minimum working date (3 working days from today)
+  const getMinimumWorkingDate = (): Date => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let workingDaysCount = 0;
+    let checkDate = new Date(today);
+
+    while (workingDaysCount < 3) {
+      checkDate.setDate(checkDate.getDate() + 1);
+      const dayOfWeek = checkDate.getDay();
+      // Skip weekends (Saturday = 6, Sunday = 0)
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        workingDaysCount++;
+      }
+    }
+
+    return checkDate;
+  };
+
+  // Check if a date is a weekend
+  const isWeekend = (date: Date): boolean => {
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6;
+  };
+
+  // Handle end date change with validation
+  const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEndDateError("");
+    const value = e.target.value;
+
+    if (!value) {
+      setEndDate(null);
+      return;
+    }
+
+    const selectedDate = new Date(value);
+    selectedDate.setHours(0, 0, 0, 0);
+    const minDate = getMinimumWorkingDate();
+
+    // Validate date is not in past and is at least 3 working days away
+    if (selectedDate < minDate) {
+      setEndDateError("End date must be at least 3 working days from today");
+      setEndDate(null);
+      return;
+    }
+
+    // Validate date is not a weekend
+    if (isWeekend(selectedDate)) {
+      setEndDateError("End date cannot fall on a weekend (Saturday or Sunday)");
+      setEndDate(null);
+      return;
+    }
+
+    setEndDate(selectedDate);
+  };
 
 
   // Fetch mycologists and current workload counts when modal opens
@@ -127,12 +184,21 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
     e.preventDefault();
     console.log("🔍 Modal - Selected mycologist:", selectedMycologist);
     console.log("🔍 Modal - End date:", endDate);
-    if (selectedMycologist) {
-      if (onAssign) {
-        onAssign(selectedMycologist, endDate);
-      }
-      onClose();
+
+    if (!selectedMycologist) {
+      setEndDateError("Please select a mycologist");
+      return;
     }
+
+    if (!endDate) {
+      setEndDateError("End date is required");
+      return;
+    }
+
+    if (onAssign) {
+      onAssign(selectedMycologist, endDate);
+    }
+    onClose();
   };
 
   return (
@@ -247,13 +313,12 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
                 id="endDate"
                 type="date"
                 value={endDate ? endDate.toISOString().slice(0, 10) : ""}
-                onChange={(e) =>
-                setEndDate(e.target.value ? new Date(e.target.value) : null)
-                }
+                onChange={handleEndDateChange}
+                min={getMinimumWorkingDate().toISOString().slice(0, 10)}
                 className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 mb-1 rounded-lg focus:outline-none appearance-none
-                [&::-webkit-calendar-picker-indicator]:opacity-0 
-                [&::-webkit-calendar-picker-indicator]:absolute 
-                [&::-webkit-calendar-picker-indicator]:right-3 
+                [&::-webkit-calendar-picker-indicator]:opacity-0
+                [&::-webkit-calendar-picker-indicator]:absolute
+                [&::-webkit-calendar-picker-indicator]:right-3
                 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
                 name="endDate"
                 required
@@ -263,11 +328,12 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--accent-color)] pointer-events-none"
             />
             </div>
+            {endDateError && <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">* {endDateError}</p>}
         </div>
         <button
           type="submit"
           className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-xl hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!selectedMycologist}
+          disabled={!selectedMycologist || !endDate}
         >
           Assign Case
         </button>
