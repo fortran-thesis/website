@@ -103,6 +103,8 @@ function ViewMoldInfoContent() {
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [moldStatus, setMoldStatus] = useState<'draft' | 'reviewed' | null>(null);
+    const [isMarkingReviewed, setIsMarkingReviewed] = useState(false);
 
     // SWR: fetch mold data
     const { data: moldSwr, isLoading } = useMoldById(moldId ?? undefined);
@@ -142,6 +144,8 @@ function ViewMoldInfoContent() {
           genus: mold.name || apiTax.genus || prev.taxonomy.genus || ''
         }
       }));
+      const rawStatus = (mold as any).status;
+      setMoldStatus(rawStatus === 'reviewed' ? 'reviewed' : 'draft');
       if (mold.mold_details?.prevention) {
         const prev = mold.mold_details.prevention as any;
         setMoldManagement(curr => ({
@@ -254,6 +258,28 @@ function ViewMoldInfoContent() {
         );
       } finally {
         setIsSaving(false);
+      }
+    };
+
+    const handleMarkAsReviewed = async () => {
+      if (!moldId || moldStatus === 'reviewed') return;
+      setIsMarkingReviewed(true);
+      setError(null);
+      try {
+        await apiMutate(`/api/v1/mold/${moldId}`, {
+          method: 'PATCH',
+          body: { status: 'reviewed' },
+        });
+        setMoldStatus('reviewed');
+        await invalidateMolds();
+      } catch (err) {
+        setError(
+          err instanceof ApiError ? err.message :
+          err instanceof Error ? err.message :
+          'Failed to mark as reviewed'
+        );
+      } finally {
+        setIsMarkingReviewed(false);
       }
     };
 
@@ -649,6 +675,11 @@ function ViewMoldInfoContent() {
                       <span className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-2xl">
                         {moldInfo.moldName || moldInfo.taxonomy.genus || 'Mold Information'}
                       </span>
+                      {moldId && moldStatus && (
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold font-[family-name:var(--font-bricolage-grotesque)] ${moldStatus === 'reviewed' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {moldStatus === 'reviewed' ? 'Reviewed' : 'Draft'}
+                        </span>
+                      )}
                     </div>
                 </div>
             </div>
@@ -681,7 +712,17 @@ function ViewMoldInfoContent() {
               </div>
 
               {/* Submit Button */}
-              <div className="flex justify-end">
+              <div className="flex justify-end gap-3">
+                {moldId && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAsReviewed}
+                    disabled={isMarkingReviewed || moldStatus === 'reviewed'}
+                    className="font-[family-name:var(--font-bricolage-grotesque)] bg-green-600 text-white font-semibold px-8 py-3 rounded-lg hover:bg-green-700 transition-colors cursor-pointer text-sm shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isMarkingReviewed ? 'Saving...' : moldStatus === 'reviewed' ? 'Reviewed ✓' : 'Mark as Reviewed'}
+                  </button>
+                )}
                 <button
                   type="submit"
                   disabled={isSaving}
