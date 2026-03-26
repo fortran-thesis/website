@@ -1,11 +1,11 @@
 "use client";
 import { useState, useEffect, useMemo, useRef } from 'react'; 
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { Navbar } from '@/components/navbar';
 import Footer from '@/components/footer';
-import { useMoldipediaArticle, type MoldipediaArticle } from '@/hooks/swr';
+import { useMoldipediaArticle, useMoldipediaCases, type MoldipediaArticle, type MoldCaseSummary } from '@/hooks/swr';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMicroscope, faChevronLeft, faArrowRight, faCompass } from '@fortawesome/free-solid-svg-icons';
 
@@ -84,9 +84,11 @@ function getHtmlField(
 
 export default function ViewWikiMold() {
   const { id } = useParams();
+  const router = useRouter();
   
   // SWR: fetch article
   const { data: articleRes, isLoading: loading, error: swrError } = useMoldipediaArticle(id as string | undefined);
+  const { data: casesRes, isLoading: casesLoading, error: casesError } = useMoldipediaCases(id as string | undefined);
   const error = swrError ? (swrError instanceof Error ? swrError.message : 'Failed to load article') : null;
 
   // --- Image States ---
@@ -154,6 +156,7 @@ export default function ViewWikiMold() {
   const [activeTreatment, setActiveTreatment] = useState(0);
   const [showExploreCasesCta, setShowExploreCasesCta] = useState(false);
   const heroSectionRef = useRef<HTMLElement | null>(null);
+  const similarCasesSectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const heroElement = heroSectionRef.current;
@@ -186,6 +189,44 @@ export default function ViewWikiMold() {
 
     const treatmentField = TREATMENT_FIELD_BY_CONTROL[controlId];
     return article[treatmentField] || article.treatment || '';
+  };
+
+  const linkedCases = useMemo<MoldCaseSummary[]>(() => {
+    const raw = casesRes?.data;
+    if (Array.isArray(raw)) {
+      return raw;
+    }
+    if (raw && typeof raw === 'object') {
+      const snapshot = (raw as { snapshot?: unknown }).snapshot;
+      if (Array.isArray(snapshot)) {
+        return snapshot as MoldCaseSummary[];
+      }
+    }
+    return [];
+  }, [casesRes]);
+
+  const formatCaseDate = (entry: MoldCaseSummary): string => {
+    const value = entry.final_verdict?.verdict_timestamp;
+    if (!value) return 'Date unavailable';
+    try {
+      const dateObj = typeof value === 'object' && '_seconds' in value
+        ? new Date(value._seconds * 1000)
+        : new Date(value as string);
+      if (isNaN(dateObj.getTime())) return 'Date unavailable';
+      return dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch {
+      return 'Date unavailable';
+    }
+  };
+
+  const openLinkedCase = (entry: MoldCaseSummary) => {
+    const target = (entry.mold_report_id || entry.id || '').trim();
+    if (!target) return;
+    router.push(`/investigation/view-case?id=${encodeURIComponent(target)}`);
+  };
+
+  const scrollToLinkedCases = () => {
+    similarCasesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
 /** * SectionHeader Component (UNTOUCHED LOGIC, UPDATED STYLING) * Unified look for Description, Treatment, and Findings sections. */
@@ -670,9 +711,78 @@ const ProseContent = ({
             </div>
           </section>
 
+          <section
+            ref={similarCasesSectionRef}
+            className="relative px-8 md:px-16 lg:px-24 py-24 bg-[var(--background-color)] border-t border-[var(--primary-color)]/10"
+          >
+            <div className="mx-auto max-w-6xl">
+              <div className="mb-8 flex items-end justify-between gap-4">
+                <div>
+                  <p className="font-[family-name:var(--font-montserrat)] text-[10px] tracking-[0.35em] uppercase text-[var(--accent-color)]/80 mb-2">
+                    Linked Investigations
+                  </p>
+                  <h3 className="text-3xl md:text-4xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight">
+                    Similar Cases
+                  </h3>
+                </div>
+                <div className="text-sm font-semibold text-[var(--primary-color)]/70">
+                  {linkedCases.length} case{linkedCases.length === 1 ? '' : 's'} found
+                </div>
+              </div>
+
+              {casesLoading ? (
+                <div className="rounded-3xl border border-[var(--primary-color)]/15 bg-white/70 p-8 text-center text-[var(--primary-color)]/80 font-semibold">
+                  Loading linked cases...
+                </div>
+              ) : casesError ? (
+                <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center text-red-700 font-semibold">
+                  Unable to load linked cases right now.
+                </div>
+              ) : linkedCases.length === 0 ? (
+                <div className="rounded-3xl border border-[var(--primary-color)]/15 bg-white/70 p-8 text-center text-[var(--primary-color)]/80">
+                  No linked resolved cases yet for this WikiMold article.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {linkedCases.map((entry, idx) => (
+                    <button
+                      key={entry.id || `${entry.name || 'case'}-${idx}`}
+                      type="button"
+                      onClick={() => openLinkedCase(entry)}
+                      className="text-left rounded-2xl border border-[var(--primary-color)]/15 bg-white p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+                    >
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <p className="font-[family-name:var(--font-montserrat)] font-black text-lg text-[var(--primary-color)] truncate">
+                          {entry.name || 'Unnamed Case'}
+                        </p>
+                        <span className="shrink-0 text-[11px] uppercase tracking-wider font-bold px-2 py-1 rounded-full bg-[var(--accent-color)]/15 text-[var(--accent-color)]">
+                          {(entry.is_archived ?? true) ? 'Resolved' : 'In Progress'}
+                        </span>
+                      </div>
+                      <p className="text-sm font-semibold text-[var(--moldify-black)]/75 mb-1">
+                        Verdict: {entry.final_verdict?.moldName || 'Not available'}
+                      </p>
+                      <p className="text-sm text-[var(--moldify-black)]/65 mb-4">
+                        Date: {formatCaseDate(entry)}
+                      </p>
+                      <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[var(--accent-color)]">
+                        Open Case
+                        <FontAwesomeIcon icon={faArrowRight} className="text-[10px]" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
           {/* Explore Similar Cases Button */}
-          <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50">
-            <button className="group relative flex items-center gap-4 bg-[var(--accent-color)]/10 backdrop-blur-md border border-[var(--accent-color)]/30 p-2 pr-6 rounded-full transition-all duration-500 hover:bg-[var(--accent-color)]/20 hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.2)]">
+          <div className={`fixed right-6 top-1/2 -translate-y-1/2 z-50 transition-opacity duration-300 ${showExploreCasesCta ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <button
+              type="button"
+              onClick={scrollToLinkedCases}
+              className="group relative flex items-center gap-4 bg-[var(--accent-color)]/10 backdrop-blur-md border border-[var(--accent-color)]/30 p-2 pr-6 rounded-full transition-all duration-500 hover:bg-[var(--accent-color)]/20 hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.2)]"
+            >
               
               <div className="absolute inset-0 rounded-full border border-[var(--accent-color)]/50 animate-pulse group-hover:hidden" />
 
