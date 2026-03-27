@@ -88,6 +88,7 @@ export default function Investigation() {
                 location,
                 submittedBy,
                 dateSubmitted,
+                dateSubmittedISO,
                 status: it.status
                     ? it.status.charAt(0).toUpperCase() + it.status.slice(1)
                     : 'Pending',
@@ -123,9 +124,10 @@ export default function Investigation() {
         /* ── Search & filter state ── */
         const [searchQuery, setSearchQuery] = useState('');
         const [statusFilter, setStatusFilter] = useState('');
+        const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
         const filteredCases = useMemo(() => {
-            return cases.filter((c) => {
+            const filtered = cases.filter((c) => {
                 const searchLower = searchQuery.toLowerCase();
                 const matchesSearch = !searchQuery ||
                     c.caseName?.toLowerCase().includes(searchLower) ||
@@ -137,7 +139,14 @@ export default function Investigation() {
                 const matchesStatus = !statusFilter || statusFilter === 'all' || c.status?.toLowerCase() === statusFilter;
                 return matchesSearch && matchesStatus;
             });
-        }, [cases, searchQuery, statusFilter]);
+
+            // Sort by date
+            return filtered.sort((a, b) => {
+                const da = a.dateSubmittedISO ? new Date(a.dateSubmittedISO).getTime() : 0;
+                const db = b.dateSubmittedISO ? new Date(b.dateSubmittedISO).getTime() : 0;
+                return sortOrder === 'desc' ? db - da : da - db;
+            });
+        }, [cases, searchQuery, statusFilter, sortOrder]);
 
         /* ── Derived loading / has-more flags ── */
         const loading = authLoading || casesLoading;
@@ -217,6 +226,20 @@ export default function Investigation() {
                                         ]
                                 }
                                 onSelect={(value) => setStatusFilter(value)}
+                            />
+                        </div>
+
+                        {/* Sort by Date */}
+                        <div className="w-full lg:w-auto">
+                            <StatusDropdown
+                                placeholder="Sort By Date"
+                                backgroundColor="var(--primary-color)"
+                                textColor="var(--background-color)"
+                                options={[
+                                    { label: "Newest First", value: "desc" },
+                                    { label: "Oldest First", value: "asc" }
+                                ]}
+                                onSelect={(value) => setSortOrder(value as 'asc' | 'desc')}
                             />
                         </div>
                     </div>

@@ -56,10 +56,13 @@ function ViewCaseContent() {
   const [isConfirmAssignOpen, setConfirmAssignOpen] = useState(false);
   const [isAddTreatmentOpen, setAddTreatmentOpen] = useState(false);
 
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; endDate: Date | null } | null>(null);
 
   // Called from AssignCaseModal -> opens confirmation modal
   const handleAssignClick = (mycologist: Mycologist, endDate: Date | null) => {
+    setAssignError(null);
     setPendingAssign({ mycologist, endDate });
     setConfirmAssignOpen(true);
   };
@@ -69,6 +72,9 @@ function ViewCaseContent() {
     if (!pendingAssign || !caseId || !caseData) return;
 
     try {
+      setAssignError(null);
+      setIsAssigning(true);
+
       // Assigning a report auto-creates the mold case on backend.
       await apiMutate(`/api/v1/mold-reports/${caseId}/assign`, {
         method: 'PATCH',
@@ -103,7 +109,9 @@ function ViewCaseContent() {
       await invalidateMoldReports();
     } catch (err: any) {
       console.error('Assignment failed:', err);
-      alert(err?.message || 'Failed to assign case');
+      setAssignError(err?.message || 'Failed to assign case');
+    } finally {
+      setIsAssigning(false);
     }
   }, [pendingAssign, caseId, caseData, mutateReport, mutateMoldCase]);
 
@@ -191,11 +199,16 @@ function ViewCaseContent() {
   const isApproved = caseData?.status === 'resolved' && !!moldCase;
   
   // Get mycologist name from fetched user data
-  const assignedMycologistName = 
-    mycologistData?.details?.displayName 
-    || mycologistData?.user?.displayName 
-    || moldCase?.mycologist_name 
+  const assignedMycologistName =
+    mycologistData?.details?.displayName
+    || mycologistData?.user?.displayName
+    || moldCase?.mycologist_name
     || "Assigned Specialist";
+
+  // Get mycologist occupation
+  const assignedMycologistOccupation =
+    mycologistData?.user?.occupation
+    || "Mycologist";
 
   // Normalize case_details
   const caseDetailsEntries = (caseData?.case_details ?? []).map((d: any) => {
@@ -679,6 +692,7 @@ function ViewCaseContent() {
                 isRejected={isRejected}
                 isApproved={isApproved}
               assignedMycologistName={assignedMycologistName}
+              assignedMycologistOccupation={assignedMycologistOccupation}
               caseData={caseData}
               status={status}
               setAssignModalOpen={setAssignModalOpen}
@@ -760,7 +774,31 @@ function ViewCaseContent() {
           </section>
         </div>
       )}
-      
+
+      {/* Error Alert */}
+      {assignError && (
+        <div className="fixed top-4 right-4 max-w-md bg-red-100 border-2 border-red-500 rounded-lg p-4 shadow-lg z-50">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="font-[family-name:var(--font-montserrat)] font-bold text-red-800">Assignment Failed</h3>
+              <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-red-700 mt-1">{assignError}</p>
+            </div>
+            <button
+              onClick={() => setAssignError(null)}
+              className="flex-shrink-0 text-red-500 hover:text-red-700"
+            >
+              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       <AssignCaseModal
@@ -786,6 +824,8 @@ function ViewCaseContent() {
         subtitle="This action is irreversible."
         cancelText="Cancel"
         confirmText="Yes, Assign"
+        confirmDisabled={isAssigning}
+        confirmLoadingText="Assigning..."
         onCancel={() => setConfirmAssignOpen(false)}
         onConfirm={handleConfirmAssign}
       />

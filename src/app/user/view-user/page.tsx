@@ -221,6 +221,18 @@ function ViewUserContent() {
                 </div>
               </>
             )}
+
+            {/* Occupation (visible only if exists) */}
+            {userDetails?.occupation && (
+              <div className="flex flex-col items-center md:items-start">
+                <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">
+                  Occupation:
+                </p>
+                <h2 className="text-lg font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold">
+                  {userDetails.occupation}
+                </h2>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,9 +1,9 @@
 "use client";
 import StatusDropdown from "./StatusDropdown";
 
-export default function CaseStatusCard({ 
-  userRole, isAssigned, isRejected, isApproved, assignedMycologistName, caseData, status,
-  setAssignModalOpen, setRejectModalOpen 
+export default function CaseStatusCard({
+  userRole, isAssigned, isRejected, isApproved, assignedMycologistName, assignedMycologistOccupation, caseData, status,
+  setAssignModalOpen, setRejectModalOpen
 }: any) {
   
   if (userRole === "Mycologist" && !isAssigned && !isRejected && !isApproved) return null;
@@ -52,12 +52,17 @@ export default function CaseStatusCard({
               {theme.sublabel}
             </p>
             <h2 className={`font-[family-name:var(--font-montserrat)] text-2xl font-black uppercase tracking-tight leading-none ${theme.text}`}>
-              {isRejected 
-                ? "Rejected" 
-                : isAssigned 
-                  ? (assignedMycologistName || "Specialist Assigned") 
+              {isRejected
+                ? "Rejected"
+                : isAssigned
+                  ? (assignedMycologistName || "Specialist Assigned")
                   : "Pending Review"}
             </h2>
+            {isAssigned && assignedMycologistOccupation && (
+              <p className="text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)] opacity-70">
+                {assignedMycologistOccupation}
+              </p>
+            )}
           </div>
           
           <div className={`px-4 py-1.5 rounded-full text-[9px] font-black tracking-widest ${theme.badge} shadow-sm`}>

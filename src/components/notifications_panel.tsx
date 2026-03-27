@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell, faCheck, faCheckDouble, faTrash } from '@fortawesome/free-solid-svg-icons';
 import EmptyState from './empty_state';
@@ -48,7 +49,40 @@ export default function NotificationsPanel({
   onMarkAllRead,
   onDelete,
 }: NotificationsPanelProps) {
+  const router = useRouter();
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Mark as read if not already
+    if (!notification.is_read && onMarkRead) {
+      onMarkRead(notification.id);
+    }
+
+    // Navigate based on reference_type
+    if (notification.reference_id && notification.reference_type) {
+      switch (notification.reference_type) {
+        case 'mold_report':
+          router.push(`/investigation?id=${notification.reference_id}`);
+          onClose();
+          break;
+        case 'mold_case':
+          router.push(`/investigation?id=${notification.reference_id}`);
+          onClose();
+          break;
+        case 'flag_report':
+          router.push(`/flag-report/${notification.reference_id}`);
+          onClose();
+          break;
+        case 'user':
+          router.push(`/user/view-user?id=${notification.reference_id}`);
+          onClose();
+          break;
+        default:
+          // Just close the panel if reference_type is unknown
+          onClose();
+      }
+    }
+  };
 
   return (
     <div
@@ -108,11 +142,12 @@ export default function NotificationsPanel({
             notifications.map((item) => (
               <div
                 key={item.id}
-                className={`flex items-start gap-3 rounded-xl px-4 py-3 shadow-sm transition ${
+                className={`flex items-start gap-3 rounded-xl px-4 py-3 shadow-sm transition cursor-pointer hover:shadow-md ${
                   item.is_read
-                    ? 'bg-[var(--taupe)]'
-                    : 'bg-[var(--moldify-blue)]/10 border-l-4 border-[var(--moldify-blue)]'
+                    ? 'bg-[var(--taupe)] hover:bg-[var(--taupe)]/80'
+                    : 'bg-[var(--moldify-blue)]/10 border-l-4 border-[var(--moldify-blue)] hover:bg-[var(--moldify-blue)]/20'
                 }`}
+                onClick={() => handleNotificationClick(item)}
               >
                 {/* Icon */}
                 <div className="flex-shrink-0 mt-1">

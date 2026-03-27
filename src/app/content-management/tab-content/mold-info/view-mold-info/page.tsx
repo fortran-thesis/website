@@ -9,7 +9,6 @@ import { faInfoCircle, faLeaf } from '@fortawesome/free-solid-svg-icons';
 import { useMoldById } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
 import {
-  buildCanonicalAdditionalInfo,
   normalizeInfoSections,
   unwrapMoldResponse,
 } from '@/lib/mold-detail-normalizer';
@@ -210,8 +209,6 @@ function ViewMoldInfoContent() {
       setIsSaving(true);
       setError(null);
       try {
-        const additionalInfoPayload = buildCanonicalAdditionalInfo(moldInfo.additionalInfo);
-
         const symptomsArray = parseCommaList(moldInfo.symptoms);
         const signsArray = parseCommaList(moldInfo.signs);
         const characteristicsArray = parseCommaList(moldInfo.characteristics);
@@ -230,7 +227,6 @@ function ViewMoldInfoContent() {
               symptoms_and_signs: moldInfo.additionalInfo.symptomsSigns.trim(),
               disease_cycle_spread_impact: moldInfo.additionalInfo.diseaseCycleImpact.trim(),
               prevention_summary: moldInfo.additionalInfo.preventionSummary.trim(),
-              additional_info: additionalInfoPayload,
             },
             prevention: moldManagement,
           },
