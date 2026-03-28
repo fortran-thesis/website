@@ -110,6 +110,7 @@ export function useMoldipediaArticle(id: string | undefined) {
     {
       dedupingInterval: MOLDIPEDIA_CACHE_MS,
       revalidateIfStale: true,
+      revalidateOnMount: true,
     },
   );
 }
@@ -121,10 +122,54 @@ export interface MoldCaseSummary {
   user_id?: string;
   priority?: 'low' | 'medium' | 'high';
   is_archived?: boolean;
+  metadata?: {
+    created_at?: { _seconds: number } | string;
+  };
+  cultivation_details?: {
+    initial_symptoms?: string[];
+    initial_characteristics?: string[];
+    initial_microscopic?: string;
+    initial_macroscopic?: string;
+    initial_microscopic_color?: string;
+    initial_microscopic_texture?: string;
+    initial_macroscopic_color?: string;
+    initial_macroscopic_texture?: string;
+    initial_macroscopic_symptoms?: string | string[];
+    initial_macroscopic_characteristics?: string | string[];
+    initial_microscopic_image_url?: string;
+    initial_macroscopic_image_url?: string;
+  };
+  cultivation_logs?: Array<{
+    type?: string;
+    created_at?: { _seconds: number } | string;
+    metadata?: { created_at?: { _seconds: number } | string };
+    characteristics?: Record<string, unknown>;
+  }>;
+  evidence_summary?: {
+    initial?: {
+      symptoms?: string[];
+      characteristics?: string[];
+      microscopic?: string;
+      macroscopic?: string;
+    };
+    in_vivo?: {
+      characteristics?: Record<string, unknown>;
+      observed_at?: { _seconds: number } | string;
+    };
+    in_vitro?: {
+      characteristics?: Record<string, unknown>;
+      observed_at?: { _seconds: number } | string;
+    };
+    rationale_notes?: string | null;
+    threshold?: {
+      type?: string;
+      value?: number;
+    };
+  };
   final_verdict?: {
     moldId?: string;
     moldName?: string;
-    confidence?: number;
+    confidence?: number | string;
     moldipedia_id?: string;
     mycologist_notes?: string;
     verdict_timestamp?: { _seconds: number } | string;
@@ -146,10 +191,11 @@ export function useMoldipediaList(limit = 1000, enabled = true) {
 /** Fetch mold cases linked to a moldipedia article. */
 export function useMoldipediaCases(moldipediaId: string | undefined) {
   return useSWR<ApiResponse<MoldCaseSummary[]>>(
-    moldipediaId ? apiUrl(`/api/v1/moldipedia/${moldipediaId}/cases`) : null,
+    moldipediaId ? apiUrl(`/api/v1/moldipedia/${moldipediaId}/cases`, { includeEvidence: 'true' }) : null,
     {
       dedupingInterval: MOLDIPEDIA_CACHE_MS,
       revalidateIfStale: true,
+      revalidateOnMount: true,
     },
   );
 }

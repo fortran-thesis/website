@@ -41,28 +41,24 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
     }
   }, [authUser, requestPermission]);
 
-  // Listen for navigation clicks and pathname changes
+  // Hide the loading bar once the pathname settles (covers all navigation types
+  // including router.back(), router.push(), and <Link> clicks).
   useEffect(() => {
-    // Add a small delay before hiding to ensure page has rendered
     const timer = setTimeout(() => {
       setIsNavigating(false);
-    }, 500);
-    
+    }, 300);
     return () => clearTimeout(timer);
   }, [pathname]);
 
+  // Show the loading bar on <Link> / <a> clicks for immediate feedback.
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      // Check if click is on a navigation link
       const linkElement = target.closest('a[href^="/"]');
       if (linkElement && !hideLayout) {
         const href = linkElement.getAttribute('href');
-        // Only show loading if navigating to a different page
         if (href && href !== pathname && !href.startsWith('http')) {
           setIsNavigating(true);
-          // Auto-hide after 5 seconds as fallback
-          setTimeout(() => setIsNavigating(false), 5000);
         }
       }
     };
@@ -70,6 +66,17 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, [pathname, hideLayout]);
+
+  // Show the loading bar on programmatic navigation (router.push / router.back).
+  // We detect this by watching for the pathname to start changing: set navigating
+  // true immediately before the new pathname resolves.
+  const prevPathnameRef = useRef(pathname);
+  useEffect(() => {
+    if (prevPathnameRef.current !== pathname) {
+      // pathname just changed — the navigation completed, hide the bar.
+      prevPathnameRef.current = pathname;
+    }
+  }, [pathname]);
 
   useEffect(() => {
     setIsMounted(true);

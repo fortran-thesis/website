@@ -137,7 +137,14 @@ export default function ViewWikiMold() {
       disease_cycle: getHtmlField(data, 'disease_cycle', '<p>Transmission details will be added here.</p>'),
       impact: getHtmlField(data, 'impact', '<p>Impact analysis will be added here.</p>'),
       prevention: getHtmlField(data, 'prevention', '<p>Prevention strategies will be added here.</p>'),
-      findings: Array.isArray(data.findings) ? data.findings : [],
+      findings: Array.isArray(data.findings)
+        ? data.findings
+            .map((item) => ({
+              title: (item?.title || 'Untitled Stage').toString(),
+              content: (item?.content || '').toString(),
+            }))
+            .filter((item) => item.title.trim().length > 0 || item.content.trim().length > 0)
+        : [],
     };
   }, [articleRes]);
 
@@ -211,24 +218,86 @@ export default function ViewWikiMold() {
     return [];
   }, [casesRes]);
 
-  const formatCaseDate = (entry: MoldCaseSummary): string => {
-    const value = entry.final_verdict?.verdict_timestamp;
-    if (!value) return 'Date unavailable';
-    try {
-      const dateObj = typeof value === 'object' && '_seconds' in value
-        ? new Date(value._seconds * 1000)
-        : new Date(value as string);
-      if (isNaN(dateObj.getTime())) return 'Date unavailable';
-      return dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-    } catch {
-      return 'Date unavailable';
-    }
+  const [expandedCases, setExpandedCases] = useState<Record<string, boolean>>({});
+
+  const getCaseKey = (entry: MoldCaseSummary, index: number): string => {
+    const idValue = (entry.id || '').trim();
+    if (idValue) return idValue;
+    const reportValue = (entry.mold_report_id || '').trim();
+    if (reportValue) return reportValue;
+    return `case-${index}`;
   };
 
-  const openLinkedCase = (entry: MoldCaseSummary) => {
-    const target = (entry.mold_report_id || entry.id || '').trim();
-    if (!target) return;
-    router.push(`/investigation/view-case?id=${encodeURIComponent(target)}`);
+  const toggleCase = (caseKey: string) => {
+    setExpandedCases((prev) => ({
+      ...prev,
+      [caseKey]: !prev[caseKey],
+    }));
+  };
+
+  const asText = (value: unknown): string => {
+    if (typeof value === 'string') return value.trim();
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (Array.isArray(value)) {
+      return value.map((item) => asText(item)).filter(Boolean).join(', ');
+    }
+    if (value && typeof value === 'object') {
+      return '';
+    }
+    return '';
+  };
+
+  const asTextList = (value: unknown): string[] => {
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => asText(item))
+        .map((item) => item.trim())
+        .filter(Boolean);
+    }
+
+    const text = asText(value);
+    return text ? [text] : [];
+  };
+
+  const asRecord = (value: unknown): Record<string, unknown> => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+    return {};
+  };
+
+  const parseDateValue = (value: unknown): number => {
+    if (!value) return 0;
+    if (typeof value === 'object' && value !== null && '_seconds' in value) {
+      const seconds = (value as { _seconds?: unknown })._seconds;
+      if (typeof seconds === 'number') return seconds * 1000;
+    }
+
+    const dateObj = new Date(String(value));
+    return Number.isNaN(dateObj.getTime()) ? 0 : dateObj.getTime();
+  };
+
+  const normalizeLogType = (typeValue: unknown): string => {
+    return asText(typeValue).toLowerCase().replace(/[_\s-]+/g, '');
+  };
+
+  const getLatestLogByType = (entry: MoldCaseSummary, type: 'vivo' | 'vitro'): Record<string, unknown> | null => {
+    const rawLogs = Array.isArray(entry.cultivation_logs) ? entry.cultivation_logs : [];
+
+    const matching = rawLogs
+      .filter((log) => {
+        const normalized = normalizeLogType(log.type);
+        if (type === 'vivo') return normalized === 'vivo' || normalized === 'invivo';
+        return normalized === 'vitro' || normalized === 'invitro';
+      })
+      .sort((a, b) => {
+        const aTime = parseDateValue(a.created_at ?? a.metadata?.created_at);
+        const bTime = parseDateValue(b.created_at ?? b.metadata?.created_at);
+        return bTime - aTime;
+      });
+
+    if (matching.length === 0) return null;
+    return asRecord(matching[0].characteristics);
   };
 
   const scrollToLinkedCases = () => {
@@ -717,7 +786,7 @@ const ProseContent = ({
             </div>
           </section>
 
-          {/* Supporting Cases Section */}
+          {/* Field & Lab Evidence Section */}
           <section className="relative px-8 md:px-16 lg:px-24 py-24 bg-gradient-to-b from-[var(--background-color)] to-[var(--background-color)]/50 border-t border-[var(--primary-color)]/10">
             <div className="mx-auto max-w-6xl">
               {linkedCases.length > 0 && (
@@ -727,90 +796,60 @@ const ProseContent = ({
                       Evidence Base
                     </p>
                     <h3 className="text-3xl md:text-4xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight mb-2">
-                      Supporting Cases
+                      Field &amp; Lab Evidence
                     </h3>
                     <p className="text-sm text-[var(--moldify-black)]/60 max-w-2xl">
-                      Real-world investigations linked to this WikiMold article, showing initial observations, field conditions (in vivo), and laboratory findings (in vitro).
+                      Based on {linkedCases.length} linked investigation{linkedCases.length === 1 ? '' : 's'}. Initial observations, field conditions (in vivo), and laboratory findings (in vitro).
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {linkedCases.map((caseEntry, idx) => (
-                      <div
-                        key={caseEntry.id || `case-${idx}`}
-                        className="bg-white rounded-2xl border border-[var(--primary-color)]/10 overflow-hidden hover:border-[var(--primary-color)]/30 hover:shadow-lg transition-all duration-300"
-                      >
-                        <div className="p-6 border-b border-[var(--primary-color)]/10">
-                          <div className="flex items-start justify-between gap-3 mb-3">
-                            <div>
-                              <p className="font-[family-name:var(--font-montserrat)] font-black text-[var(--primary-color)] text-lg truncate">
-                                {caseEntry.name || 'Unnamed Case'}
-                              </p>
-                              <p className="text-xs text-[var(--moldify-black)]/60 mt-1">
-                                Case ID: {caseEntry.id?.substring(0, 8) || 'N/A'}...
-                              </p>
+                    {linkedCases.map((caseEntry, idx) => {
+                      const initial = asRecord(caseEntry.cultivation_details);
+                      const inVivo = getLatestLogByType(caseEntry, 'vivo');
+                      const inVitro = getLatestLogByType(caseEntry, 'vitro');
+                      const inVivoRecord = inVivo ?? {};
+                      const inVitroRecord = inVitro ?? {};
+                      const initialMicroscopic = asText(initial['initial_microscopic']);
+                      const initialMacroscopic = asText(initial['initial_macroscopic']);
+                      const initialSymptoms = asTextList(initial['initial_symptoms'] ?? initial['initial_macroscopic_symptoms']);
+                      const initialCharacteristics = asTextList(initial['initial_characteristics'] ?? initial['initial_macroscopic_characteristics']);
+                      const initialDescription = initialMicroscopic || initialMacroscopic
+                        ? [initialMicroscopic, initialMacroscopic].filter(Boolean).join(' | ')
+                        : initialSymptoms.join(', ') || initialCharacteristics.join(', ') || 'No initial observation evidence recorded.';
+                      const inVivoSummary = asText(
+                        inVivoRecord['symptoms'] ?? inVivoRecord['characteristics'] ?? inVivoRecord['lesion_color'] ?? inVivoRecord['lesion_size']
+                      ) || 'No in vivo evidence log available.';
+                      const inVitroSummary = asText(
+                        inVitroRecord['characteristics'] ?? inVitroRecord['colony_color'] ?? inVitroRecord['colony_diameter']
+                      ) || 'No in vitro evidence log available.';
+                      return (
+                        <div
+                          key={caseEntry.id || `case-${idx}`}
+                          className="bg-white rounded-2xl border border-[var(--primary-color)]/10 overflow-hidden"
+                        >
+                          <div className="p-5 border-b border-[var(--primary-color)]/10">
+                            <p className="font-[family-name:var(--font-montserrat)] font-black text-[var(--primary-color)] text-base">
+                              Observation #{idx + 1}
+                            </p>
+                          </div>
+                          <div className="p-5 space-y-3">
+                            <div className="rounded-xl bg-[var(--primary-color)]/5 p-3">
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)]/70 mb-1">Initial Observation</p>
+                              <p className="text-sm text-[var(--moldify-black)]/80">{initialDescription}</p>
                             </div>
-                            <span className={`shrink-0 text-[11px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full ${
-                              caseEntry.priority === 'high'
-                                ? 'bg-red-100 text-red-700'
-                                : caseEntry.priority === 'medium'
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-green-100 text-green-700'
-                            }`}>
-                              {caseEntry.priority || 'normal'}
-                            </span>
+                            <div className="rounded-xl bg-[var(--accent-color)]/10 p-3">
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)]/70 mb-1">In Vivo</p>
+                              <p className="text-sm text-[var(--moldify-black)]/80">{inVivoSummary}</p>
+                            </div>
+                            <div className="rounded-xl bg-[var(--accent-color)]/10 p-3">
+                              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)]/70 mb-1">In Vitro</p>
+                              <p className="text-sm text-[var(--moldify-black)]/80">{inVitroSummary}</p>
+                            </div>
                           </div>
                         </div>
-
-                        <div className="p-6 space-y-4">
-                          <div>
-                            <p className="text-xs font-black text-[var(--primary-color)] uppercase tracking-wider mb-1">
-                              Identified Mold
-                            </p>
-                            <p className="text-sm font-semibold text-[var(--moldify-black)]">
-                              {caseEntry.final_verdict?.moldName || 'Pending verdict'}
-                            </p>
-                          </div>
-
-                          {caseEntry.final_verdict?.confidence && (
-                            <div>
-                              <p className="text-xs font-black text-[var(--primary-color)] uppercase tracking-wider mb-2">
-                                Confidence
-                              </p>
-                              <div className="w-full bg-[var(--primary-color)]/10 rounded-full h-2">
-                                <div
-                                  className="bg-[var(--primary-color)] h-2 rounded-full transition-all"
-                                  style={{ width: `${caseEntry.final_verdict.confidence * 100}%` }}
-                                />
-                              </div>
-                              <p className="text-xs text-[var(--moldify-black)]/60 mt-1">
-                                {Math.round(caseEntry.final_verdict.confidence * 100)}% match
-                              </p>
-                            </div>
-                          )}
-
-                          <div>
-                            <p className="text-xs font-black text-[var(--primary-color)] uppercase tracking-wider mb-1">
-                              Verdict Date
-                            </p>
-                            <p className="text-sm text-[var(--moldify-black)]/70">
-                              {formatCaseDate(caseEntry)}
-                            </p>
-                          </div>
-
-                          {caseEntry.final_verdict?.mycologist_notes && (
-                            <div className="pt-3 border-t border-[var(--primary-color)]/10">
-                              <p className="text-xs font-black text-[var(--primary-color)] uppercase tracking-wider mb-2">
-                                Notes
-                              </p>
-                              <p className="text-xs text-[var(--moldify-black)] line-clamp-3">
-                                {caseEntry.final_verdict.mycologist_notes}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -828,55 +867,106 @@ const ProseContent = ({
                     Linked Investigations
                   </p>
                   <h3 className="text-3xl md:text-4xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight">
-                    Similar Cases
+                    Field Evidence
                   </h3>
                 </div>
                 <div className="text-sm font-semibold text-[var(--primary-color)]/70">
-                  {linkedCases.length} case{linkedCases.length === 1 ? '' : 's'} found
+                  {linkedCases.length} investigation{linkedCases.length === 1 ? '' : 's'}
                 </div>
               </div>
 
               {casesLoading ? (
                 <div className="rounded-3xl border border-[var(--primary-color)]/15 bg-white/70 p-8 text-center text-[var(--primary-color)]/80 font-semibold">
-                  Loading linked cases...
+                  Loading linked evidence...
                 </div>
               ) : casesError ? (
                 <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center text-red-700 font-semibold">
-                  Unable to load linked cases right now.
+                  Unable to load field evidence right now.
                 </div>
               ) : linkedCases.length === 0 ? (
                 <div className="rounded-3xl border border-[var(--primary-color)]/15 bg-white/70 p-8 text-center text-[var(--primary-color)]/80">
-                  No linked resolved cases yet for this WikiMold article.
+                  No linked field evidence yet for this WikiMold article.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {linkedCases.map((entry, idx) => (
-                    <button
-                      key={entry.id || `${entry.name || 'case'}-${idx}`}
-                      type="button"
-                      onClick={() => openLinkedCase(entry)}
-                      className="text-left rounded-2xl border border-[var(--primary-color)]/15 bg-white p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
-                    >
-                      <div className="flex items-center justify-between gap-3 mb-3">
-                        <p className="font-[family-name:var(--font-montserrat)] font-black text-lg text-[var(--primary-color)] truncate">
-                          {entry.name || 'Unnamed Case'}
-                        </p>
-                        <span className="shrink-0 text-[11px] uppercase tracking-wider font-bold px-2 py-1 rounded-full bg-[var(--accent-color)]/15 text-[var(--accent-color)]">
-                          {(entry.is_archived ?? true) ? 'Resolved' : 'In Progress'}
-                        </span>
+                <div className="space-y-4">
+                  {linkedCases.map((entry, idx) => {
+                    const caseKey = getCaseKey(entry, idx);
+                    const isExpanded = !!expandedCases[caseKey];
+                    const initial = asRecord(entry.cultivation_details);
+                    const inVivo = getLatestLogByType(entry, 'vivo');
+                    const inVitro = getLatestLogByType(entry, 'vitro');
+                    const inVivoRecord = inVivo ?? {};
+                    const inVitroRecord = inVitro ?? {};
+
+                    const initialSymptoms = asTextList(initial['initial_symptoms'] ?? initial['initial_macroscopic_symptoms']);
+                    const initialCharacteristics = asTextList(initial['initial_characteristics'] ?? initial['initial_macroscopic_characteristics']);
+                    const initialMicroscopic = asText(initial['initial_microscopic']);
+                    const initialMacroscopic = asText(initial['initial_macroscopic']);
+                    const initialDescription = initialMicroscopic || initialMacroscopic
+                      ? [initialMicroscopic, initialMacroscopic].filter(Boolean).join(' | ')
+                      : initialSymptoms.join(', ') || initialCharacteristics.join(', ') || 'No initial observation evidence recorded.';
+
+                    const inVivoSummary = asText(
+                      inVivoRecord['symptoms'] ??
+                        inVivoRecord['characteristics'] ??
+                        inVivoRecord['lesion_color'] ??
+                        inVivoRecord['lesion_size']
+                    ) || 'No in vivo evidence log available.';
+                    const inVitroSummary = asText(
+                      inVitroRecord['characteristics'] ??
+                        inVitroRecord['colony_color'] ??
+                        inVitroRecord['colony_diameter']
+                    ) || 'No in vitro evidence log available.';
+
+                    return (
+                      <div
+                        key={caseKey}
+                        className="rounded-2xl border border-[var(--primary-color)]/15 bg-white p-5 shadow-sm transition-all duration-300"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                          <p className="font-[family-name:var(--font-montserrat)] font-black text-lg text-[var(--primary-color)]">
+                            Observation #{idx + 1}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => toggleCase(caseKey)}
+                            className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[var(--primary-color)] border border-[var(--primary-color)]/20 rounded-full px-3 py-2 hover:bg-[var(--primary-color)]/5"
+                          >
+                            {isExpanded ? 'Hide Evidence' : 'Show Evidence'}
+                          </button>
+                        </div>
+
+                        <AnimatePresence initial={false}>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.25 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-4 pt-4 border-t border-[var(--primary-color)]/10 space-y-3">
+                                <div className="rounded-xl bg-[var(--primary-color)]/5 p-3">
+                                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)]/70 mb-1">Initial Observation</p>
+                                  <p className="text-sm text-[var(--moldify-black)]/80">{initialDescription}</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div className="rounded-xl bg-[var(--accent-color)]/10 p-3">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)]/70 mb-1">In Vivo</p>
+                                    <p className="text-sm text-[var(--moldify-black)]/80">{inVivoSummary}</p>
+                                  </div>
+                                  <div className="rounded-xl bg-[var(--accent-color)]/10 p-3">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)]/70 mb-1">In Vitro</p>
+                                    <p className="text-sm text-[var(--moldify-black)]/80">{inVitroSummary}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
-                      <p className="text-sm font-semibold text-[var(--moldify-black)]/75 mb-1">
-                        Verdict: {entry.final_verdict?.moldName || 'Not available'}
-                      </p>
-                      <p className="text-sm text-[var(--moldify-black)]/65 mb-4">
-                        Date: {formatCaseDate(entry)}
-                      </p>
-                      <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[var(--accent-color)]">
-                        Open Case
-                        <FontAwesomeIcon icon={faArrowRight} className="text-[10px]" />
-                      </div>
-                    </button>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -901,7 +991,7 @@ const ProseContent = ({
                   Explore
                 </span>
                 <span className="text-[13px] font-bold text-[var(--primary-color)] tracking-tight font-[family-name:var(--font-montserrat)]">
-                  Similar Cases
+                  Field Evidence
                 </span>
               </div>
 

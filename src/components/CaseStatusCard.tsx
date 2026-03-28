@@ -70,7 +70,7 @@ export default function CaseStatusCard({
           </div>
         </div>
 
-        {/* Action Section: Only shows if Unassigned & Pending */}
+        {/* Action Section: Initial Assignment (Unassigned & Pending) */}
         {!isAssigned && !isRejected && caseData?.status?.toLowerCase() === 'pending' && (
           <div className="pt-8 border-t border-black/[0.04]">
             <div className="flex flex-col gap-4">
@@ -87,6 +87,23 @@ export default function CaseStatusCard({
                   onSelect={(val: string) => val === "assign" ? setAssignModalOpen(true) : setRejectModalOpen(true)}
                 />
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reassignment Section: Shows if Already Assigned */}
+        {isAssigned && !isRejected && (
+          <div className="pt-8 border-t border-black/[0.04]">
+            <div className="flex flex-col gap-4">
+              <p className="text-[11px] font-bold text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
+                Manage Assignment
+              </p>
+              <button
+                onClick={() => setAssignModalOpen(true)}
+                className="w-full sm:w-auto min-w-[250px] px-4 py-3 bg-[var(--primary-color)] text-white font-[family-name:var(--font-bricolage-grotesque)] text-xs font-bold uppercase rounded-lg hover:opacity-90 transition-opacity shadow-sm"
+              >
+                Reassign Mycologist
+              </button>
             </div>
           </div>
         )}
