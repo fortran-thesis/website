@@ -35,6 +35,7 @@ type ArticleViewModel = {
   disease_cycle: string;
   impact: string;
   prevention: string;
+  findings: Array<{ title: string; content: string }>;
 };
 
 type DossierField = 'affected_crops' | 'symptoms' | 'disease_cycle' | 'impact' | 'prevention';
@@ -64,11 +65,10 @@ const TREATMENT_CONTROLS: Array<{ name: string; id: TreatmentControlId; desc: st
   { name: 'Chemical Control', id: 'chemical', desc: 'Targeted antimicrobial application' },
 ];
 
-const DISCOVERY_STAGES = [
-  { id: 1, title: "Initial Observation", content: "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat" },
-  { id: 2, title: "In Vivo", content: "Quantitative data regarding fungal concentration... (Add your heavy data here)" },
-  { id: 3, title: "In Vitro", content: "Direct swabbing results from contaminated surfaces... (Add your heavy data here)" },
-  
+const FALLBACK_FINDINGS = [
+  { title: "Initial Observation", content: "<p>No initial observation data available yet.</p>" },
+  { title: "In Vivo", content: "<p>No in vivo data available yet.</p>" },
+  { title: "In Vitro", content: "<p>No in vitro data available yet.</p>" },
 ];
 
 function getHtmlField(
@@ -137,6 +137,7 @@ export default function ViewWikiMold() {
       disease_cycle: getHtmlField(data, 'disease_cycle', '<p>Transmission details will be added here.</p>'),
       impact: getHtmlField(data, 'impact', '<p>Impact analysis will be added here.</p>'),
       prevention: getHtmlField(data, 'prevention', '<p>Prevention strategies will be added here.</p>'),
+      findings: Array.isArray(data.findings) ? data.findings : [],
     };
   }, [articleRes]);
 
@@ -177,9 +178,14 @@ export default function ViewWikiMold() {
     return () => observer.disconnect();
   }, []);
 
+  // Get findings from article, fallback to empty state messages
+  const discoveryStages = article?.findings && article.findings.length > 0
+    ? article.findings
+    : FALLBACK_FINDINGS;
+
   // Fast Refresh can keep an old activeStage even when dummy stages change size.
-  const currentStageIndex = Math.min(Math.max(activeStage, 0), DISCOVERY_STAGES.length - 1);
-  const currentStage = DISCOVERY_STAGES[currentStageIndex];
+  const currentStageIndex = Math.min(Math.max(activeStage, 0), discoveryStages.length - 1);
+  const currentStage = discoveryStages[currentStageIndex];
 
   // Helper to get treatment HTML based on control type
   const getTreatmentHtml = (controlId: TreatmentControlId): string => {
@@ -654,9 +660,9 @@ const ProseContent = ({
             <div className="flex flex-col lg:flex-row gap-10 items-stretch">
               {/* Slim Navigation Sidebar */}
               <div className="w-full lg:w-[28%] space-y-2 sticky top-32 z-20">
-                {DISCOVERY_STAGES.map((stage, idx) => (
+                {discoveryStages.map((stage, idx) => (
                   <button
-                    key={stage.id}
+                    key={idx}
                     onClick={() => setActiveStage(idx)}
                     className={`w-full text-left px-8 py-5 rounded-2xl transition-all duration-500 font-[family-name:var(--font-montserrat)] flex flex-col justify-center gap-1 border-2 ${
                       activeStage === idx
@@ -664,7 +670,7 @@ const ProseContent = ({
                         : 'bg-transparent border-[var(--primary-color)]/10 text-[var(--primary-color)] opacity-60 hover:opacity-100 hover:bg-[var(--accent-color)]/[0.02]'
                     }`}
                   >
-                    <span className={`text-[10px] font-black tracking-widest ${activeStage === idx ? 'text-[var(--accent-color)]' : 'opacity-40'}`}>PHASE 0{stage.id}</span>
+                    <span className={`text-[10px] font-black tracking-widest ${activeStage === idx ? 'text-[var(--accent-color)]' : 'opacity-40'}`}>PHASE 0{idx + 1}</span>
                     <span className="font-black uppercase tracking-tight text-sm">{stage.title}</span>
                   </button>
                 ))}
@@ -680,7 +686,7 @@ const ProseContent = ({
                 
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={currentStage.id}
+                    key={currentStageIndex}
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
@@ -708,6 +714,106 @@ const ProseContent = ({
                   </motion.div>
                 </AnimatePresence>
               </div>
+            </div>
+          </section>
+
+          {/* Supporting Cases Section */}
+          <section className="relative px-8 md:px-16 lg:px-24 py-24 bg-gradient-to-b from-[var(--background-color)] to-[var(--background-color)]/50 border-t border-[var(--primary-color)]/10">
+            <div className="mx-auto max-w-6xl">
+              {linkedCases.length > 0 && (
+                <>
+                  <div className="mb-12">
+                    <p className="font-[family-name:var(--font-montserrat)] text-[10px] tracking-[0.35em] uppercase text-[var(--accent-color)]/80 mb-2">
+                      Evidence Base
+                    </p>
+                    <h3 className="text-3xl md:text-4xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight mb-2">
+                      Supporting Cases
+                    </h3>
+                    <p className="text-sm text-[var(--moldify-black)]/60 max-w-2xl">
+                      Real-world investigations linked to this WikiMold article, showing initial observations, field conditions (in vivo), and laboratory findings (in vitro).
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {linkedCases.map((caseEntry, idx) => (
+                      <div
+                        key={caseEntry.id || `case-${idx}`}
+                        className="bg-white rounded-2xl border border-[var(--primary-color)]/10 overflow-hidden hover:border-[var(--primary-color)]/30 hover:shadow-lg transition-all duration-300"
+                      >
+                        <div className="p-6 border-b border-[var(--primary-color)]/10">
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                              <p className="font-[family-name:var(--font-montserrat)] font-black text-[var(--primary-color)] text-lg truncate">
+                                {caseEntry.name || 'Unnamed Case'}
+                              </p>
+                              <p className="text-xs text-[var(--moldify-black)]/60 mt-1">
+                                Case ID: {caseEntry.id?.substring(0, 8) || 'N/A'}...
+                              </p>
+                            </div>
+                            <span className={`shrink-0 text-[11px] uppercase tracking-wider font-bold px-2.5 py-1 rounded-full ${
+                              caseEntry.priority === 'high'
+                                ? 'bg-red-100 text-red-700'
+                                : caseEntry.priority === 'medium'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-green-100 text-green-700'
+                            }`}>
+                              {caseEntry.priority || 'normal'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                          <div>
+                            <p className="text-xs font-black text-[var(--primary-color)] uppercase tracking-wider mb-1">
+                              Identified Mold
+                            </p>
+                            <p className="text-sm font-semibold text-[var(--moldify-black)]">
+                              {caseEntry.final_verdict?.moldName || 'Pending verdict'}
+                            </p>
+                          </div>
+
+                          {caseEntry.final_verdict?.confidence && (
+                            <div>
+                              <p className="text-xs font-black text-[var(--primary-color)] uppercase tracking-wider mb-2">
+                                Confidence
+                              </p>
+                              <div className="w-full bg-[var(--primary-color)]/10 rounded-full h-2">
+                                <div
+                                  className="bg-[var(--primary-color)] h-2 rounded-full transition-all"
+                                  style={{ width: `${caseEntry.final_verdict.confidence * 100}%` }}
+                                />
+                              </div>
+                              <p className="text-xs text-[var(--moldify-black)]/60 mt-1">
+                                {Math.round(caseEntry.final_verdict.confidence * 100)}% match
+                              </p>
+                            </div>
+                          )}
+
+                          <div>
+                            <p className="text-xs font-black text-[var(--primary-color)] uppercase tracking-wider mb-1">
+                              Verdict Date
+                            </p>
+                            <p className="text-sm text-[var(--moldify-black)]/70">
+                              {formatCaseDate(caseEntry)}
+                            </p>
+                          </div>
+
+                          {caseEntry.final_verdict?.mycologist_notes && (
+                            <div className="pt-3 border-t border-[var(--primary-color)]/10">
+                              <p className="text-xs font-black text-[var(--primary-color)] uppercase tracking-wider mb-2">
+                                Notes
+                              </p>
+                              <p className="text-xs text-[var(--moldify-black)] line-clamp-3">
+                                {caseEntry.final_verdict.mycologist_notes}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </section>
 
