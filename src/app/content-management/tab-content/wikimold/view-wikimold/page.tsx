@@ -10,6 +10,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen, faArchive } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { useMoldipediaArticle } from '@/hooks/swr';
+import { useMoldCatalog, type MoldCatalogEntry } from '@/hooks/swr/use-mold';
 import { apiMutate, ApiError } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
@@ -69,6 +70,11 @@ function ViewWikiMoldContent() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+
+  // Mold Catalog States: For auto-fill dropdown
+  const { data: catalogData, isLoading: catalogLoading } = useMoldCatalog();
+  const [showCatalogBanner, setShowCatalogBanner] = useState(false);
+  const [selectedCatalogMold, setSelectedCatalogMold] = useState<MoldCatalogEntry | null>(null);
 
   const fallbackImage = "/assets/wikimold-fallback.png";
 
@@ -186,6 +192,39 @@ function ViewWikiMoldContent() {
       setCoverImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  /**
+   * Handle mold catalog selection
+   * - Maps catalog entry fields to form fields
+   * - Auto-fills biological description, affected hosts, symptoms, etc.
+   * - Shows confirmation banner that fields have been auto-filled
+   */
+  const handleMoldCatalogSelect = (mold: MoldCatalogEntry) => {
+    setSelectedCatalogMold(mold);
+    setShowCatalogBanner(true);
+
+    setWikiMoldInfo((prev) => ({
+      ...prev,
+      // Map catalog fields to form fields
+      content: mold.description || mold.overview || prev.content,
+      affected_hosts: mold.affected_hosts || prev.affected_hosts,
+      symptoms: mold.symptoms || prev.symptoms,
+      disease_cycle: mold.disease_cycle || prev.disease_cycle,
+      impact: mold.impact || prev.impact,
+      prevention: mold.preventionSummary || prev.prevention,
+      // Auto-fill treatment controls if available
+      treatments: {
+        mechanical: (mold.prevention as any)?.mechanical || prev.treatments.mechanical,
+        cultural: (mold.prevention as any)?.cultural || prev.treatments.cultural,
+        biological: (mold.prevention as any)?.biological || prev.treatments.biological,
+        physical: (mold.prevention as any)?.physical || prev.treatments.physical,
+        chemical: (mold.prevention as any)?.chemical || prev.treatments.chemical,
+      },
+    }));
+
+    // Auto-dismiss banner after 5 seconds
+    setTimeout(() => setShowCatalogBanner(false), 5000);
   };
 
   const handlePublish = async () => {
@@ -347,6 +386,51 @@ function ViewWikiMoldContent() {
           </label>
         </div>
       </section>
+
+      {/* MOLD CATALOG DROPDOWN: Auto-fill fields from catalog */}
+      <div className="px-4 mb-12">
+        <div className="max-w-2xl mx-auto p-8 rounded-[2rem] border-2 border-[var(--primary-color)]/10 bg-[var(--primary-color)]/2">
+          <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-[var(--accent-color)] mb-3">
+            Update from Catalog
+          </label>
+          <p className="text-sm text-[var(--moldify-black)]/70 mb-4">
+            Refresh form fields from the mold catalog (existing content will be preserved):
+          </p>
+          <select
+            disabled={catalogLoading}
+            onChange={(e) => {
+              const moldName = e.target.value;
+              const mold = catalogData?.data?.data?.find((m: MoldCatalogEntry) => m.name === moldName);
+              if (mold) {
+                handleMoldCatalogSelect(mold);
+              }
+            }}
+            className="w-full px-4 py-3 rounded-lg border border-[var(--primary-color)]/20 bg-white text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] focus:outline-none focus:border-[var(--accent-color)] cursor-pointer"
+          >
+            <option value="">
+              {catalogLoading ? "Loading catalog..." : "Choose a mold to refresh fields..."}
+            </option>
+            {catalogData?.data?.data?.map((mold: MoldCatalogEntry) => (
+              <option key={mold.name} value={mold.name}>
+                {mold.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* CATALOG AUTO-FILL BANNER: Notification that fields have been updated */}
+      {showCatalogBanner && selectedCatalogMold && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full text-sm font-bold z-50 shadow-lg flex items-center gap-2">
+          <span>✓ Fields updated from "{selectedCatalogMold.name}" • Review before saving</span>
+          <button
+            onClick={() => setShowCatalogBanner(false)}
+            className="ml-4 hover:opacity-75 text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Sticky in-page nav keeps long-form editing sections easy to access. */}
       <StickyDossierNav items={navItems} />

@@ -5,6 +5,7 @@ import Sidebar from "@/components/sidebar";
 import Footer from "@/components/footer";
 import { useAuth } from "@/hooks/useAuth";
 import { useFCM } from "@/hooks/useFCM";
+import { useRouteChangeRevalidate } from "@/hooks/use-route-change-revalidate";
 import SwrProvider from "@/providers/swr-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 
@@ -22,6 +23,9 @@ export default function LayoutClient({ children }: { children: React.ReactNode }
 
 /** Inner component that consumes useAuth (now backed by the shared AuthProvider) */
 function LayoutInner({ children, pathname }: { children: React.ReactNode; pathname: string }) {
+  // Revalidate SWR caches on route changes for fresh data on back navigation
+  useRouteChangeRevalidate();
+
   const { user: authUser } = useAuth();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isMounted, setIsMounted] = useState(false);

@@ -88,7 +88,7 @@ export function useMoldReportsInfinite(
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false },
+    { revalidateFirstPage: false, revalidateOnFocus: true },
   );
 }
 
@@ -103,6 +103,8 @@ export function useMoldReport(id: string | undefined) {
 export function useUnassignedReports(limit = 50, enabled = true) {
   return useSWR<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
     enabled ? apiUrl('/api/v1/mold-reports/unassigned', { limit }) : null,
+    undefined,
+    { revalidateOnFocus: true },
   );
 }
 
@@ -118,6 +120,8 @@ export function useAssignedReports(
           pageToken: params?.pageToken,
         })
       : null,
+    undefined,
+    { revalidateOnFocus: true },
   );
 }
 
@@ -133,6 +137,8 @@ export function useClosedReports(
           pageToken: params?.pageToken,
         })
       : null,
+    undefined,
+    { revalidateOnFocus: true },
   );
 }
 
@@ -148,7 +154,7 @@ export function useClosedReportsInfinite(limit = 50, enabled = true) {
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false },
+    { revalidateFirstPage: false, revalidateOnFocus: true },
   );
 }
 
@@ -163,7 +169,7 @@ export function useAssignedReportsInfinite(limit = 100) {
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false },
+    { revalidateFirstPage: false, revalidateOnFocus: true },
   );
 }
 
