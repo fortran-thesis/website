@@ -26,21 +26,33 @@ export default async function LandingPage() {
   let resolvedCount = 0;
 
   try {
-    const res = await serverFetch<Record<string, unknown>>(
-      endpoints.moldReport.countStatuses,
-      { revalidate: 600, tags: ['resolved-count'] },
+    const payload = await serverFetch<{
+      resolved_count?: number | string;
+      resolvedCount?: number | string;
+      resolved?: number | string;
+    }>(
+      endpoints.moldReport.publicResolvedCount,
+      { revalidate: false },
     );
 
-    if (res?.data) {
-      // Backend returns { total, pending, in_progress, resolved, closed }
-      resolvedCount =
-        (res.data as any).resolved ??
-        (res.data as any).resolved_count ??
-        (res.data as any).resolvedCount ??
+    console.log('[LandingPage] publicResolvedCount response:', payload);
+
+    if (payload?.success && payload?.data) {
+      const rawResolved =
+        payload.data.resolved_count ??
+        payload.data.resolvedCount ??
+        payload.data.resolved ??
         0;
+      const parsedResolved =
+        typeof rawResolved === 'number' ? rawResolved : Number(rawResolved);
+
+      resolvedCount = Number.isFinite(parsedResolved) ? parsedResolved : 0;
+      console.log('[LandingPage] parsed resolvedCount:', resolvedCount);
+    } else {
+      console.warn('[LandingPage] API response invalid:', { success: payload?.success, data: payload?.data });
     }
-  } catch {
-    // Fallback to 0
+  } catch (error) {
+    console.error('[LandingPage] Fetch error:', error);
   }
 
   return <LandingClient resolvedCount={resolvedCount} />;
