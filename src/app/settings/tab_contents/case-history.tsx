@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import CaseTable from "@/components/tables/case_table";
+import PageLoading from "@/components/loading/page_loading";
+import MessageBanner from "@/components/feedback/message_banner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import { useClosedReportsInfinite, type MoldReportSnapshot } from "@/hooks/swr";
@@ -132,9 +134,9 @@ export default function CaseHistory() {
 
       {/* Error Message Display */}
       {errorMessage && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <MessageBanner variant="error" className="mb-4">
           {errorMessage}
-        </div>
+        </MessageBanner>
       )}
     
       {/* Mold Genus Section */}
@@ -174,9 +176,7 @@ export default function CaseHistory() {
       </div>
       {/* Case Table - Shows only closed cases with eye icon for viewing */}
       {isLoading ? (
-        <div className="p-6 text-center text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Loading closed cases...
-        </div>
+        <PageLoading message="Loading closed cases..." />
       ) : (
         <CaseTable
           cases={filteredClosedCases}
@@ -189,7 +189,7 @@ export default function CaseHistory() {
 
       <div ref={loadMoreRef} className="py-4 text-center">
         {isValidating && hasMore && (
-          <p className="text-sm text-[var(--moldify-grey)]">Loading more closed cases...</p>
+          <PageLoading message="Loading more closed cases..." compact />
         )}
       </div>
     </div>

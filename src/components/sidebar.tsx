@@ -6,6 +6,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHouseChimney, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers, faBookOpen, faSeedling, faChevronLeft, faChevronRight, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLogout } from '@/hooks/useLogout';
+import ConfirmModal from '@/components/modals/confirmation_modal';
+import TopLoadingBar from '@/components/loading/top_loading_bar';
 
 const MoldifyLogo = '/assets/Moldify_Logo.png';
 
@@ -17,6 +19,7 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const [navOpen, setNavOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [isCollapsed, setIsCollapsed] = useState(true); 
     const [isDesktop, setIsDesktop] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
@@ -33,6 +36,12 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const isMycologist = normalizedRole === "Mycologist";
 
     const handleLogout = async () => {
+        if (isLoggingOut) return;
+        setShowLogoutConfirm(true);
+    };
+
+    const confirmLogout = async () => {
+        setShowLogoutConfirm(false);
         setIsLoggingOut(true);
         await logout();
     };
@@ -71,6 +80,8 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
 
     return (
         <>
+            <TopLoadingBar isVisible={isLoggingOut} />
+
             {/* MOBILE TOP BAR */}
             <div className={`xl:hidden fixed top-0 left-0 w-full h-16 z-[60] flex items-center px-6 transition-all duration-300
                 ${scrolled ? "bg-[var(--primary-color)] shadow-lg" : "bg-transparent"}
@@ -182,6 +193,18 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
                     </nav>
                 </aside>
             </div>
+
+            <ConfirmModal
+                isOpen={showLogoutConfirm}
+                title="Log Out"
+                subtitle="Are you sure you want to log out?"
+                cancelText="Cancel"
+                confirmText="Log Out"
+                confirmDisabled={isLoggingOut}
+                confirmLoadingText="Logging out..."
+                onCancel={() => setShowLogoutConfirm(false)}
+                onConfirm={confirmLogout}
+            />
         </>
     );
 }

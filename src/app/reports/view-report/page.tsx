@@ -10,6 +10,8 @@ import { useState, useMemo, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { useReport } from '@/hooks/swr';
 import BackButton from "@/components/buttons/back_button";
+import PageLoading from "@/components/loading/page_loading";
+import MessageBanner from "@/components/feedback/message_banner";
 // Use standard img elements here to avoid Next.js Image domain config issues
 import StatusBox from "@/components/tiles/status_tile";
 import ConfirmModal from "@/components/modals/confirmation_modal";
@@ -108,7 +110,7 @@ function ProseContent({
 
 export default function ViewReport() {
   return (
-    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+    <Suspense fallback={<PageLoading fullScreen showTopBar />}>
       <ViewReportContent />
     </Suspense>
   );
@@ -236,8 +238,8 @@ function ViewReportContent() {
 
       <BackButton />
 
-      {loading && <p className="text-center">Loading report...</p>}
-      {error && <p className="text-center text-red-600">{error}</p>}
+      {loading && <PageLoading message="Loading report..." />}
+      {error && <MessageBanner variant="error" className="mb-4 text-center">{error}</MessageBanner>}
 
       {!loading && !error && (
         <>

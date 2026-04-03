@@ -12,6 +12,7 @@ import CaseTable from '@/components/tables/case_table';
 import AuthDebug from '@/components/auth-debug';
 import NotificationsPanel from '@/components/notifications_panel';
 import DonutChart from '@/components/charts/donut-chart';
+import PageLoading from '@/components/loading/page_loading';
 import {
   useUnassignedReports,
   useAssignedReports,
@@ -224,15 +225,7 @@ export default function Home() {
 
     // Show loading state while checking authentication
     if (authLoading) {
-        return (
-            <main className="relative flex flex-col xl:py-2 py-10 items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">
-                        Loading dashboard...
-                    </p>
-                </div>
-            </main>
-        );
+      return <PageLoading message="Loading dashboard..." fullScreen />;
     }
 
     return (

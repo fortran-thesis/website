@@ -20,6 +20,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMoldReport, useMoldCaseByReport, useMoldCaseLogs, useUser } from "@/hooks/swr";
 import { apiMutate } from "@/lib/api";
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
+import PageLoading from "@/components/loading/page_loading";
+import MessageBanner from "@/components/feedback/message_banner";
 
 type Mycologist = {
   name: string;
@@ -162,12 +164,12 @@ function ViewCaseContent() {
   };
 
   // Use data from API
-  const caseName = caseData?.case_name || "Loading...";
-  const cropName = caseData?.host || "Loading...";
-  const location = caseData?.location || "Loading...";
+  const caseName = caseData?.case_name || (loading ? "Loading..." : "N/A");
+  const cropName = caseData?.host || (loading ? "Loading..." : "N/A");
+  const location = caseData?.location || (loading ? "Loading..." : "N/A");
   const dateObserved = (() => {
     const d = toDate(caseData?.date_observed);
-    return d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "Loading...";
+    return d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : (loading ? "Loading..." : "N/A");
   })();
   const status = caseData?.status ? caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1) : "Pending";
   
@@ -188,10 +190,16 @@ function ViewCaseContent() {
   };
   
   // Reporter info
-  const reporterName = caseData?.reporter?.details?.displayName || "Loading...";
+  const reporterName = caseData?.reporter?.details?.displayName || (loading ? "Loading..." : "N/A");
   const reporterEmail = caseData?.reporter?.details?.email || "N/A";
   const reporterPhone = caseData?.reporter?.details?.phone_number || "N/A";
   const imageUrl = caseData?.reporter?.details?.photo_url || "/profile-placeholder.svg";
+
+  const [imgSrc, setImgSrc] = useState(imageUrl);
+
+  if (loading) {
+    return <PageLoading message="Loading case..." fullScreen showTopBar />;
+  }
 
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
@@ -626,8 +634,6 @@ function ViewCaseContent() {
     },
   ];
   
-  const [imgSrc, setImgSrc] = useState(imageUrl);
-
   return (
     <main className="relative flex flex-col xl:py-2 py-10 w-full">
       
@@ -777,27 +783,15 @@ function ViewCaseContent() {
 
       {/* Error Alert */}
       {assignError && (
-        <div className="fixed top-4 right-4 max-w-md bg-red-100 border-2 border-red-500 rounded-lg p-4 shadow-lg z-50">
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
+        <MessageBanner variant="error" className="fixed top-4 right-4 max-w-md z-50">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="font-[family-name:var(--font-montserrat)] font-bold">Assignment Failed</div>
+              <div className="font-[family-name:var(--font-bricolage-grotesque)] text-sm mt-1">{assignError}</div>
             </div>
-            <div className="flex-1">
-              <h3 className="font-[family-name:var(--font-montserrat)] font-bold text-red-800">Assignment Failed</h3>
-              <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-red-700 mt-1">{assignError}</p>
-            </div>
-            <button
-              onClick={() => setAssignError(null)}
-              className="flex-shrink-0 text-red-500 hover:text-red-700"
-            >
-              <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
+            <button onClick={() => setAssignError(null)} className="font-black">✕</button>
           </div>
-        </div>
+        </MessageBanner>
       )}
 
       {/* Modals */}
@@ -841,7 +835,7 @@ function ViewCaseContent() {
 
 export default function ViewCase() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<PageLoading fullScreen showTopBar />}>
       <ViewCaseContent />
     </Suspense>
   );

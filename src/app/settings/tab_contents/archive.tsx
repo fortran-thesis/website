@@ -2,6 +2,8 @@
 import WikiMoldTable, { type WikiMold } from "@/components/tables/wikimold_table";
 import EmptyState from "@/components/empty_state";
 import ConfirmationModal from "@/components/modals/confirmation_modal";
+import PageLoading from "@/components/loading/page_loading";
+import MessageBanner from "@/components/feedback/message_banner";
 import { useState, useEffect } from "react";
 import { faBoxArchive } from "@fortawesome/free-solid-svg-icons";
 import { mutate } from 'swr';
@@ -151,16 +153,14 @@ export default function Archive() {
 
       {/* Error Message Display */}
       {error && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <MessageBanner variant="error" className="mb-4">
           {error}
-        </div>
+        </MessageBanner>
       )}
 
       {/* Loading State */}
       {isLoading ? (
-        <div className="p-6 text-center text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Loading archived wikimolds...
-        </div>
+        <PageLoading message="Loading archived wikimolds..." />
       ) : archivedWikiMolds.length === 0 ? (
         /* Empty State - Show when no archived wikimolds exist */
         <EmptyState

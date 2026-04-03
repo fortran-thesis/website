@@ -13,6 +13,9 @@ import { useMoldById } from "@/hooks/swr";
 import { apiMutate, ApiError } from "@/lib/api";
 import { normalizeInfoSections, unwrapMoldResponse } from "@/lib/mold-detail-normalizer";
 import { useInvalidationFunctions } from "@/utils/cache-invalidation";
+import PageLoading from "@/components/loading/page_loading";
+import TopLoadingBar from "@/components/loading/top_loading_bar";
+import MessageBanner from "@/components/feedback/message_banner";
 
 interface MoldInfoFormData {
   moldName: string;
@@ -50,13 +53,7 @@ interface MoldManagementFormData {
 
 export default function ViewMoldInfo() {
   return (
-    <Suspense
-      fallback={
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" style={{ width: "30%" }} />
-        </div>
-      }
-    >
+    <Suspense fallback={<PageLoading fullScreen showTopBar />}>
       <ViewMoldInfoContent />
     </Suspense>
   );
@@ -310,11 +307,7 @@ function ViewMoldInfoContent() {
 
   return (
     <main className="relative flex flex-col xl:py-2 py-10 w-full font-[family-name:var(--font-bricolage-grotesque)]">
-      {(isSaving || isMarkingReviewed) && (
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" style={{ width: "30%" }} />
-        </div>
-      )}
+      <TopLoadingBar isVisible={isSaving || isMarkingReviewed} />
 
       <div className="flex flex-col gap-2 mb-8">
         <Breadcrumbs role={userRole} skipSegments={["tab-content", "mold-info", "view-mold-info"]} />
@@ -327,8 +320,8 @@ function ViewMoldInfoContent() {
         </div>
       </div>
 
-      {isLoading && <p className="mt-6 text-[var(--moldify-grey)] text-sm">Loading mold data...</p>}
-      {error && <div className="mb-4 px-4 py-3 bg-red-100 text-red-800 rounded-lg font-semibold">{error}</div>}
+      {isLoading && <PageLoading message="Loading mold data..." />}
+      {error && <MessageBanner variant="error" className="mb-4">{error}</MessageBanner>}
 
       {!isLoading && (
         <>

@@ -13,6 +13,7 @@ import useSWRInfinite from 'swr/infinite';
 import { apiUrl, type ApiResponse } from '@/lib/api';
 import type { PaginatedResponse } from '@/hooks/swr/types';
 import type { MoldReportSnapshot, StatusCounts } from '@/hooks/swr/use-mold-reports';
+import PageLoading from '@/components/loading/page_loading';
 
 export default function Investigation() {
         const { user: authUser, loading: authLoading } = useAuth();
@@ -251,7 +252,7 @@ export default function Investigation() {
 
             {/* Submitted Cases Table */}
             <div className="w-full">
-                {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading cases...</p>}
+                {loading && <PageLoading message="Loading cases..." />}
                 {!loading && (
                     <>
                         <CaseTable
@@ -262,9 +263,9 @@ export default function Investigation() {
                             }}
                         />
                         {/* Loading indicator for additional pages */}
-                        {(isLoadingMore || hasMore) && (
+                        {isLoadingMore && (
                             <div className="py-4 text-center">
-                                <p className="text-sm text-[var(--moldify-grey)]">Loading more cases...</p>
+                                <PageLoading message="Loading more cases..." compact />
                             </div>
                         )}
                     </>

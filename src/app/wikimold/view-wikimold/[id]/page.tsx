@@ -7,6 +7,8 @@ import { Navbar } from '@/components/navbar';
 import Footer from '@/components/footer';
 import { useMoldipediaArticle, useMoldipediaCases, type MoldipediaArticle, type MoldCaseSummary } from '@/hooks/swr';
 import { CollapsibleEntry } from '../../../../components/wikimold/collapsible-entry';
+import TopLoadingBar from '@/components/loading/top_loading_bar';
+import PageLoading from '@/components/loading/page_loading';
 
 // --- Default Placeholders ---
 const DEFAULT_BANNER = "/assets/mold.jpg";
@@ -436,15 +438,10 @@ const ProseContent = ({
     return (
       <div className="min-h-screen bg-[var(--background-color)] flex flex-col">
         {/* Top Loading Bar */}
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div 
-            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
-            style={{ width: '30%' }}
-          />
-        </div>
+        <TopLoadingBar />
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
-          <p className="text-gray-500 text-center">Loading article...</p>
+          <PageLoading message="Loading article..." />
         </div>
         <Footer />
       </div>

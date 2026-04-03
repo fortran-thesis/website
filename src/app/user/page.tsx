@@ -9,6 +9,8 @@ import UserTable from '@/components/tables/user_table';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserRoleCounts, useUserDisabledCounts, useUsersInfinite } from '@/hooks/swr';
+import PageLoading from '@/components/loading/page_loading';
+import MessageBanner from '@/components/feedback/message_banner';
 
 
 export default function Users() {
@@ -212,8 +214,8 @@ export default function Users() {
 
             {/* Submitted Cases Table */}
             <div className="mt-5 w-full">
-                {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading users...</p>}
-                {error && <p className="text-red-600">{error}</p>}
+                {loading && <PageLoading message="Loading users..." />}
+                {error && <MessageBanner variant="error" className="mb-4">{error}</MessageBanner>}
                 {!loading && !error && <UserTable data={filteredUsers} 
                     onEdit={(c: any) => {
                       console.log('📋 UserTable edit clicked:', { user: c, userId: c?.id });
@@ -226,7 +228,7 @@ export default function Users() {
 
                 {/* Infinite scroll trigger */}
                 <div ref={loadMoreRef} className="py-4 text-center">
-                    {isLoadingMore && <p className="text-sm text-[var(--moldify-grey)]">Loading more users...</p>}
+                    {!loading && isLoadingMore && <PageLoading message="Loading more users..." compact />}
                 </div>
             </div>
         </main>

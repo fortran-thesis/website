@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import FlaggedHistoryTable, { type FlaggedHistory } from "@/components/tables/flagged_history_table";
+import PageLoading from "@/components/loading/page_loading";
+import MessageBanner from "@/components/feedback/message_banner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 /**
@@ -42,9 +44,9 @@ export default function FlagHistory({ flaggedHistory, isLoading, error }: FlagHi
 
       {/* Error Message Display */}
       {error && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <MessageBanner variant="error" className="mb-4">
           {error}
-        </div>
+        </MessageBanner>
       )}
      
       {/* Flagged Genus Section */}
@@ -85,9 +87,7 @@ export default function FlagHistory({ flaggedHistory, isLoading, error }: FlagHi
 
       {/* Flagged History Table */}
       {isLoading ? (
-        <div className="p-6 text-center text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Loading flagged history...
-        </div>
+        <PageLoading message="Loading flagged history..." />
       ) : (
         <FlaggedHistoryTable 
           data={filteredHistory}

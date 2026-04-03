@@ -13,6 +13,8 @@ import { useMoldipediaArticle } from '@/hooks/swr';
 import { useMoldCatalog, type MoldCatalogEntry } from '@/hooks/swr/use-mold';
 import { apiMutate, ApiError } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
+import PageLoading from '@/components/loading/page_loading';
+import MessageBanner from '@/components/feedback/message_banner';
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
@@ -50,14 +52,7 @@ type WikiMoldDetail = {
 
 export default function ViewWikiMold() {
   return (
-    <Suspense fallback={
-      <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-        <div
-          className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]"
-          style={{ width: '30%' }}
-        />
-      </div>
-    }>
+    <Suspense fallback={<PageLoading fullScreen showTopBar />}>
       <ViewWikiMoldContent />
     </Suspense>
   );
@@ -464,8 +459,8 @@ function ViewWikiMoldContent() {
 
       <form className="w-full pb-40">
         {/* Alerts */}
-        {successMessage && <div className="mb-4 px-4 py-3 bg-green-100 text-green-800 rounded-lg font-semibold">{successMessage}</div>}
-        {errorMessage && <div className="mb-4 px-4 py-3 bg-red-100 text-red-800 rounded-lg font-semibold">{errorMessage}</div>}
+        {successMessage && <MessageBanner variant="success" className="mb-4">{successMessage}</MessageBanner>}
+        {errorMessage && <MessageBanner variant="error" className="mb-4">{errorMessage}</MessageBanner>}
 
         {/* Article meta fields: high-visibility title/genus inputs above detailed sections. */}
         <div className="max-w-full mx-auto px-4 mb-24 mt-20">

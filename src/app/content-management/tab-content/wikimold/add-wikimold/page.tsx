@@ -13,6 +13,7 @@ import { apiMutate } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 import { StickyDossierNav } from "@/components/dossier_nav";
 import { useMoldCatalog, type MoldCatalogEntry } from '@/hooks/swr/use-mold';
+import MessageBanner from '@/components/feedback/message_banner';
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
@@ -625,15 +626,15 @@ export default function AddWikiMold() {
       {/* ALERTS: Feedback messages shown at bottom of page */}
       {/* Error: Validation or API errors (red background) */}
       {errorMessage && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full text-sm font-bold z-50 shadow-lg">
+        <MessageBanner variant="error" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 shadow-lg rounded-full px-6 py-3 text-sm font-bold text-white">
           {errorMessage}
-        </div>
+        </MessageBanner>
       )}
       {/* Success: Article published successfully (green background) */}
       {successMessage && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full text-sm font-bold z-50 shadow-lg">
+        <MessageBanner variant="success" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 shadow-lg rounded-full px-6 py-3 text-sm font-bold text-white">
           {successMessage}
-        </div>
+        </MessageBanner>
       )}
     </main>
   </>

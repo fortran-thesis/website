@@ -15,6 +15,9 @@ import type { FlaggedHistory } from "@/components/tables/flagged_history_table";
 import { useFlagReportsInfinite } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
+import PageLoading from '@/components/loading/page_loading';
+import TopLoadingBar from '@/components/loading/top_loading_bar';
+import MessageBanner from '@/components/feedback/message_banner';
 
 export default function Settings() {
   const { user, refreshUser } = useAuth();
@@ -347,14 +350,7 @@ export default function Settings() {
       }`}
       aria-busy={isProfileSaving || isPasswordSaving}
     >
-      {(isProfileSaving || isPasswordSaving) && (
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div
-            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]"
-            style={{ width: "30%" }}
-          />
-        </div>
-      )}
+      <TopLoadingBar isVisible={isProfileSaving || isPasswordSaving} />
 
       <div className="flex flex-row justify-between">
         <div className="flex flex-col">
@@ -366,23 +362,19 @@ export default function Settings() {
       </div>
 
       {error && (
-        <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <MessageBanner variant="error" className="mt-4">
           {error}
-        </div>
+        </MessageBanner>
       )}
 
       {successMessage && (
-        <div className="mt-4 mb-6 p-3 bg-green-100 border border-green-200 text-green-700 rounded-lg text-xs text-left lg:text-left">
+        <MessageBanner variant="success" className="mt-4 mb-6 text-xs text-left lg:text-left">
           {successMessage}
-        </div>
+        </MessageBanner>
       )}
 
       {isLoading ? (
-        <div className="mt-10 p-6 text-center">
-          <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)]">
-            Loading settings...
-          </p>
-        </div>
+        <PageLoading message="Loading settings..." />
       ) : (
         <>
           <div className="mt-10">

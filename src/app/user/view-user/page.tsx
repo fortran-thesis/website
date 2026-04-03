@@ -9,6 +9,8 @@ import UserLogTile, { UserLogTileEntry } from "@/components/tiles/user_log_tile"
 import EmptyState from "@/components/empty_state";
 import { faClipboard } from "@fortawesome/free-solid-svg-icons";
 import { useUser, useAuditLogs } from '@/hooks/swr';
+import PageLoading from "@/components/loading/page_loading";
+import MessageBanner from "@/components/feedback/message_banner";
 
 
 type UserRole = "Farmer" | "Administrator" | "Mycologist";
@@ -29,7 +31,7 @@ type UserDetails = {
 
 export default function ViewUser() {
   return (
-    <Suspense fallback={<div className="flex justify-center items-center min-h-screen">Loading...</div>}>
+    <Suspense fallback={<PageLoading fullScreen showTopBar />}>
       <ViewUserContent />
     </Suspense>
   );
@@ -130,15 +132,7 @@ function ViewUserContent() {
   const hidePersonalInfo = userRole === "Administrator";
 
   if (loading) {
-    return (
-      <main className="relative flex flex-col xl:py-2 py-10 items-center justify-center min-h-screen">
-        <div className="text-center">
-          <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">
-            Loading user...
-          </p>
-        </div>
-      </main>
-    );
+    return <PageLoading message="Loading user..." fullScreen />;
   }
 
   return (
@@ -156,9 +150,9 @@ function ViewUserContent() {
       <BackButton />
 
       {error && (
-        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <MessageBanner variant="error" className="mb-6">
           {error}
-        </div>
+        </MessageBanner>
       )}
 
       <div className="flex flex-col lg:flex-row w-full gap-12 items-start py-8 border-b border-[var(--primary-color)]/5">

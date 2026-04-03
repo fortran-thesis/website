@@ -6,6 +6,7 @@ import { faCircle, faCircleCheck, faEye, faEyeSlash, faUserPlus } from "@fortawe
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import ConfirmModal from "@/components/modals/confirmation_modal";
+import MessageBanner from "@/components/feedback/message_banner";
 import { apiMutate, ApiError } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
@@ -172,10 +173,9 @@ export default function CreateMycologist() {
       </header>
 
       {error && (
-        <div className="mb-10 p-5 bg-[var(--moldify-red)]/[0.05] border border-[var(--moldify-red)]/10 rounded-2xl flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-[var(--moldify-red)] animate-pulse" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--moldify-red)] font-[family-name:var(--font-bricolage-grotesque)]">{error}</p>
-        </div>
+        <MessageBanner variant="error" className="mb-10 text-[10px] uppercase tracking-widest">
+          {error}
+        </MessageBanner>
       )}
 
       <form onSubmit={handleCreateClick} className="space-y-12">
