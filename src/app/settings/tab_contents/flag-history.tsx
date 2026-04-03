@@ -31,12 +31,14 @@ export default function FlagHistory({ flaggedHistory, isLoading, error }: FlagHi
 
   return (
     <div>
-      <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-        Flag History
-      </h2>
-      <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mb-6">
-        Your record of previously flagged mold identifications below.
-      </p>
+      <header className="mt-10 mb-12 flex flex-col gap-2">
+        <h1 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight leading-none">
+          Flag History
+        </h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">
+          Flagged Mold Identification Records
+        </p>
+      </header>
 
       {/* Error Message Display */}
       {error && (

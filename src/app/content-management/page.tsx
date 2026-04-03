@@ -52,6 +52,7 @@ import { useInvalidationFunctions } from '@/utils/cache-invalidation';
       return snapshot.map((m: any) => ({
         id: m.id || '',
         genusName: m.name || 'Unknown',
+        status: typeof m.status === 'string' ? m.status : 'draft',
         reviewedBy: 'N/A',
         dateReviewed: 'N/A',
       }));

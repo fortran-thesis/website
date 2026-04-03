@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBacterium, faBell, faBookOpen, faHourglassHalf, faSeedling, faTriangleExclamation, faUsers } from '@fortawesome/free-solid-svg-icons';
@@ -25,6 +26,7 @@ const userRole = "Administrator";
 export default function Home() {
     // Get authenticated user data from centralized auth hook
     const { user: authUser, loading: authLoading } = useAuth();
+  const router = useRouter();
     
     // Fallback mock data for initial UI
     const fallbackChartData = [
@@ -353,7 +355,7 @@ export default function Home() {
                     showAction={true}
                     onEdit={(c: any) => {
                       const params = new URLSearchParams({ id: c.id });
-                      window.location.href = `/investigation/view-case?${params.toString()}`;
+                      router.push(`/investigation/view-case?${params.toString()}`);
                   }}
                 />
             </div>

@@ -151,7 +151,7 @@ export default function Users() {
 
                 {/* Right Section */}
                 <button
-                    className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
+                    className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-2xl hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
                     onClick={() => router.push('/user/create-mycologist')}
                 >
                     <span>Create Mycologist Account</span>
@@ -221,7 +221,7 @@ export default function Users() {
                         console.error('❌ User has no id:', c);
                         return;
                       }
-                      window.location.href = `/user/view-user?id=${c.id}`;
+                                            router.push(`/user/view-user?id=${c.id}`);
                   }}/>}
 
                 {/* Infinite scroll trigger */}

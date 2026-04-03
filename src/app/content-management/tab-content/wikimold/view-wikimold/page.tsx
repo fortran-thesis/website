@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen, faArchive } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faArchive, faRotate } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { useMoldipediaArticle } from '@/hooks/swr';
 import { useMoldCatalog, type MoldCatalogEntry } from '@/hooks/swr/use-mold';
@@ -17,6 +17,7 @@ import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
 import { StickyDossierNav } from "@/components/dossier_nav";
+import StatusDropdown from "@/components/StatusDropdown";
 
 type WikiMoldDetail = {
   // Editable article model used by the form and PATCH payload construction.
@@ -63,6 +64,7 @@ export default function ViewWikiMold() {
 }
 
 function ViewWikiMoldContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const wikimoldId = searchParams.get("id") ?? '';
   const userRole = "Mycologist";
@@ -70,6 +72,7 @@ function ViewWikiMoldContent() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isBackModalOpen, setIsBackModalOpen] = useState(false);
 
   // Mold Catalog States: For auto-fill dropdown
   const { data: catalogData, isLoading: catalogLoading } = useMoldCatalog();
@@ -339,10 +342,23 @@ function ViewWikiMoldContent() {
 
   const navItems = [
     { id: 'description', label: 'Description' },
-    { id: 'analysis', label: 'Fungal Analysis' },
+    { id: 'analysis', label: 'Host & Pathogen Impact' },
     { id: 'prevention', label: 'Prevention' },
-    { id: 'treatments', label: 'Treatments' },
+    { id: 'treatments', label: 'Remediation Protocols' },
   ];
+
+  const navigateBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push('/content-management/tab-content/wikimold');
+  };
+
+  const handleBack = () => {
+    setIsBackModalOpen(true);
+  };
 
   return (
     <main className="relative flex flex-col xl:py-2 py-10 w-full font-[family-name:var(--font-bricolage-grotesque)]">
@@ -366,7 +382,48 @@ function ViewWikiMoldContent() {
       </div>
 
       <div className="mb-8">
-        <BackButton />
+        <BackButton onClick={handleBack} />
+      </div>
+
+      {/* MOLD CATALOG DROPDOWN: Auto-fill fields from catalog */}
+      <div className="w-full px-8 mb-15">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-12 py-10 border-y border-[var(--primary-color)]/10">
+           <div className="flex items-center gap-8">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full border border-[var(--primary-color)]/20 text-[var(--accent-color)] shadow-sm">
+                <FontAwesomeIcon icon={faRotate} className="animate-spin-slow text-sm" />
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)]">
+                    Update From Catalog
+                  </span>
+                  <div className="w-6 h-[1px] bg-[var(--primary-color)]/20" />
+                </div>
+                <h2 className="text-xl font-black uppercase tracking-tight text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
+                  Archive Synchronization
+                </h2>
+              </div>
+            </div>
+          <div className="w-full md:w-[400px]">
+            <StatusDropdown
+              options={catalogData?.data?.data?.map((m: MoldCatalogEntry) => ({ label: m.name, value: m.name })) || []}
+              onSelect={(value) => {
+                if (catalogLoading) return;
+                const mold = catalogData?.data?.data?.find((m: MoldCatalogEntry) => m.name === value);
+                if (mold) {
+                  handleMoldCatalogSelect(mold);
+                }
+              }}
+              placeholder="CHOOSE A MOLD TO AUTO FILL..."
+              backgroundColor="transparent"
+              textColor="var(--primary-color)"
+              borderColor="transparent"
+              selectedValue={selectedCatalogMold?.name}
+            />
+            <div className="h-[2px] w-full bg-gradient-to-r from-[var(--primary-color)]/20 via-[var(--primary-color)]/5 to-transparent mt-[-4px]" />
+          </div>
+        </div>
       </div>
 
       {/* Cover image hero with immediate preview and optional replacement upload. */}
@@ -387,37 +444,7 @@ function ViewWikiMoldContent() {
         </div>
       </section>
 
-      {/* MOLD CATALOG DROPDOWN: Auto-fill fields from catalog */}
-      <div className="px-4 mb-12">
-        <div className="max-w-2xl mx-auto p-8 rounded-[2rem] border-2 border-[var(--primary-color)]/10 bg-[var(--primary-color)]/2">
-          <label className="block text-[10px] font-black uppercase tracking-[0.3em] text-[var(--accent-color)] mb-3">
-            Update from Catalog
-          </label>
-          <p className="text-sm text-[var(--moldify-black)]/70 mb-4">
-            Refresh form fields from the mold catalog (existing content will be preserved):
-          </p>
-          <select
-            disabled={catalogLoading}
-            onChange={(e) => {
-              const moldName = e.target.value;
-              const mold = catalogData?.data?.data?.find((m: MoldCatalogEntry) => m.name === moldName);
-              if (mold) {
-                handleMoldCatalogSelect(mold);
-              }
-            }}
-            className="w-full px-4 py-3 rounded-lg border border-[var(--primary-color)]/20 bg-white text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] focus:outline-none focus:border-[var(--accent-color)] cursor-pointer"
-          >
-            <option value="">
-              {catalogLoading ? "Loading catalog..." : "Choose a mold to refresh fields..."}
-            </option>
-            {catalogData?.data?.data?.map((mold: MoldCatalogEntry) => (
-              <option key={mold.name} value={mold.name}>
-                {mold.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      
 
       {/* CATALOG AUTO-FILL BANNER: Notification that fields have been updated */}
       {showCatalogBanner && selectedCatalogMold && (
@@ -665,6 +692,19 @@ function ViewWikiMoldContent() {
         subtitle="This will hide the article from the public database."
         onCancel={() => setIsArchiveModalOpen(false)}
         onConfirm={handleArchive}
+      />
+
+      <ConfirmModal
+        isOpen={isBackModalOpen}
+        title="Discard changes?"
+        subtitle="If you leave this page now, unsaved edits will be lost."
+        cancelText="Stay"
+        confirmText="Leave"
+        onCancel={() => setIsBackModalOpen(false)}
+        onConfirm={() => {
+          setIsBackModalOpen(false);
+          navigateBack();
+        }}
       />
     </main>
   );

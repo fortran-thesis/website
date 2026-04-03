@@ -47,24 +47,32 @@ export default function WikiMoldManagement({ wikimoldData = [], setWikiMoldData,
         </p>
 
         {/* Right Section (Search Bar + Add Button) */}
-        <div className="flex flex-col md:flex-row md:ml-auto gap-x-2 gap-y-3 w-full md:w-auto">
-          <div className="relative flex items-center w-full md:w-100">
+        <div className="flex flex-col md:flex-row md:ml-auto items-stretch gap-3 w-full md:w-auto">
+          
+          {/* SEARCH: Unified with the button height and border style */}
+          <div className="relative flex items-center w-full md:w-80">
             <label htmlFor="search" className="sr-only">Search WikiMold</label>
             <input
               id="search"
+              type="text"
               placeholder="Search WikiMold"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--background-color)] py-2 px-4 rounded-full border-2 border-[var(--primary-color)] focus:outline-none w-full pr-10"
+              className="w-full h-12 px-6 rounded-full border-2 border-[var(--primary-color)] bg-[var(--background-color)] text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/20 transition-all pr-12"
             />
-            <FontAwesomeIcon icon={faSearch} className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--primary-color)]" />
+            <FontAwesomeIcon 
+              icon={faSearch} 
+              className="absolute right-5 text-[var(--primary-color)] opacity-60" 
+            />
           </div>
+
+          {/* ADD BUTTON: Matching the height (h-12) and corner radius of the search bar */}
           <button
-              className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
-              onClick={onAddWikiMold}
+            onClick={onAddWikiMold}
+            className="flex items-center justify-center gap-3 h-12 px-8 rounded-xl bg-[var(--primary-color)] text-white font-[family-name:var(--font-bricolage-grotesque)] font-bold text-sm hover:bg-[var(--hover-primary)] active:scale-95 transition-all cursor-pointer shadow-md"
           >
-              <span>Add WikiMold</span>
-              <FontAwesomeIcon icon={faPlus} />
+            <span>Add WikiMold</span>
+            <FontAwesomeIcon icon={faPlus} className="text-xs" />
           </button>
         </div>
       </div>

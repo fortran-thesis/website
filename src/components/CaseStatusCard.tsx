@@ -1,12 +1,15 @@
 "use client";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import StatusDropdown from "./StatusDropdown";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 
 export default function CaseStatusCard({
   userRole, isAssigned, isRejected, isApproved, assignedMycologistName, assignedMycologistOccupation, caseData, status,
   setAssignModalOpen, setRejectModalOpen
 }: any) {
-  
-  if (userRole === "Mycologist" && !isAssigned && !isRejected && !isApproved) return null;
+  const isAdmin = userRole === "Administrator" || userRole === "admin";
+
+  if (!isAdmin) return null;
 
   const getTheme = () => {
     if (isRejected) return {
@@ -92,18 +95,42 @@ export default function CaseStatusCard({
         )}
 
         {/* Reassignment Section: Shows if Already Assigned */}
-        {isAssigned && !isRejected && (
-          <div className="pt-8 border-t border-black/[0.04]">
-            <div className="flex flex-col gap-4">
-              <p className="text-[11px] font-bold text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-                Manage Assignment
-              </p>
+        {isAdmin && isAssigned && !isRejected && (
+          <div className="pt-10 border-t-2 border-[var(--primary-color)]/5">
+            
+            <div className="flex flex-col items-start gap-6">
+              
+              <div className="flex gap-5">
+                <div className="w-[4px] h-12 rounded-full bg-[var(--accent-color)] shadow-[0_0_15px_rgba(var(--accent-color),0.3)]" />
+                
+                <div className="flex flex-col justify-center">
+                  <p className="text-[12px] font-black text-[var(--primary-color)] uppercase tracking-[0.15em] font-[family-name:var(--font-bricolage-grotesque)] leading-none mb-1.5">
+                    Management Protocol
+                  </p>
+                  <p className="text-[14px] font-bold text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] leading-snug">
+                    Update the specialist assigned to this case record.
+                  </p>
+                </div>
+              </div>
+
+              {/* 2. Action Button */}
               <button
                 onClick={() => setAssignModalOpen(true)}
-                className="w-full sm:w-auto min-w-[250px] px-4 py-3 bg-[var(--primary-color)] text-white font-[family-name:var(--font-bricolage-grotesque)] text-xs font-bold uppercase rounded-lg hover:opacity-90 transition-opacity shadow-sm"
+                className="cursor-pointer group relative flex items-center gap-4 px-10 py-4 bg-[var(--primary-color)] rounded-2xl transition-all hover:scale-[1.02] active:scale-[0.98] shadow-lg shadow-[var(--primary-color)]/10"
               >
-                Reassign Mycologist
+                <span className="text-[12px] font-black text-white uppercase tracking-[0.1em] font-[family-name:var(--font-bricolage-grotesque)]">
+                  Reassign Mycologist
+                </span>
+                
+                <FontAwesomeIcon 
+                  icon={faArrowRight} 
+                  className="text-white text-xs opacity-60 group-hover:translate-x-1 transition-transform" 
+                />
+                
+                {/* Subtle hover shine */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
               </button>
+              
             </div>
           </div>
         )}

@@ -100,7 +100,7 @@ export default function CaseTable({
                       title={useViewIcon ? "View Case" : "Edit Case"}
                     >
                       <FontAwesomeIcon 
-                        icon={useViewIcon ? faEye : faPen} 
+                        icon={faEye} 
                         className={navigatingId === item.caseName ? 'animate-pulse' : ''}
                         style={{ width: "12px", height: "12px" }} 
                       />

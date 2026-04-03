@@ -139,13 +139,15 @@ export default function Archive() {
   };
 
   return (
-    <div className="mt-5">
-      <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-        Archive
-      </h2>
-      <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mb-6">
-        Your collection of archived wikimolds.
-      </p>
+    <div>
+      <header className="mt-10 mb-12 flex flex-col gap-2">
+        <h1 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight leading-none">
+          Archive
+        </h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">
+          Archived WikiMold Collection
+        </p>
+      </header>
 
       {/* Error Message Display */}
       {error && (

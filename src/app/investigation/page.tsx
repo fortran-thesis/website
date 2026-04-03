@@ -6,6 +6,7 @@ import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import StatusDropdown from '@/components/StatusDropdown';
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
@@ -15,6 +16,7 @@ import type { MoldReportSnapshot, StatusCounts } from '@/hooks/swr/use-mold-repo
 
 export default function Investigation() {
         const { user: authUser, loading: authLoading } = useAuth();
+    const router = useRouter();
         
         // Map auth user data  
         const user = authUser ? {
@@ -256,7 +258,7 @@ export default function Investigation() {
                             cases={filteredCases}
                             onEdit={(c: any) => {
                                 const params = new URLSearchParams({ id: c.id });
-                                window.location.href = `/investigation/view-case?${params.toString()}`;
+                                router.push(`/investigation/view-case?${params.toString()}`);
                             }}
                         />
                         {/* Loading indicator for additional pages */}

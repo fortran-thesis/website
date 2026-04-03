@@ -6,11 +6,13 @@ import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import ReportsTable, { Report } from '@/components/tables/report_table';
 import { useEffect, useState, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFlagReportsInfinite } from '@/hooks/swr';
 
 export default function Reports() {
        
     const userRole = "Administrator";
+  const router = useRouter();
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -192,7 +194,7 @@ export default function Reports() {
               {error && <p className="text-red-600">{error}</p>}
               {!isInitialLoading && !error && <ReportsTable data={filteredReports} 
                 onEdit={(c: Report) => {
-                        window.location.href = `/reports/view-report?id=${c.id}`;
+                        router.push(`/reports/view-report?id=${c.id}`);
                     }}
                 />}
 

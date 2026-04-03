@@ -114,7 +114,7 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
 
             {/* Main content */}
             <div className="flex flex-col flex-grow min-w-0">
-                <main className="flex-grow px-4 sm:px-6 py-4 overflow-x-auto">{children}</main>
+              <main className="flex-grow px-4 sm:px-6 py-4 overflow-x-visible">{children}</main>
                 <Footer />
             </div>
         </div> 

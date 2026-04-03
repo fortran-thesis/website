@@ -728,7 +728,7 @@ function ViewCaseContent() {
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-12 pt-10 border-t border-white/10">
                 <div>
-                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Host Crop</span>
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Host Plant Affected</span>
                   <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{cropName}</p>
                 </div>
                 <div>
@@ -736,7 +736,7 @@ function ViewCaseContent() {
                   <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{location}</p>
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Log Date</span>
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Date Received</span>
                   <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{dateObserved}</p>
                 </div>
               </div>
@@ -826,6 +826,8 @@ function ViewCaseContent() {
         confirmText="Yes, Assign"
         confirmDisabled={isAssigning}
         confirmLoadingText="Assigning..."
+
+
         onCancel={() => setConfirmAssignOpen(false)}
         onConfirm={handleConfirmAssign}
       />
