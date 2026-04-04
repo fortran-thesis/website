@@ -87,7 +87,7 @@ function CaseTimelineTile({
         <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">{dateTime}</p>
 
         <div>
-          <p className="text-sm font-bold font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Additional Notes:</p>
+          <p className="text-sm font-bold font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">Problem Description:</p>
           <p className="text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed break-words">{notes}</p>
         </div>
 

@@ -7,14 +7,17 @@ import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faRotate } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { apiMutate } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 import { StickyDossierNav } from "@/components/dossier_nav";
+import { useMoldCatalog, type MoldCatalogEntry } from '@/hooks/swr/use-mold';
+import MessageBanner from '@/components/feedback/message_banner';
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
+import StatusDropdown from "@/components/StatusDropdown";
 
 /**
  * WikiMoldData: Frontend form data model
@@ -117,22 +120,22 @@ export default function AddWikiMold() {
   
   // Main Form Data State: Holds all article content
   const [wikiMoldData, setWikiMoldData] = useState<WikiMoldData>(EMPTY_WIKIMOLD_DATA);
-  
+
   // Cover Image States: Separate tracking for image preview and file upload
   // coverImagePreview: Base64 string for displaying preview in browser
   // coverImageFile: Actual File object sent to backend via FormData
   const [coverImagePreview, setCoverImagePreview] = useState("");
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
-  
+
   // API Call State: Prevents multiple submissions and shows loading bar
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const navItems = [
-    { id: 'description', label: '01. Description' },
-    { id: 'treatments', label: '02. Treatment Control' },
-    { id: 'findings', label: '03. Findings' },
-  ]; // Sticky navigation items for quick section jumping
+  // Mold Catalog States: For auto-fill dropdown
+  const { data: catalogData, isLoading: catalogLoading } = useMoldCatalog();
+  const [showCatalogBanner, setShowCatalogBanner] = useState(false);
+  const [selectedCatalogMold, setSelectedCatalogMold] = useState<MoldCatalogEntry | null>(null);
 
+  
   // Initialize baseline form snapshot for unsaved-changes detection
   // This captures the form state when component mounts
   useEffect(() => {
@@ -176,6 +179,41 @@ export default function AddWikiMold() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  /**
+   * Handle mold catalog selection
+   * - Maps catalog entry fields to form fields
+   * - Auto-fills biological description, affected hosts, symptoms, etc.
+   * - Shows confirmation banner that fields have been auto-filled
+   */
+  const handleMoldCatalogSelect = (mold: MoldCatalogEntry) => {
+    setSelectedCatalogMold(mold);
+    setShowCatalogBanner(true);
+
+    setWikiMoldData((prev) => ({
+      ...prev,
+      // Pre-fill title if empty
+      title: prev.title || mold.name,
+      // Map catalog fields to form fields
+      content: mold.description || mold.overview || '',
+      affected_hosts: mold.affected_hosts || '',
+      symptoms: mold.symptoms || '',
+      disease_cycle: mold.disease_cycle || '',
+      impact: mold.impact || '',
+      prevention: mold.preventionSummary || '',
+      // Auto-fill treatment controls if available
+      treatments: {
+        mechanical: (mold.prevention as any)?.mechanical || prev.treatments.mechanical,
+        cultural: (mold.prevention as any)?.cultural || prev.treatments.cultural,
+        biological: (mold.prevention as any)?.biological || prev.treatments.biological,
+        physical: (mold.prevention as any)?.physical || prev.treatments.physical,
+        chemical: (mold.prevention as any)?.chemical || prev.treatments.chemical,
+      },
+    }));
+
+    // Auto-dismiss banner after 5 seconds
+    setTimeout(() => setShowCatalogBanner(false), 5000);
   };
 
   /**
@@ -305,7 +343,7 @@ export default function AddWikiMold() {
     if (isChanged) {
       setShowBackConfirm(true);
     } else {
-      window.history.back();
+      router.back();
     }
   };
 
@@ -338,7 +376,48 @@ export default function AddWikiMold() {
 
       {/* MAIN FORM */}
       <form className="w-full" onSubmit={(e) => { e.preventDefault(); setShowConfirm(true); }}>
-        
+        {/* PHASE 00: PREPARATION & SYNC */}
+        <div className="w-full px-8 mb-15">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-12 py-10 border-y border-[var(--primary-color)]/10">
+            
+            <div className="flex items-center gap-8">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full border border-[var(--primary-color)]/20 text-[var(--accent-color)] shadow-sm">
+                <FontAwesomeIcon icon={faRotate} className="animate-spin-slow text-sm" />
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)]">
+                    Quick Start
+                  </span>
+                  <div className="w-6 h-[1px] bg-[var(--primary-color)]/20" />
+                </div>
+                <h2 className="text-xl font-black uppercase tracking-tight text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
+                  Archive Synchronization
+                </h2>
+              </div>
+            </div>
+
+            <div className="w-full md:w-[400px]">
+              <StatusDropdown
+                options={catalogData?.data?.data?.map((m: any) => ({ label: m.name, value: m.name })) || []}
+                onSelect={(v) => {
+                  const selectedMold = catalogData?.data?.data?.find((m: any) => m.name === v);
+                  if (selectedMold) {
+                    handleMoldCatalogSelect(selectedMold);
+                  }
+                }}
+                placeholder="CHOOSE A MOLD TO AUTO FILL..."
+                backgroundColor="transparent"
+                textColor="var(--primary-color)"
+                borderColor="transparent"
+                selectedValue={selectedCatalogMold?.name}
+              />
+              <div className="h-[2px] w-full bg-gradient-to-r from-[var(--primary-color)]/20 via-[var(--primary-color)]/5 to-transparent mt-[-4px]" />
+            </div>
+          </div>
+        </div>
+
         {/* COVER IMAGE SECTION: Banner image upload with preview */}
         <div className="relative w-full mb-16 group px-4">
           <div className="relative w-full h-[350px] rounded-[2.5rem] overflow-hidden bg-[var(--taupe)] shadow-2xl transition-all duration-700">
@@ -359,12 +438,14 @@ export default function AddWikiMold() {
           </div>
         </div>
 
+        
+
         {/* STICKY NAVIGATION: Quick access to form sections */}
         <StickyDossierNav items={[
           { id: 'overview', label: 'Overview' },
-          { id: 'analysis', label: 'Fungal Analysis' },
+          { id: 'analysis', label: 'Host & Pathogen Impact' },
           { id: 'prevention', label: 'Prevention' },
-          { id: 'management', label: 'Treatments' }
+          { id: 'management', label: 'Remediation Protocols' }
         ]} />
 
         <div className="max-w-full mx-auto px-4 space-y-32 mt-10">
@@ -512,6 +593,21 @@ export default function AddWikiMold() {
         </div>
       </form>
 
+      {showBackConfirm && (
+        <ConfirmModal
+          isOpen={showBackConfirm}
+          title="Discard changes?"
+          subtitle="You have unsaved changes. If you leave now, your edits will be lost."
+          cancelText="Stay"
+          confirmText="Leave"
+          onCancel={() => setShowBackConfirm(false)}
+          onConfirm={() => {
+            setShowBackConfirm(false);
+            router.back();
+          }}
+        />
+      )}
+
       {/* CONFIRMATION MODAL: Appears when user clicks "Publish Article" */}
       {/* Allows user to review before final submission */}
       {showConfirm && (
@@ -530,15 +626,15 @@ export default function AddWikiMold() {
       {/* ALERTS: Feedback messages shown at bottom of page */}
       {/* Error: Validation or API errors (red background) */}
       {errorMessage && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-full text-sm font-bold z-50 shadow-lg">
+        <MessageBanner variant="error" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 shadow-lg rounded-full px-6 py-3 text-sm font-bold text-white">
           {errorMessage}
-        </div>
+        </MessageBanner>
       )}
       {/* Success: Article published successfully (green background) */}
       {successMessage && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full text-sm font-bold z-50 shadow-lg">
+        <MessageBanner variant="success" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 shadow-lg rounded-full px-6 py-3 text-sm font-bold text-white">
           {successMessage}
-        </div>
+        </MessageBanner>
       )}
     </main>
   </>

@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { setUserData } from '@/utils/auth';
+import TopLoadingBar from '@/components/loading/top_loading_bar';
+import MessageBanner from '@/components/feedback/message_banner';
 
 {/* IMAGES */}
 const LogInImage = '/assets/LogIn_Image.svg';
@@ -29,6 +31,8 @@ export default function Auth() {
 
   // Handler to set which recovery type was clicked
   const handleRecoveryClick = (type: "forgot-username" | "forgot-password") => {
+    setIsLoading(true);
+    setError(null);
     // Set recovery type in sessionStorage for account recovery pages
     if (typeof window !== "undefined") {
       sessionStorage.setItem("recoveryType", type);
@@ -112,14 +116,7 @@ export default function Auth() {
   return (
       <>
       {/* Top Loading Bar */}
-      {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div 
-            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
-            style={{ width: '30%' }}
-          />
-        </div>
-      )}
+      <TopLoadingBar isVisible={isLoading} />
 
       <div className="relative min-h-screen w-full flex items-center justify-center lg:justify-start bg-[#fcfaf2] overflow-hidden">
       
@@ -154,9 +151,9 @@ export default function Auth() {
           <h1 className="font-[family-name:var(--font-montserrat)] font-black text-5xl md:text-6xl text-[var(--primary-color)] mb-12 tracking-tight">LOG IN</h1>
 
           {error && (
-            <div className="mb-6 p-3 bg-red-100 border border-red-200 text-red-700 rounded-lg text-xs text-center lg:text-left">
+            <MessageBanner variant="error" className="mb-6 text-xs text-center lg:text-left">
               {error}
-            </div>
+            </MessageBanner>
           )}
 
           <form className="flex flex-col space-y-6" onSubmit={handleSubmit}>

@@ -3,9 +3,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 export default function StatisticsTile({ icon, iconColor, title, statNum }: { icon: any; iconColor: string; title: string, statNum: number }) {
     return (
-        <div className = "bg-[var(--taupe)] rounded-xl p-5 w-full">
+        <div className = "bg-[var(--taupe)] rounded-3xl p-5 w-full">
             <div className="flex flex-row items-center gap-4">
-                <div className = "bg-[var(--background-color)] p-5 rounded-xl">
+                <div className = "bg-[var(--background-color)] p-5 rounded-3xl">
                     <FontAwesomeIcon
                         icon={icon}
                         style={{ width: "1.5rem", height: "1.5rem", color: iconColor }}

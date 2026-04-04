@@ -6,6 +6,7 @@ interface DropdownOption {
   label: string;
   value: string;
   variant?: "default" | "danger";
+  disabled?: boolean;
 }
 
 interface StatusDropdownProps {
@@ -76,12 +77,16 @@ export default function StatusDropdown({
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => handleSelect(option.value)}
+                  onClick={() => {
+                    if (option.disabled) return;
+                    handleSelect(option.value);
+                  }}
+                  disabled={option.disabled}
                   className={`w-full text-left px-4 py-3 text-xs font-bold transition-colors font-[family-name:var(--font-bricolage-grotesque)] break-words ${
                     option.variant === "danger"
                       ? "hover:bg-red-50 text-red-600"
                       : "hover:bg-[var(--taupe)] text-[var(--primary-color)]"
-                  }`}
+                  } ${option.disabled ? "opacity-40 cursor-not-allowed hover:bg-transparent" : ""}`}
                 >
                   {option.label}
                 </button>

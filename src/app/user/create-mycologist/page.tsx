@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faCircle, faCircleCheck, faEye, faEyeSlash, faUserPlus } from "@fortawesome/free-solid-svg-icons";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import ConfirmModal from "@/components/modals/confirmation_modal";
+import MessageBanner from "@/components/feedback/message_banner";
 import { apiMutate, ApiError } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
@@ -50,6 +51,9 @@ export default function CreateMycologist() {
   const hasNumber = [...formData.password].some(char => /[0-9]/.test(char));
   const hasSpecialChar = [...formData.password].some(char => /[^a-zA-Z0-9]/.test(char));
   const hasMinLength = formData.password.length >= 8;
+  const passwordsMatch =
+    formData.confirmPassword.length > 0 &&
+    formData.password === formData.confirmPassword;
 
   const handleChange = (field: keyof MycoFormData, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -149,244 +153,112 @@ export default function CreateMycologist() {
 
 
 
+  const labelStyles = "font-[family-name:var(--font-bricolage-grotesque)] text-[11px] uppercase tracking-[0.15em] text-[var(--primary-color)] font-black mb-2 block opacity-60";
+  const inputStyles = "w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3.5 px-5 rounded-xl border border-transparent focus:border-[var(--primary-color)]/20 focus:bg-white focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed";
+
   return (
-    <main className="relative flex flex-col xl:py-2 py-10 w-full">
-      {/* Top Loading Bar */}
-      {isLoading && (
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div 
-            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
-            style={{ width: '30%' }}
-          />
-        </div>
-      )}
+    <main className="mx-auto w-full py-12 px-6">
+      <Breadcrumbs role={userRole} />
 
-      {/* Header Section */}
-      <div className="flex flex-col">
-        <Breadcrumbs role={userRole} />
-        <div className="flex items-center gap-4 mb-2">
-          <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl uppercase">
-            User Management
-          </h1>
+      <header className="mt-10 mb-12 flex items-center gap-6">
+        <BackButton onClick={handleBackClick} />
+        <div className="flex flex-col">
+          <h2 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight leading-none">
+            Register Mycologist
+          </h2>
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--moldify-grey)] mt-2 font-[family-name:var(--font-bricolage-grotesque)] opacity-60">
+            Account Provisioning Portal
+          </p>
         </div>
-      </div>
+      </header>
 
-      <div className = "mt-10">
-        {/* Error Message */}
       {error && (
-        <div className="mb-6 p-3 bg-red-100 border border-red-200 text-red-700 rounded-lg text-xs">
+        <MessageBanner variant="error" className="mb-10 text-[10px] uppercase tracking-widest">
           {error}
-        </div>
+        </MessageBanner>
       )}
 
-    
-      <div className = "mb-5">
-        <div className="flex items-start gap-4">
-          <BackButton onClick={handleBackClick} />
-          <div className="flex flex-col">
-            <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-              Create Mycologist Account
-            </h2>
-            <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-              Register a new mycologist to the system.
-            </p>
+      <form onSubmit={handleCreateClick} className="space-y-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+          {/* Identity Section */}
+          <div>
+            <label htmlFor="first-name" className={labelStyles}>First Name</label>
+            <input id="first-name" placeholder="Enter first name" type="text" value={formData.firstName} onChange={(e) => handleChange("firstName", e.target.value)} disabled={isLoading} required className={inputStyles} />
           </div>
-        </div>
-      </div>
 
-      </div>
-      {/* Form */}
-      <form onSubmit={handleCreateClick} className="space-y-6 mt-4">
-        <div className="border border-[var(--moldify-softGrey)] rounded-lg p-8 bg-transparent">
+          <div>
+            <label htmlFor="last-name" className={labelStyles}>Last Name</label>
+            <input id="last-name" placeholder="Enter last name" type="text" value={formData.lastName} onChange={(e) => handleChange("lastName", e.target.value)} disabled={isLoading} required className={inputStyles} />
+          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* First Name */}
-            <div>
-              <label
-                htmlFor="first-name"
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mb-2 block"
-              >
-                First Name
-              </label>
-              <input
-                id="first-name"
-                placeholder="Enter First Name"
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => handleChange("firstName", e.target.value)}
-                disabled={isLoading}
-                required
-                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-              />
+          <div>
+            <label htmlFor="username" className={labelStyles}>Username</label>
+            <input id="username" placeholder="Enter username" type="text" value={formData.username} onChange={(e) => handleChange("username", e.target.value)} disabled={isLoading} required className={inputStyles} />
+          </div>
+
+          <div>
+            <label htmlFor="email" className={labelStyles}>Registry Email</label>
+            <input id="email" placeholder="email@moldify.com" type="email" value={formData.email} onChange={(e) => handleChange("email", e.target.value)} disabled={isLoading} required className={inputStyles} />
+          </div>
+
+          {/* Security Section */}
+          <div>
+            <label htmlFor="password" className={labelStyles}>Password</label>
+            <div className="relative">
+              <input id="password" placeholder="••••••••" type={showPassword ? "text" : "password"} value={formData.password} onChange={(e) => handleChange("password", e.target.value)} disabled={isLoading} required className={inputStyles} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} disabled={isLoading} className="cursor-pointer absolute right-5 top-1/2 -translate-y-1/2 text-[var(--primary-color)] opacity-20 hover:opacity-100 transition-all p-1">
+                <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} className="w-4 h-4" />
+              </button>
             </div>
+          </div>
 
-            {/* Last Name */}
-            <div>
-              <label
-                htmlFor="last-name"
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mb-2 block"
-              >
-                Last Name
-              </label>
-              <input
-                id="last-name"
-                placeholder="Enter Last Name"
-                type="text"
-                value={formData.lastName}
-                onChange={(e) => handleChange("lastName", e.target.value)}
-                disabled={isLoading}
-                required
-                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Username */}
-            <div>
-              <label
-                htmlFor="username"
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mb-2 block"
-              >
-                Username
-              </label>
-              <input
-                id="username"
-                placeholder="Enter Username"
-                type="text"
-                value={formData.username}
-                onChange={(e) => handleChange("username", e.target.value)}
-                disabled={isLoading}
-                required
-                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label
-                htmlFor="email"
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mb-2 block"
-              >
-                Email
-              </label>
-              <input
-                id="email"
-                placeholder="Enter Email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleChange("email", e.target.value)}
-                disabled={isLoading}
-                required
-                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label
-                htmlFor="password"
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mb-2 block"
-              >
-                Password
-              </label>
-              <div className="relative mb-3">
-                <input
-                  id="password"
-                  placeholder="Enter Password"
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={(e) => handleChange("password", e.target.value)}
-                  disabled={isLoading}
-                  required
-                  className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-12 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--primary-color)] opacity-50 cursor-pointer hover:opacity-100 transition-all disabled:cursor-not-allowed"
-                  aria-label="Toggle password visibility"
-                >
-                  <FontAwesomeIcon icon={showPassword ? faEye : faEyeSlash} className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Password Requirements */}
-              {formData.password && (
-                <div className="space-y-2 text-xs font-[family-name:var(--font-bricolage-grotesque)] mb-3">
-                  <div className={hasMinLength ? "text-green-600" : "text-red-600"}>
-                    ✓ At least 8 characters
-                  </div>
-                  <div className={hasLowerCase ? "text-green-600" : "text-red-600"}>
-                    ✓ At least one lowercase letter (a-z)
-                  </div>
-                  <div className={hasUpperCase ? "text-green-600" : "text-red-600"}>
-                    ✓ At least one capital letter (A-Z)
-                  </div>
-                  <div className={hasNumber ? "text-green-600" : "text-red-600"}>
-                    ✓ At least one number (0-9)
-                  </div>
-                  <div className={hasSpecialChar ? "text-green-600" : "text-red-600"}>
-                    ✓ At least one special character (!@#$%^&*...)
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label
-                htmlFor="confirm-password"
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mb-2 block"
-              >
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  id="confirm-password"
-                  placeholder="Confirm Password"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleChange("confirmPassword", e.target.value)}
-                  disabled={isLoading}
-                  required
-                  className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-12 rounded-lg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  disabled={isLoading}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--primary-color)] opacity-50 cursor-pointer hover:opacity-100 transition-all disabled:cursor-not-allowed"
-                  aria-label="Toggle confirm password visibility"
-                >
-                  <FontAwesomeIcon icon={showConfirmPassword ? faEye : faEyeSlash} className="w-4 h-4" />
-                </button>
-              </div>
+          <div>
+            <label htmlFor="confirm-password" className={labelStyles}>Confirm Password</label>
+            <div className="relative">
+              <input id="confirm-password" placeholder="••••••••" type={showConfirmPassword ? "text" : "password"} value={formData.confirmPassword} onChange={(e) => handleChange("confirmPassword", e.target.value)} disabled={isLoading} required className={inputStyles} />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} disabled={isLoading} className="cursor-pointer absolute right-5 top-1/2 -translate-y-1/2 text-[var(--primary-color)] opacity-20 hover:opacity-100 transition-all p-1">
+                <FontAwesomeIcon icon={showConfirmPassword ? faEye : faEyeSlash} className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-end gap-4">
-          <button
-            type="button"
-            onClick={handleBackClick}
-            disabled={isLoading}
-            className={`px-10 py-3 rounded-lg bg-transparent border-2 border-[var(--primary-color)] text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] font-semibold hover:bg-[var(--primary-color)]/10 transition-colors ${
-              isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
-            }`}
-          >
-            Cancel
+        {/* Validation Tray - Matching your specific palette */}
+        {formData.password && (
+          <div className="p-8 bg-[var(--taupe)] rounded-[2rem] border border-[var(--primary-color)]/5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-12">
+            {[
+              { met: hasMinLength, label: "08+ Character Units" },
+              { met: hasLowerCase, label: "Lowercase Sequence" },
+              { met: hasUpperCase, label: "Uppercase Sequence" },
+              { met: hasNumber, label: "Numerical Entry" },
+              { met: hasSpecialChar, label: "Symbolic Integrity" },
+              { met: passwordsMatch, label: "Passwords Match" },
+            ].map((req, i) => (
+              <div key={i} className={`flex items-center gap-3 transition-all duration-300 ${req.met ? 'opacity-100' : 'opacity-20'}`}>
+                <FontAwesomeIcon 
+                  icon={req.met ? faCircleCheck : faCircle} 
+                  className={`w-3.5 h-3.5 transition-colors duration-500 ${req.met ? 'text-[var(--accent-color)] shadow-[0_0_15px_var(--accent-color)]/20' : 'text-[var(--primary-color)]'}`} 
+                />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">
+                  {req.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <footer className="flex justify-end items-center gap-6 pt-10 border-t border-[var(--primary-color)]/5">
+          <button type="button" onClick={handleBackClick} disabled={isLoading} className="cursor-pointer text-[10px] font-black uppercase tracking-widest text-[var(--primary-color)] opacity-40 hover:opacity-100 transition-all disabled:opacity-20 font-[family-name:var(--font-bricolage-grotesque)]">
+            Cancel Registration
           </button>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`px-10 py-3 rounded-lg bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] font-semibold hover:bg-[var(--hover-primary)] transition-colors ${
-              isLoading ? 'opacity-50 cursor-wait' : 'cursor-pointer'
-            }`}
-          >
-            {isLoading ? "Creating..." : "Create Account"}
+          <button type="submit" disabled={isLoading} className="cursor-pointer px-12 py-4 rounded-xl bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.15)] hover:-translate-y-1 active:translate-y-0 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-wait">
+            <div className="flex items-center gap-3">
+              <FontAwesomeIcon icon={faUserPlus} className="text-[10px]" />
+              <span>{isLoading ? "Creating..." : "Create Account"}</span>
+            </div>
           </button>
-        </div>
+        </footer>
       </form>
 
       {/* Back/Cancel Confirmation Modal */}

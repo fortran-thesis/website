@@ -3,15 +3,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHouseChimney, faClipboard, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers, faBookOpen, faSeedling, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import { faHouseChimney, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers, faBookOpen, faSeedling, faChevronLeft, faChevronRight, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLogout } from '@/hooks/useLogout';
+import ConfirmModal from '@/components/modals/confirmation_modal';
+import TopLoadingBar from '@/components/loading/top_loading_bar';
 
 const MoldifyLogo = '/assets/Moldify_Logo.png';
-
-// This is the sidebar component that contains navigation links to different 
-// sections of the application.
-// It is responsive and can be toggled on smaller screens.
 
 interface SidebarProps {
     userRole?: string;
@@ -21,12 +19,12 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const [navOpen, setNavOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
-    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(true); 
     const [isDesktop, setIsDesktop] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const logout = useLogout();
 
-    // Normalize role comparison - handle both "Admin"/"Administrator" and "Mycologist"
     const normalizeRole = (role: string): string => {
         if (!role) return "Mycologist";
         const lowerRole = role.toLowerCase();
@@ -38,30 +36,29 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const isMycologist = normalizedRole === "Mycologist";
 
     const handleLogout = async () => {
+        if (isLoggingOut) return;
+        setShowLogoutConfirm(true);
+    };
+
+    const confirmLogout = async () => {
+        setShowLogoutConfirm(false);
         setIsLoggingOut(true);
         await logout();
     };
 
-    //Detect scroll
     useEffect(() => {
-        const handleScroll = () => {
-        setScrolled(window.scrollY > 10);
-        };
+        const handleScroll = () => setScrolled(window.scrollY > 10);
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    useEffect(() => {
-        setIsMounted(true);
-    }, []);
+    useEffect(() => { setIsMounted(true); }, []);
 
     useEffect(() => {
         const handleResize = () => {
             const desktop = window.innerWidth >= 1280;
             setIsDesktop(desktop);
-            if (!desktop) {
-                setIsCollapsed(false);
-            }
+            if (!desktop) setIsCollapsed(false);
         };
         handleResize();
         window.addEventListener("resize", handleResize);
@@ -71,9 +68,7 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     useEffect(() => {
         if (!isMounted || !isDesktop) return;
         const saved = window.localStorage.getItem("sidebarCollapsed");
-        if (saved === "true") {
-            setIsCollapsed(true);
-        }
+        if (saved !== null) setIsCollapsed(saved === "true");
     }, [isDesktop, isMounted]);
 
     useEffect(() => {
@@ -85,191 +80,170 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
 
     return (
         <>
-            <div
-            className={`xl:hidden fixed top-0 left-0 w-full h-14 z-50 flex items-center justify-between px-4 transition-all duration-300
-                ${scrolled ? "bg-[var(--primary-color)]/95 shadow-md backdrop-blur-sm" : "bg-transparent"}
-            `}
-            ></div>
-            <button 
-                className="xl:hidden fixed top-4 left-4 z-50"
-                onClick={() => setNavOpen(true)}
-                aria-label="Open navigation">
-                <FontAwesomeIcon icon={faBars} className={`cursor-pointer ${scrolled ? "text-[var(--background-color)]" : "text-[var(--primary-color)]"}`} style={{ width: "1.5rem", height: "1.5rem" }} />
-            </button>
+            <TopLoadingBar isVisible={isLoggingOut} />
 
+            {/* MOBILE TOP BAR */}
+            <div className={`xl:hidden fixed top-0 left-0 w-full h-16 z-[60] flex items-center px-6 transition-all duration-300
+                ${scrolled ? "bg-[var(--primary-color)] shadow-lg" : "bg-transparent"}
+            `}>
+                <button 
+                    onClick={() => setNavOpen(true)} 
+                    className="p-2 -ml-2"
+                    aria-label="Open Menu"
+                >
+                    <FontAwesomeIcon 
+                        icon={faBars} 
+                        className={scrolled ? "text-white" : "text-[var(--primary-color)]"} 
+                        style={{ width: "1.5rem", height: "1.5rem" }} 
+                    />
+                </button>
+            </div>
+
+            {/* MOBILE OVERLAY */}
             {navOpen && (
-                <div className="fixed inset-0 bg-black/40 z-40 xl:hidden" onClick={() => setNavOpen(false)} />
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] xl:hidden transition-opacity duration-300" 
+                    onClick={() => setNavOpen(false)} 
+                />
             )}
 
-                 <div
-                    className={`relative xl:flex-shrink-0 overflow-visible bg-[var(--primary-color)] w-[280px] z-50 xl:sticky xl:top-0 xl:h-screen fixed top-0 left-0 h-full transform transition-transform duration-300 
-                ${navOpen ? "translate-x-0" : "-translate-x-full"} 
-                    ${isCollapsedEffective ? "xl:w-[88px]" : "xl:w-[280px]"}
-                xl:translate-x-0 xl:static
-                `}
-            >
-            <nav className="text-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] flex flex-col h-full">
-                {/* Top Branding */}
-                    <div className={`flex items-start ${isCollapsedEffective ? "justify-center" : "justify-between"} gap-4 p-6`}>
-                        <div className={`flex items-start gap-4 ${isCollapsedEffective ? "justify-center" : ""}`}>
-                    <Image 
-                        src={MoldifyLogo} 
-                        alt="Moldify Logo" 
-                            width={isCollapsedEffective ? 40 : 60} 
-                            height={isCollapsedEffective ? 40 : 60} 
-                    />
-                        {!isCollapsedEffective && (
-                        <div className="flex flex-col justify-center">
-                            <h2 className="text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-black text-2xl">MOLDIFY</h2>
-                            <p className="text-[var(--background-color)] text-xs font-[family-name:var(--font-bricolage-grotesque)]">Identify mold with Moldify</p>
-                        </div>
-                    )}
-                    </div>
-                </div>
-
+            <div className="relative group/sidebar h-full">
+                {/* FLOATING TOGGLE BUTTON - Centered Vertically & Hover-only */}
                 <button
-                    type="button"
-                    onClick={() => setIsCollapsed((prev) => !prev)}
-                    className="hidden xl:flex items-center justify-center absolute top-4 right-0 translate-x-1/2 rounded-full text-xs  bg-[var(--background-color)] border-2 border-[var(--primary-color)]/30 text-[var(--primary-color)] w-7 h-7 hover:brightness-110 transition cursor-pointer"
-                    aria-label={isCollapsedEffective ? "Expand sidebar" : "Collapse sidebar"}
-                    title={isCollapsedEffective ? "Expand" : "Collapse"}
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className={`hidden xl:flex items-center justify-center fixed top-1/2 -translate-y-1/2 w-8 h-8 rounded-full z-[100] transition-all duration-300
+                        bg-white shadow-[0_4px_12px_rgba(0,0,0,0.15)] border border-gray-100 text-[var(--primary-color)]
+                        opacity-0 group-hover/sidebar:opacity-100 hover:scale-110 cursor-pointer
+                        ${isCollapsedEffective ? "left-[72px]" : "left-[264px]"}
+                    `}
                 >
-                    <FontAwesomeIcon icon={isCollapsedEffective ? faChevronRight : faChevronLeft} />
+                    <FontAwesomeIcon icon={isCollapsedEffective ? faChevronRight : faChevronLeft} size="sm" />
                 </button>
 
-                <div className="h-px bg-[#576146] w-full mb-2" />
-
-                {/* Navigation Container: fills vertical space */}
-                <div className="flex flex-col justify-between h-full mt-4">
-                    {/* Top Links */}
-                    <div className = "flex flex-col gap-y-4">
-                        <SidebarLink icon={faHouseChimney} 
-                            text="Dashboard" 
-                            href="/dashboard"
-                            collapsed={isCollapsedEffective} />
+                <aside
+                    className={`fixed top-0 left-0 h-full z-[80] bg-[var(--primary-color)] transition-all duration-300 ease-in-out border-r border-white/10
+                    ${navOpen ? "translate-x-0" : "-translate-x-full"} 
+                    ${isCollapsedEffective ? "xl:w-[88px]" : "xl:w-[280px]"}
+                    xl:translate-x-0 xl:sticky xl:top-0 xl:h-screen overflow-x-hidden
+                    `}
+                >
+                    <nav className="text-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] flex flex-col h-full">
                         
-                        {isAdministrator && (
-                            <SidebarLink icon={faUsers} 
-                                text="User Management" 
-                                href="/user"
-                                collapsed={isCollapsedEffective} />
-                        )}
-                        
-                        <SidebarLink icon={faSeedling} 
-                            text="Case Management"
-                            href="/investigation"
-                            collapsed={isCollapsedEffective} />
-                        
-                        {isMycologist && (
-                            <SidebarLink icon={faBookOpen} 
-                                text="Content Management" 
-                                href="/content-management"
-                                collapsed={isCollapsedEffective} />
-                        )}
-                        
-                        {isAdministrator && (
-                            <SidebarLink icon={faTriangleExclamation} 
-                                text="Report Management" 
-                                href="/reports"
-                                collapsed={isCollapsedEffective} />
-                        )}
-                    </div>
-
-                    {/* Bottom Links */}
-                    <div className = "flex flex-col gap-y-4">
-                        <div className="h-px bg-[#576146] w-full" />
-                        <SidebarLink icon={faGear} 
-                            text="Settings" 
-                            href="/settings"
-                            onNavigate={() => setNavOpen(false)}
-                            collapsed={isCollapsedEffective} />
-                        <div className="h-px bg-[#576146] w-full" />
-                        
-                        {/* Top Loading Bar */}
-                        {isLoggingOut && (
-                            <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-                                <div 
-                                    className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
-                                    style={{ width: '30%' }}
+                        {/* Brand Section - Now cleaner without the button nearby */}
+                        <div className={`flex items-start ${isCollapsedEffective ? "justify-center" : "justify-between gap-4"} p-6 pt-10 min-h-[120px]`}>
+                            <div className="flex items-start gap-4">
+                                <Image 
+                                    src={MoldifyLogo} 
+                                    alt="Logo" 
+                                    width={isCollapsedEffective ? 45 : 60} 
+                                    height={isCollapsedEffective ? 45 : 60} 
+                                    className="flex-shrink-0"
                                 />
+                                {!isCollapsedEffective && (
+                                    <div className="flex flex-col animate-in fade-in duration-300">
+                                        <h2 className="text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-black text-2xl tracking-tight leading-none uppercase">MOLDIFY</h2>
+                                        <p className="text-[10px] font-[family-name:var(--font-bricolage-grotesque)] opacity-70 mt-1 tracking-widest">Identify Mold with Moldify</p>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                        
-                        <button
-                            onClick={handleLogout}
-                            disabled={isLoggingOut}
-                            className={`cursor-pointer flex items-center hover:bg-white/20 p-2 rounded-xl text-left relative group ${
-                                isLoggingOut ? 'opacity-60 cursor-wait' : ''
-                            } ${isCollapsedEffective ? 'justify-center mx-2' : 'gap-x-6 mx-4'} mb-2`}
-                        >
-                            <FontAwesomeIcon
-                                icon={faRightFromBracket}
-                                className={`mt-1 text-[var(--background-color)] ${isLoggingOut ? 'animate-pulse' : ''}`}
-                                style={{ width: "1.5rem", height: "1.5rem" }}
-                            />
-                            {!isCollapsedEffective && <span className="mt-1 text-sm">Log Out</span>}
-                            {isCollapsedEffective && (
-                                <span className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 whitespace-nowrap rounded-md bg-[var(--moldify-black)] text-[var(--background-color)] text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition">
-                                    Log Out
-                                </span>
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </nav>
+                            
+                            <button onClick={() => setNavOpen(false)} className="xl:hidden text-white/50 hover:text-white">
+                                <FontAwesomeIcon icon={faXmark} size="lg" />
+                            </button>
+                        </div>
+
+                        <div className="h-px bg-white/10 mx-6 mb-6" />
+
+                        {/* Navigation Links */}
+                        <div className="flex-1 flex flex-col justify-between overflow-y-auto no-scrollbar overflow-x-hidden">
+                            <div className="px-3 space-y-2">
+                                <SidebarLink icon={faHouseChimney} text="Dashboard" href="/dashboard" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />
+                                {isAdministrator && <SidebarLink icon={faUsers} text="User Management" href="/user" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />}
+                                <SidebarLink icon={faSeedling} text="Case Management" href="/investigation" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />
+                                {isMycologist && <SidebarLink icon={faBookOpen} text="Content Management" href="/content-management" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />}
+                                {isAdministrator && <SidebarLink icon={faTriangleExclamation} text="Report Management" href="/reports" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />}
+                            </div>
+
+                            <div className="px-3 pb-8 space-y-2">
+                                <div className="h-px bg-white/10 mx-3 my-4" />
+                                <SidebarLink icon={faGear} text="Settings" href="/settings" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />
+                                
+                                <button
+                                    onClick={handleLogout}
+                                    disabled={isLoggingOut}
+                                    title={isCollapsedEffective ? "Log Out" : undefined}
+                                    aria-label={isCollapsedEffective ? "Log Out" : undefined}
+                                    className={`w-full flex items-center p-3 rounded-xl hover:bg-red-500/10 transition-all group relative
+                                    ${isCollapsedEffective ? "justify-center" : "gap-5"}
+                                    ${isLoggingOut ? "opacity-50" : ""}`}
+                                >
+                                    <div className="w-6 flex justify-center flex-shrink-0">
+                                        <FontAwesomeIcon icon={faRightFromBracket} className={isLoggingOut ? "animate-pulse" : ""} />
+                                    </div>
+                                    {!isCollapsedEffective && <span className="text-sm font-medium">Log Out</span>}
+                                    
+                                    {isCollapsedEffective && (
+                                        <span className="absolute left-full ml-4 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-[100] pointer-events-none shadow-xl transition-all duration-150 delay-300">
+                                            Log Out
+                                        </span>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+                </aside>
             </div>
+
+            <ConfirmModal
+                isOpen={showLogoutConfirm}
+                title="Log Out"
+                subtitle="Are you sure you want to log out?"
+                cancelText="Cancel"
+                confirmText="Log Out"
+                confirmDisabled={isLoggingOut}
+                confirmLoadingText="Logging out..."
+                onCancel={() => setShowLogoutConfirm(false)}
+                onConfirm={confirmLogout}
+            />
         </>
     );
 }
 
-// helper component for cleaner code
-function SidebarLink({ icon, text, href, onNavigate, collapsed }: { icon: any; text: string; href: string; onNavigate?: () => void; collapsed?: boolean }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [active, setActive] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
-
-  useEffect(() => {
-    if (pathname) {
-      setActive(pathname === href || pathname.startsWith(href + "/"));
-      setIsNavigating(false);
-    }
-  }, [pathname, href]);
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (pathname !== href && !isNavigating) {
-      setIsNavigating(true);
-      router.push(href);
-    }
-  };
+function SidebarLink({ icon, text, href, collapsed, onNavigate }: { icon: any; text: string; href: string; collapsed: boolean; onNavigate?: () => void }) {
+    const pathname = usePathname();
+    const router = useRouter();
+    const active = pathname === href || pathname.startsWith(href + "/");
 
     return (
         <Link
             href={href}
-            onClick={handleClick}
-            className={`cursor-pointer flex hover:bg-white/20 p-2 rounded-xl items-center transition-all relative group ${
-                active ? "bg-white/20" : ""
-            } ${
-                isNavigating ? "opacity-60" : ""
-            } ${collapsed ? "justify-center mx-2" : "gap-x-6 mx-4"} mb-2`}
             title={collapsed ? text : undefined}
+            aria-label={collapsed ? text : undefined}
+            onClick={(e) => {
+                e.preventDefault();
+                if (onNavigate) onNavigate();
+                router.push(href);
+            }}
+            className={`flex items-center p-3 rounded-xl transition-all group relative
+                ${active ? "bg-white/15 text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}
+                ${collapsed ? "justify-center" : "gap-5"}
+            `}
         >
-      <FontAwesomeIcon
-        icon={icon}
-        className="mt-1 text-[var(--background-color)]"
-        style={{ width: "1.5rem", height: "1.5rem" }}
-      />
+            <div className="w-6 flex justify-center flex-shrink-0">
+                <FontAwesomeIcon icon={icon} style={{ width: "1.2rem", height: "1.2rem" }} />
+            </div>
+            
             {!collapsed && (
-                <span className={`mt-1 text-sm ${active ? "font-bold" : ""}`}>
+                <span className="text-sm font-medium whitespace-nowrap overflow-hidden">
                     {text}
                 </span>
             )}
-                        {collapsed && (
-                                <span className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 whitespace-nowrap rounded-md bg-[var(--moldify-black)] text-[var(--background-color)] text-xs px-2 py-1 opacity-0 group-hover:opacity-100 transition">
-                                        {text}
-                                </span>
-                        )}
-    </Link>
-  );
+
+            {collapsed && (
+                <span className="absolute left-full ml-4 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-[100] pointer-events-none shadow-xl transition-all duration-150 delay-300">
+                    {text}
+                </span>
+            )}
+        </Link>
+    );
 }

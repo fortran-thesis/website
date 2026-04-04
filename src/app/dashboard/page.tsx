@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBacterium, faBell, faBookOpen, faHourglassHalf, faSeedling, faTriangleExclamation, faUsers } from '@fortawesome/free-solid-svg-icons';
@@ -11,6 +12,7 @@ import CaseTable from '@/components/tables/case_table';
 import AuthDebug from '@/components/auth-debug';
 import NotificationsPanel from '@/components/notifications_panel';
 import DonutChart from '@/components/charts/donut-chart';
+import PageLoading from '@/components/loading/page_loading';
 import {
   useUnassignedReports,
   useAssignedReports,
@@ -25,6 +27,7 @@ const userRole = "Administrator";
 export default function Home() {
     // Get authenticated user data from centralized auth hook
     const { user: authUser, loading: authLoading } = useAuth();
+  const router = useRouter();
     
     // Fallback mock data for initial UI
     const fallbackChartData = [
@@ -222,15 +225,7 @@ export default function Home() {
 
     // Show loading state while checking authentication
     if (authLoading) {
-        return (
-            <main className="relative flex flex-col xl:py-2 py-10 items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">
-                        Loading dashboard...
-                    </p>
-                </div>
-            </main>
-        );
+      return <PageLoading message="Loading dashboard..." fullScreen />;
     }
 
     return (
@@ -353,7 +348,7 @@ export default function Home() {
                     showAction={true}
                     onEdit={(c: any) => {
                       const params = new URLSearchParams({ id: c.id });
-                      window.location.href = `/investigation/view-case?${params.toString()}`;
+                      router.push(`/investigation/view-case?${params.toString()}`);
                   }}
                 />
             </div>

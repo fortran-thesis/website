@@ -9,6 +9,8 @@ import UserTable from '@/components/tables/user_table';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserRoleCounts, useUserDisabledCounts, useUsersInfinite } from '@/hooks/swr';
+import PageLoading from '@/components/loading/page_loading';
+import MessageBanner from '@/components/feedback/message_banner';
 
 
 export default function Users() {
@@ -26,21 +28,6 @@ export default function Users() {
     const { data: rolesData } = useUserRoleCounts();
     const { data: disabledData } = useUserDisabledCounts();
 
-    const roleCounts = (rolesData as any)?.data ?? { farmer: 0, mycologist: 0, admin: 0 };
-    const disabledCounts = (disabledData as any)?.data ?? { active: 0, inactive: 0 };
-
-    const totalUsers = roleCounts.farmer + roleCounts.mycologist + roleCounts.admin;
-    const totalFarmers = roleCounts.farmer;
-    const totalMycologists = roleCounts.mycologist;
-    const totalAdmins = roleCounts.admin;
-
-    const inactiveCount = disabledCounts.inactive;
-    const activeCount = disabledCounts.active;
-    const userStatusData = [
-        { name: "Inactive", value: inactiveCount, color: "var(--moldify-red)" },
-        { name: "Active", value: activeCount, color: "var(--primary-color)" },
-    ];
-
     // SWR: paginated users
     const {
       data: usersPages,
@@ -54,6 +41,46 @@ export default function Users() {
       () => usersPages?.flatMap((p: any) => p.data?.snapshot ?? []) ?? [],
       [usersPages],
     );
+
+    // Fallback client-side counts when backend count endpoints fail or return different key names.
+    const computedRoleCounts = useMemo(() => {
+        return users.reduce(
+            (acc: { farmer: number; mycologist: number; admin: number }, user: any) => {
+                const roleValue = String(user.user?.role ?? '').toLowerCase();
+                if (roleValue === 'user' || roleValue === 'farmer') acc.farmer += 1;
+                else if (roleValue === 'mycologist') acc.mycologist += 1;
+                else if (roleValue === 'administrator' || roleValue === 'admin') acc.admin += 1;
+                return acc;
+            },
+            { farmer: 0, mycologist: 0, admin: 0 },
+        );
+    }, [users]);
+
+    const computedDisabledCounts = useMemo(() => {
+        return users.reduce(
+            (acc: { active: number; inactive: number }, user: any) => {
+                if (user.details?.disabled === true) acc.inactive += 1;
+                else acc.active += 1;
+                return acc;
+            },
+            { active: 0, inactive: 0 },
+        );
+    }, [users]);
+
+    const rawRoleCounts = (rolesData as any)?.data;
+    const rawDisabledCounts = (disabledData as any)?.data;
+
+    const totalFarmers = rawRoleCounts?.farmer ?? rawRoleCounts?.user ?? computedRoleCounts.farmer;
+    const totalMycologists = rawRoleCounts?.mycologist ?? computedRoleCounts.mycologist;
+    const totalAdmins = rawRoleCounts?.admin ?? rawRoleCounts?.administrator ?? computedRoleCounts.admin;
+    const totalUsers = totalFarmers + totalMycologists + totalAdmins;
+
+    const inactiveCount = rawDisabledCounts?.inactive ?? rawDisabledCounts?.disabled ?? computedDisabledCounts.inactive;
+    const activeCount = rawDisabledCounts?.active ?? computedDisabledCounts.active;
+    const userStatusData = [
+        { name: "Inactive", value: inactiveCount, color: "var(--moldify-red)" },
+        { name: "Active", value: activeCount, color: "var(--primary-color)" },
+    ];
     const hasMore = usersPages?.[usersPages.length - 1]?.data?.nextPageToken;
     const error: string | null = null;
 
@@ -151,7 +178,7 @@ export default function Users() {
 
                 {/* Right Section */}
                 <button
-                    className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-lg hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
+                    className="flex items-center justify-center gap-2 font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-semibold px-6 py-3 rounded-2xl hover:bg-[var(--hover-primary)] transition-colors cursor-pointer text-sm"
                     onClick={() => router.push('/user/create-mycologist')}
                 >
                     <span>Create Mycologist Account</span>
@@ -212,8 +239,8 @@ export default function Users() {
 
             {/* Submitted Cases Table */}
             <div className="mt-5 w-full">
-                {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading users...</p>}
-                {error && <p className="text-red-600">{error}</p>}
+                {loading && <PageLoading message="Loading users..." />}
+                {error && <MessageBanner variant="error" className="mb-4">{error}</MessageBanner>}
                 {!loading && !error && <UserTable data={filteredUsers} 
                     onEdit={(c: any) => {
                       console.log('📋 UserTable edit clicked:', { user: c, userId: c?.id });
@@ -221,12 +248,12 @@ export default function Users() {
                         console.error('❌ User has no id:', c);
                         return;
                       }
-                      window.location.href = `/user/view-user?id=${c.id}`;
+                                            router.push(`/user/view-user?id=${c.id}`);
                   }}/>}
 
                 {/* Infinite scroll trigger */}
                 <div ref={loadMoreRef} className="py-4 text-center">
-                    {isLoadingMore && <p className="text-sm text-[var(--moldify-grey)]">Loading more users...</p>}
+                    {!loading && isLoadingMore && <PageLoading message="Loading more users..." compact />}
                 </div>
             </div>
         </main>

@@ -1,13 +1,14 @@
 "use client";
-import { useState, useEffect, useMemo, useRef } from 'react'; 
+import { useState, useEffect, useMemo } from 'react'; 
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { Navbar } from '@/components/navbar';
 import Footer from '@/components/footer';
-import { useMoldipediaArticle, type MoldipediaArticle } from '@/hooks/swr';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMicroscope, faChevronLeft, faArrowRight, faCompass } from '@fortawesome/free-solid-svg-icons';
+import { useMoldipediaArticle, useMoldipediaCases, type MoldipediaArticle, type MoldCaseSummary } from '@/hooks/swr';
+import { CollapsibleEntry } from '../../../../components/wikimold/collapsible-entry';
+import TopLoadingBar from '@/components/loading/top_loading_bar';
+import PageLoading from '@/components/loading/page_loading';
 
 // --- Default Placeholders ---
 const DEFAULT_BANNER = "/assets/mold.jpg";
@@ -35,6 +36,7 @@ type ArticleViewModel = {
   disease_cycle: string;
   impact: string;
   prevention: string;
+  findings: Array<{ title: string; content: string }>;
 };
 
 type DossierField = 'affected_crops' | 'symptoms' | 'disease_cycle' | 'impact' | 'prevention';
@@ -64,13 +66,6 @@ const TREATMENT_CONTROLS: Array<{ name: string; id: TreatmentControlId; desc: st
   { name: 'Chemical Control', id: 'chemical', desc: 'Targeted antimicrobial application' },
 ];
 
-const DISCOVERY_STAGES = [
-  { id: 1, title: "Initial Observation", content: "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat" },
-  { id: 2, title: "In Vivo", content: "Quantitative data regarding fungal concentration... (Add your heavy data here)" },
-  { id: 3, title: "In Vitro", content: "Direct swabbing results from contaminated surfaces... (Add your heavy data here)" },
-  
-];
-
 function getHtmlField(
   article: MoldipediaArticle,
   fieldName: DossierField,
@@ -87,6 +82,7 @@ export default function ViewWikiMold() {
   
   // SWR: fetch article
   const { data: articleRes, isLoading: loading, error: swrError } = useMoldipediaArticle(id as string | undefined);
+  const { data: casesRes, isLoading: casesLoading } = useMoldipediaCases(id as string | undefined);
   const error = swrError ? (swrError instanceof Error ? swrError.message : 'Failed to load article') : null;
 
   // --- Image States ---
@@ -135,6 +131,14 @@ export default function ViewWikiMold() {
       disease_cycle: getHtmlField(data, 'disease_cycle', '<p>Transmission details will be added here.</p>'),
       impact: getHtmlField(data, 'impact', '<p>Impact analysis will be added here.</p>'),
       prevention: getHtmlField(data, 'prevention', '<p>Prevention strategies will be added here.</p>'),
+      findings: Array.isArray(data.findings)
+        ? data.findings
+            .map((item) => ({
+              title: (item?.title || 'Untitled Stage').toString(),
+              content: (item?.content || '').toString(),
+            }))
+            .filter((item) => item.title.trim().length > 0 || item.content.trim().length > 0)
+        : [],
     };
   }, [articleRes]);
 
@@ -150,33 +154,21 @@ export default function ViewWikiMold() {
   const { scrollY } = useScroll();
   const yBanner = useTransform(scrollY, [0, 500], [0, 200]);
 
-  const [activeStage, setActiveStage] = useState(0);
   const [activeTreatment, setActiveTreatment] = useState(0);
-  const [showExploreCasesCta, setShowExploreCasesCta] = useState(false);
-  const heroSectionRef = useRef<HTMLElement | null>(null);
+  const [expandedPathogenItems, setExpandedPathogenItems] = useState<Record<number, boolean>>({});
 
-  useEffect(() => {
-    const heroElement = heroSectionRef.current;
-    if (!heroElement || typeof IntersectionObserver === 'undefined') {
-      return;
-    }
+  // Helper: Check if content is long enough to warrant expanding
+  const isContentLong = (html: string): boolean => {
+    const plainText = html.replace(/<[^>]*>/g, '').trim();
+    return plainText.length > 300; // Show button if more than 300 characters
+  };
 
-    // Show CTA only after the hero section leaves the viewport.
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setShowExploreCasesCta(!entry.isIntersecting);
-      },
-      { threshold: 0 },
-    );
-
-    observer.observe(heroElement);
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Fast Refresh can keep an old activeStage even when dummy stages change size.
-  const currentStageIndex = Math.min(Math.max(activeStage, 0), DISCOVERY_STAGES.length - 1);
-  const currentStage = DISCOVERY_STAGES[currentStageIndex];
+  const togglePathogenItem = (index: number) => {
+    setExpandedPathogenItems((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
 
   // Helper to get treatment HTML based on control type
   const getTreatmentHtml = (controlId: TreatmentControlId): string => {
@@ -187,6 +179,133 @@ export default function ViewWikiMold() {
     const treatmentField = TREATMENT_FIELD_BY_CONTROL[controlId];
     return article[treatmentField] || article.treatment || '';
   };
+
+  const linkedCases = useMemo<MoldCaseSummary[]>(() => {
+    const raw = casesRes?.data;
+    if (Array.isArray(raw)) {
+      return raw;
+    }
+    if (raw && typeof raw === 'object') {
+      const snapshot = (raw as { snapshot?: unknown }).snapshot;
+      if (Array.isArray(snapshot)) {
+        return snapshot as MoldCaseSummary[];
+      }
+    }
+    return [];
+  }, [casesRes]);
+
+  const [expandedCases, setExpandedCases] = useState<Record<string, boolean>>({});
+
+  const getCaseKey = (entry: MoldCaseSummary, index: number): string => {
+    const idValue = (entry.id || '').trim();
+    if (idValue) return idValue;
+    const reportValue = (entry.mold_report_id || '').trim();
+    if (reportValue) return reportValue;
+    return `case-${index}`;
+  };
+
+  const toggleCase = (caseKey: string) => {
+    setExpandedCases((prev) => ({
+      ...prev,
+      [caseKey]: !prev[caseKey],
+    }));
+  };
+
+  const asText = (value: unknown): string => {
+    if (typeof value === 'string') return value.trim();
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (Array.isArray(value)) {
+      return value.map((item) => asText(item)).filter(Boolean).join(', ');
+    }
+    if (value && typeof value === 'object') {
+      return '';
+    }
+    return '';
+  };
+
+  const asRecord = (value: unknown): Record<string, unknown> => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      return value as Record<string, unknown>;
+    }
+    return {};
+  };
+
+  const parseDateValue = (value: unknown): number => {
+    if (!value) return 0;
+    if (typeof value === 'object' && value !== null && '_seconds' in value) {
+      const seconds = (value as { _seconds?: unknown })._seconds;
+      if (typeof seconds === 'number') return seconds * 1000;
+    }
+
+    const dateObj = new Date(String(value));
+    return Number.isNaN(dateObj.getTime()) ? 0 : dateObj.getTime();
+  };
+
+  const normalizeLogType = (typeValue: unknown): string => {
+    return asText(typeValue).toLowerCase().replace(/[_\s-]+/g, '');
+  };
+
+  const getLatestLogByType = (entry: MoldCaseSummary, type: 'vivo' | 'vitro'): Record<string, unknown> | null => {
+    const rawLogs = Array.isArray(entry.cultivation_logs) ? entry.cultivation_logs : [];
+
+    const matching = rawLogs
+      .filter((log) => {
+        const normalized = normalizeLogType(log.type);
+        if (type === 'vivo') return normalized === 'vivo' || normalized === 'invivo';
+        return normalized === 'vitro' || normalized === 'invitro';
+      })
+      .sort((a, b) => {
+        const aTime = parseDateValue(a.created_at ?? a.metadata?.created_at);
+        const bTime = parseDateValue(b.created_at ?? b.metadata?.created_at);
+        return bTime - aTime;
+      });
+
+    if (matching.length === 0) return null;
+    return asRecord(matching[0].characteristics);
+  };
+
+  const pathogenItems = useMemo(
+    () => [
+      {
+        title: 'Affected Hosts',
+        summary: 'Expected host range and crop impact.',
+        content: article?.affected_crops ?? '',
+      },
+      {
+        title: 'Symptoms & Signs',
+        summary: 'Expected visible symptoms and warning signs.',
+        content: article?.symptoms ?? '',
+      },
+      {
+        title: 'Transmission Cycle',
+        summary: 'Expected spread and infection path.',
+        content: article?.disease_cycle ?? '',
+      },
+      {
+        title: 'Impact Analysis',
+        summary: 'Expected severity and downstream damage.',
+        content: article?.impact ?? '',
+      },
+      {
+        title: 'Prevention Strategies',
+        summary: 'Expected steps to reduce infection.',
+        content: article?.prevention ?? '',
+      },
+    ],
+    [article],
+  );
+
+  const fieldSporeSeeds = useMemo(
+    () =>
+      Array.from({ length: 60 }, (_, i) => ({
+        key: `spore-${i}`,
+        x: `${Math.random() * 100}%`,
+        y: `${Math.random() * 100}%`,
+        opacityStart: Math.random() * 0.3,
+        duration: Math.random() * 10 + 10,
+      })),
+    [],
+  );
 
 /** * SectionHeader Component (UNTOUCHED LOGIC, UPDATED STYLING) * Unified look for Description, Treatment, and Findings sections. */
 const SectionHeader = ({
@@ -319,15 +438,10 @@ const ProseContent = ({
     return (
       <div className="min-h-screen bg-[var(--background-color)] flex flex-col">
         {/* Top Loading Bar */}
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div 
-            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
-            style={{ width: '30%' }}
-          />
-        </div>
+        <TopLoadingBar />
         <Navbar />
         <div className="flex-grow flex items-center justify-center">
-          <p className="text-gray-500 text-center">Loading article...</p>
+          <PageLoading message="Loading article..." />
         </div>
         <Footer />
       </div>
@@ -363,9 +477,76 @@ const ProseContent = ({
         </svg>
       </div>
 
+      {/* --- GLOBAL FLOATING LEAF ACCENTS --- */}
+      <div className="absolute inset-0 pointer-events-none z-[2] overflow-visible">
+        <motion.div
+          className="absolute top-[6%] left-[2%] opacity-[0.12]"
+          animate={{ y: [0, 12, 0], rotate: [-4, 2, -4] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Image src="/assets/leaf.svg" alt="decorative leaf" width={95} height={95} className="grayscale -scale-x-100" />
+        </motion.div>
+
+        <motion.div
+          className="absolute top-[14%] right-[4%] opacity-[0.14]"
+          animate={{ y: [0, -10, 0], rotate: [-2, 4, -2] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Image src="/assets/leaf.svg" alt="decorative leaf" width={120} height={120} className="grayscale" />
+        </motion.div>
+
+        <motion.div
+          className="absolute top-[30%] left-[6%] opacity-[0.12] hidden md:block"
+          animate={{ y: [0, 14, 0], rotate: [3, -3, 3] }}
+          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Image src="/assets/leaf.svg" alt="decorative leaf" width={140} height={140} className="grayscale -scale-x-100" />
+        </motion.div>
+
+        <motion.div
+          className="absolute top-[44%] right-[7%] opacity-[0.13]"
+          animate={{ y: [0, -12, 0], rotate: [0, 4, 0] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Image src="/assets/leaf.svg" alt="decorative leaf" width={105} height={105} className="grayscale" />
+        </motion.div>
+
+        <motion.div
+          className="absolute top-[58%] left-[3%] opacity-[0.11] hidden lg:block"
+          animate={{ y: [0, 10, 0], rotate: [-3, 2, -3] }}
+          transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Image src="/assets/leaf.svg" alt="decorative leaf" width={125} height={125} className="grayscale -scale-x-100" />
+        </motion.div>
+
+        <motion.div
+          className="absolute top-[72%] right-[12%] opacity-[0.13]"
+          animate={{ y: [0, -9, 0], rotate: [2, -2, 2] }}
+          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Image src="/assets/leaf.svg" alt="decorative leaf" width={98} height={98} className="grayscale" />
+        </motion.div>
+
+        <motion.div
+          className="absolute bottom-[18%] left-[10%] opacity-[0.12] hidden md:block"
+          animate={{ y: [0, 8, 0], rotate: [-2, 2, -2] }}
+          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Image src="/assets/leaf.svg" alt="decorative leaf" width={110} height={110} className="grayscale" />
+        </motion.div>
+
+        <motion.div
+          className="absolute bottom-[6%] right-[18%] opacity-[0.14] hidden lg:block"
+          animate={{ y: [0, -7, 0], rotate: [2, -2, 2] }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Image src="/assets/leaf.svg" alt="decorative leaf" width={130} height={130} className="grayscale -scale-x-100" />
+        </motion.div>
+      </div>
+
       <main className="flex-grow relative z-10">
         {/* --- HERO BANNER SECTION  --- */}
-        <section ref={heroSectionRef} className="relative h-[50vh] md:h-[60vh] w-full overflow-hidden">
+        <section className="relative h-[50vh] md:h-[60vh] w-full overflow-hidden">
           <motion.div style={{ y: yBanner }} className="relative h-full w-full">
             <Image
               src={bannerSrc}
@@ -430,23 +611,18 @@ const ProseContent = ({
             <SectionHeader number="01" title="Biological Description" />
             
             {/* Background Radial Glow (Accent Color at 5% opacity) */}
-            <div className="absolute -top-20 -left-20 w-96 h-96 bg-[var(--accent-color)]/5 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute -top-20 -left-20 w-96 h-96 bg-[var(--accent-color)]/20 blur-[120px] rounded-full pointer-events-none" />
             
             <motion.div className="relative z-10">
               <ProseContent 
                 html={article.content} 
-                className="text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-left"
+                className="text-xl text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-left"
               />
             </motion.div>
           </section>
 
           {/* --- 3. AGRICULTURAL INFO --- */}
-          <section className="my-32 px-16 py-28 rounded-[3.5rem] bg-[var(--primary-color)]/[0.02] border border-[var(--primary-color)]/10 relative overflow-hidden">
-            {/* The decorative leaf moved to the far background */}
-            <div className="absolute top-12 right-12 opacity-[0.07] pointer-events-none">
-              <Image src="/assets/leaf.svg" alt="leaf" width={220} height={220} className="grayscale" />
-            </div>
-            
+          <section className="mb-30 relative max-w-5xl mx-auto">
             <SectionHeader 
               number="02" 
               title="Host & Pathogen Impact" 
@@ -454,47 +630,32 @@ const ProseContent = ({
             />
 
             {/* Main content */}
-            <div className="mt-32 max-w-5xl mx-auto space-y-40">
-              {[
-                { title: "Affected Hosts", content: article.affected_crops },
-                { title: "Symptoms & Signs", content: article.symptoms },
-                { title: "Transmission Cycle", content: article.disease_cycle },
-                { title: "Impact Analysis", content: article.impact },
-                { title: "Prevention Strategies", content: article.prevention },
-              ].map((item, index) => (
-                <div key={index} className="relative flex flex-col md:flex-row gap-12 md:gap-24">
-                  
-                  {/* The Number*/}
-                  <div className="flex-shrink-0">
-                    <span className="text-5xl font-extrabold text-[var(--accent-color)]/80 font-[family-name:var(--font-montserrat)] leading-none select-none">
-                      0{index + 1}
-                    </span>
-                  </div>
-
-                  {/* The Content */}
-                  <div className="flex-grow space-y-8 pt-2">
-                    <div className="flex items-center gap-4">
-                      <div className="h-[2px] w-8 bg-[var(--accent-color)]/40" />
-                      <h4 className="text-2xl font-black uppercase text-[var(--primary-color)] tracking-tight font-[family-name:var(--font-montserrat)]">
-                        {item.title}
-                      </h4>
-                    </div>
-                    
-                    <div className="md:pl-12">
-                      <ProseContent 
-                        html={item.content} 
-                        className="text-lg leading-relaxed text-[var(--primary-color)]/70 font-light" 
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-4 relative">
+              {pathogenItems.map((item, index) => {
+                const isLong = isContentLong(item.content);
+                const isExpanded = expandedPathogenItems[index] || false;
+                
+                return (
+                <CollapsibleEntry
+                  key={index}
+                  number={`0${index + 1}`}
+                  title={item.title}
+                  description={item.summary}
+                  isExpanded={isExpanded}
+                  onToggle={() => togglePathogenItem(index)}
+                  className=""
+                  bodyClassName="text-[var(--moldify-black)]/80"
+                >
+                  <ProseContent html={item.content} className="text-lg leading-relaxed text-[var(--primary-color)]/70 font-light" />
+                </CollapsibleEntry>
+                );
+              })}
             </div>
           </section>
           
         {/* --- 02. TREATMENT --- */}
           <section className="mb-30 relative max-w-5xl mx-auto">
-            <SectionHeader number="02" title="Treatment Protocols" />
+            <SectionHeader number="03" title="Treatment Protocols" />
             
             <div className="space-y-4 relative">
               {TREATMENT_CONTROLS.map((ctrl, idx) => {
@@ -570,130 +731,143 @@ const ProseContent = ({
           </section>
 
           {/* --- 4. FINDINGS: Typography Specimen & Interactive Stages --- */}
-         <section className="max-w-6xl mx-auto selection:bg-[var(--accent-color)] selection:text-white">
-            <SectionHeader number="04" title="Specimen ID & Findings" />
-       
-            <div className="mb-22 -mt-10 relative py-16 px-6 md:px-12 border-b-2 border-[var(--primary-color)]/10 overflow-hidden group">
-              
-              <div className="absolute inset-0 opacity-[0.2] -z-10 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
-                  <svg width="100%" height="100%" viewBox="0 0 100 100">
-                      <defs>
-                          <radialGradient id="bioGradient1" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
-                              <stop offset="0%" stopColor="var(--accent-color)" stopOpacity="1" />
-                              <stop offset="100%" stopColor="var(--primary-color)" stopOpacity="0.1" />
-                          </radialGradient>
-                      </defs>
-                      <circle cx="20" cy="20" r="15" fill="url(#bioGradient1)" />
-                      <circle cx="80" cy="80" r="25" fill="url(#bioGradient1)" opacity="0.5" />
-                      <circle cx="50" cy="60" r="10" fill="var(--accent-color)" />
-                  </svg>
-              </div>
-
-              {/* Elegant "Glass-Morphism" Verification Chip */}
-              <div className="absolute top-10 right-10 flex gap-1.5 p-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm z-30">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[var(--accent-color)] animate-pulse" />
-                  <div className="w-10 h-2.5 rounded-full bg-[var(--primary-color)] opacity-20" />
-              </div>
-
-              <div className="relative z-20 text-center md:text-left flex flex-col md:flex-row items-center md:items-baseline gap-6 md:gap-12">
-                  <div>
-                    <span className="inline-block px-4 py-1.5 rounded-full bg-[var(--accent-color)]/10 text-[var(--accent-color)] text-[10px] font-black uppercase tracking-[0.4em] mb-5">
-                      Mold Classification
-                    </span>
-                    {/* Main Mold Title - Striking Italic Montserrat */}
-                    <h3 className="mb-5 text-5xl md:text-6xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] italic tracking-tighter uppercase leading-none max-w-4xl">
-                      {article.mold_type}
-                    </h3>
-                  </div>
-                 
-              </div>
-            </div>
-
-          
-            <div className="flex flex-col lg:flex-row gap-10 items-stretch">
-              {/* Slim Navigation Sidebar */}
-              <div className="w-full lg:w-[28%] space-y-2 sticky top-32 z-20">
-                {DISCOVERY_STAGES.map((stage, idx) => (
-                  <button
-                    key={stage.id}
-                    onClick={() => setActiveStage(idx)}
-                    className={`w-full text-left px-8 py-5 rounded-2xl transition-all duration-500 font-[family-name:var(--font-montserrat)] flex flex-col justify-center gap-1 border-2 ${
-                      activeStage === idx
-                        ? 'bg-[var(--primary-color)] border-[var(--primary-color)] text-white shadow-xl scale-[1.03] z-20 translate-x-3'
-                        : 'bg-transparent border-[var(--primary-color)]/10 text-[var(--primary-color)] opacity-60 hover:opacity-100 hover:bg-[var(--accent-color)]/[0.02]'
-                    }`}
-                  >
-                    <span className={`text-[10px] font-black tracking-widest ${activeStage === idx ? 'text-[var(--accent-color)]' : 'opacity-40'}`}>PHASE 0{stage.id}</span>
-                    <span className="font-black uppercase tracking-tight text-sm">{stage.title}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Robust Findings Content Area */}
-              <div className="w-full lg:w-[72%] bg-transparent rounded-[3.5rem] border-4 border-[var(--primary-color)]/5 backdrop-blur-3xl p-12 md:p-20 relative overflow-hidden flex flex-col min-h-[600px] shadow-sm">
-                
-                {/* Dynamic Background Ghost Number (Using low opacity Primary Color creatively) --- */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[30rem] font-black text-[var(--primary-color)]/[0.01] select-none pointer-events-none font-[family-name:var(--font-montserrat)] leading-none z-0">
-                  {currentStageIndex + 1}
-                </div>
-                
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentStage.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.4 }}
-                    className="relative z-10 flex flex-col h-full"
-                  >
-                    {/* Phase Header with organic accent dot */}
-                    <div className="mb-12 border-b-2 border-[var(--primary-color)]/10 pb-8 flex justify-between gap-4">
-                      <h4 className="text-4xl md:text-6xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase tracking-tighter mb-2 leading-none">
-                            {currentStage.title}
-                      </h4>
-                      <div className="shrink-0 pt-2 flex gap-1">
-                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-color)] opacity-50" />
-                        <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-color)] animate-pulse" />
-                      </div>
-                    </div>
-
-                    {/* Immersive text handling inside prose container - handles large data easily --- */}
-                    <div className="flex-grow">
-                      <ProseContent 
-                        html={currentStage.content}
-                        className="text-[var(--moldify-black)] font-[family-name:var(--font-bricolage-grotesque)] leading-relaxed text-left"
-                      />
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </div>
-          </section>
-
-          {/* Explore Similar Cases Button */}
-          <div className="fixed right-6 top-1/2 -translate-y-1/2 z-50">
-            <button className="group relative flex items-center gap-4 bg-[var(--accent-color)]/10 backdrop-blur-md border border-[var(--accent-color)]/30 p-2 pr-6 rounded-full transition-all duration-500 hover:bg-[var(--accent-color)]/20 hover:shadow-[0_0_30px_rgba(var(--accent-rgb),0.2)]">
-              
-              <div className="absolute inset-0 rounded-full border border-[var(--accent-color)]/50 animate-pulse group-hover:hidden" />
-
-              <div className="w-10 h-10 rounded-full bg-[var(--accent-color)] flex items-center justify-center text-white shadow-lg">
-                <FontAwesomeIcon icon={faCompass} className="text-sm" />
-              </div>
-
-              <div className="flex flex-col items-start leading-none">
-                <span className="text-[9px] font-black uppercase tracking-widest text-[var(--accent-color)] opacity-80 mb-1">
-                  Explore
-                </span>
-                <span className="text-[13px] font-bold text-[var(--primary-color)] tracking-tight font-[family-name:var(--font-montserrat)]">
-                  Similar Cases
-                </span>
-              </div>
-
-              <div className="w-0 overflow-hidden opacity-0 group-hover:w-4 group-hover:opacity-100 transition-all duration-500">
-                <FontAwesomeIcon icon={faArrowRight} className="text-xs text-[var(--accent-color)]" />
-              </div>
-            </button>
+        <section className="mb-30 relative max-w-5xl mx-auto bg-transparent overflow-visible">
+          {/* HIGH-DENSITY BIO-SPORE SWARM */}
+          <div className="absolute inset-0 z-0 pointer-events-none">
+            {fieldSporeSeeds.map((seed) => (
+              <motion.div
+                key={seed.key}
+                initial={{ x: seed.x, y: seed.y, opacity: seed.opacityStart }}
+                animate={{
+                  y: ["-20%", "20%"],
+                  x: ["-10%", "10%"],
+                  opacity: [0.05, 0.3, 0.05]
+                }}
+                transition={{
+                  duration: seed.duration,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="absolute w-[2px] h-[2px] rounded-full bg-[var(--accent-color)] shadow-[0_0_8px_var(--accent-color)]"
+              />
+            ))}
           </div>
+
+          <div className="relative z-10">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+              <SectionHeader 
+                number="04" 
+                title="Field Evidence" 
+                subtitle="Correlated Fungal Investigations"
+              />
+
+              {/* SIDE-ALIGNED COUNTER */}
+              {!casesLoading && (
+                <div className="flex items-center gap-4 pb-2 border-b border-[var(--primary-color)]/10">
+                  <div className="flex flex-col items-end">
+                    <span className="font-[family-name:var(--font-montserrat)] text-[9px] font-black uppercase tracking-[0.3em] text-[var(--accent-color)] leading-none">Linked</span>
+                    <span className="font-[family-name:var(--font-montserrat)] text-[9px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)]/30 leading-none mt-1">Investigations</span>
+                  </div>
+                  <div className="relative">
+                    <span className="font-[family-name:var(--font-montserrat)] font-black text-5xl text-[var(--primary-color)] tracking-tighter tabular-nums leading-none">
+                      {linkedCases.length.toString().padStart(2, '0')}
+                    </span>
+                    <div className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-[var(--accent-color)] shadow-[0_0_10px_var(--accent-color)] animate-pulse" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* INVESTIGATION LIST */}
+            <div className="flex flex-col divide-y divide-[var(--primary-color)]/10">
+              {casesLoading ? (
+                <div className="py-24 flex items-center gap-4">
+                  <div className="w-12 h-[2px] bg-[var(--accent-color)] animate-pulse" />
+                  <p className="font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-[0.5em] text-[var(--primary-color)]/40">Synchronizing Archives</p>
+                </div>
+              ) : (
+                linkedCases.map((entry, idx) => {
+                  const caseKey = getCaseKey(entry, idx);
+                  const isExpanded = !!expandedCases[caseKey];
+                  
+                  const initial = asRecord(entry.cultivation_details);
+                  const inVivo = getLatestLogByType(entry, 'vivo') ?? {};
+                  const inVitro = getLatestLogByType(entry, 'vitro') ?? {};
+                  
+                  const cropRecord = entry as Record<string, unknown>;
+                  const cropName =
+                    asText(cropRecord.common_name) ||
+                    asText(cropRecord.crop_name) ||
+                    asText(entry.name) ||
+                    asText(cropRecord.crop) ||
+                    `Log#${(idx + 1).toString().padStart(2, '0')}`;
+                  
+                  const sections = [
+                    { label: "[01] Initial Observation", content: [asText(initial['initial_microscopic']), asText(initial['initial_macroscopic'])].filter(Boolean).join(' // ') || 'Observation metadata incomplete.' },
+                    { label: "[02] In Vivo Analysis", content: asText(inVivo['symptoms'] ?? inVivo['characteristics']) || 'No active bio-logs.' },
+                    { label: "[03] In Vitro Results", content: asText(inVitro['characteristics'] ?? inVitro['colony_color']) || 'Laboratory culture pending.' }
+                  ];
+
+                  return (
+                    <div key={caseKey} className={`group pb-12 transition-all duration-700 relative ${isExpanded ? 'bg-[var(--primary-color)]/[0.01]' : ''}`}>
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+                        <div className="flex flex-col">
+                          <span className="font-[family-name:var(--font-montserrat)] font-black text-[10px] text-[var(--accent-color)] tracking-[0.3em] uppercase block mb-1">Crop Name</span>
+                          <h4 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] uppercase tracking-tight">
+                            {cropName} <span className="opacity-20 ml-2 font-light text-xl italic tabular-nums">{caseKey.slice(-6)}</span>
+                          </h4>
+                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => toggleCase(caseKey)}
+                          className={`cursor-pointer px-8 py-3 transition-all duration-500 rounded-full font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-[0.4em] ${
+                            isExpanded ? 'bg-[var(--accent-color)] text-white shadow-lg shadow-[var(--accent-color)]/20' : 'bg-transparent border border-[var(--primary-color)]/20 text-[var(--primary-color)] hover:border-[var(--primary-color)]'
+                          }`}
+                        >
+                          {isExpanded ? 'Close Case' : 'View Case'}
+                        </button>
+                      </div>
+
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                          >
+                            <div className="mt-12 space-y-6 pl-6 relative">
+                              {/* Investigation Line Spores */}
+                              <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-[var(--accent-color)]/40 via-[var(--accent-color)]/10 to-transparent" />
+                              {[0, 50, 95].map((pos) => (
+                                <div key={pos} className="absolute left-[-3.5px] w-2 h-2 rounded-full bg-[var(--accent-color)] shadow-[0_0_8px_var(--accent-color)]" style={{ top: `${pos}%` }} />
+                              ))}
+                              
+                              {sections.map((section, sIdx) => (
+                                <div key={sIdx} className="relative group/card">
+                                  <div className="p-8 rounded-2xl bg-[var(--primary-color)]/[0.02] border border-[var(--primary-color)]/5 backdrop-blur-sm transition-all duration-500 hover:bg-[var(--primary-color)]/[0.04] hover:border-[var(--accent-color)]/20">
+                                    <label className="block font-[family-name:var(--font-montserrat)] text-[9px] font-black uppercase tracking-[0.5em] text-[var(--accent-color)] mb-4 opacity-70">
+                                      {section.label}
+                                    </label>
+                                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-lg leading-relaxed text-[var(--primary-color)]/80 font-medium">
+                                      {section.content}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </section>
+          
         </article>
       </main>
       <Footer />

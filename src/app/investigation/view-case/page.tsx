@@ -20,6 +20,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMoldReport, useMoldCaseByReport, useMoldCaseLogs, useUser } from "@/hooks/swr";
 import { apiMutate } from "@/lib/api";
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
+import PageLoading from "@/components/loading/page_loading";
+import MessageBanner from "@/components/feedback/message_banner";
 
 type Mycologist = {
   name: string;
@@ -56,10 +58,13 @@ function ViewCaseContent() {
   const [isConfirmAssignOpen, setConfirmAssignOpen] = useState(false);
   const [isAddTreatmentOpen, setAddTreatmentOpen] = useState(false);
 
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; endDate: Date | null } | null>(null);
 
   // Called from AssignCaseModal -> opens confirmation modal
   const handleAssignClick = (mycologist: Mycologist, endDate: Date | null) => {
+    setAssignError(null);
     setPendingAssign({ mycologist, endDate });
     setConfirmAssignOpen(true);
   };
@@ -69,6 +74,9 @@ function ViewCaseContent() {
     if (!pendingAssign || !caseId || !caseData) return;
 
     try {
+      setAssignError(null);
+      setIsAssigning(true);
+
       // Assigning a report auto-creates the mold case on backend.
       await apiMutate(`/api/v1/mold-reports/${caseId}/assign`, {
         method: 'PATCH',
@@ -103,7 +111,9 @@ function ViewCaseContent() {
       await invalidateMoldReports();
     } catch (err: any) {
       console.error('Assignment failed:', err);
-      alert(err?.message || 'Failed to assign case');
+      setAssignError(err?.message || 'Failed to assign case');
+    } finally {
+      setIsAssigning(false);
     }
   }, [pendingAssign, caseId, caseData, mutateReport, mutateMoldCase]);
 
@@ -154,12 +164,12 @@ function ViewCaseContent() {
   };
 
   // Use data from API
-  const caseName = caseData?.case_name || "Loading...";
-  const cropName = caseData?.host || "Loading...";
-  const location = caseData?.location || "Loading...";
+  const caseName = caseData?.case_name || (loading ? "Loading..." : "N/A");
+  const cropName = caseData?.host || (loading ? "Loading..." : "N/A");
+  const location = caseData?.location || (loading ? "Loading..." : "N/A");
   const dateObserved = (() => {
     const d = toDate(caseData?.date_observed);
-    return d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "Loading...";
+    return d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : (loading ? "Loading..." : "N/A");
   })();
   const status = caseData?.status ? caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1) : "Pending";
   
@@ -180,10 +190,16 @@ function ViewCaseContent() {
   };
   
   // Reporter info
-  const reporterName = caseData?.reporter?.details?.displayName || "Loading...";
+  const reporterName = caseData?.reporter?.details?.displayName || (loading ? "Loading..." : "N/A");
   const reporterEmail = caseData?.reporter?.details?.email || "N/A";
   const reporterPhone = caseData?.reporter?.details?.phone_number || "N/A";
   const imageUrl = caseData?.reporter?.details?.photo_url || "/profile-placeholder.svg";
+
+  const [imgSrc, setImgSrc] = useState(imageUrl);
+
+  if (loading) {
+    return <PageLoading message="Loading case..." fullScreen showTopBar />;
+  }
 
   // IMPORTANT: Derive state from backend data, not local state
   const isAssigned = !!caseData?.assigned_mycologist_id;
@@ -191,11 +207,16 @@ function ViewCaseContent() {
   const isApproved = caseData?.status === 'resolved' && !!moldCase;
   
   // Get mycologist name from fetched user data
-  const assignedMycologistName = 
-    mycologistData?.details?.displayName 
-    || mycologistData?.user?.displayName 
-    || moldCase?.mycologist_name 
+  const assignedMycologistName =
+    mycologistData?.details?.displayName
+    || mycologistData?.user?.displayName
+    || moldCase?.mycologist_name
     || "Assigned Specialist";
+
+  // Get mycologist occupation
+  const assignedMycologistOccupation =
+    mycologistData?.user?.occupation
+    || "Mycologist";
 
   // Normalize case_details
   const caseDetailsEntries = (caseData?.case_details ?? []).map((d: any) => {
@@ -613,8 +634,6 @@ function ViewCaseContent() {
     },
   ];
   
-  const [imgSrc, setImgSrc] = useState(imageUrl);
-
   return (
     <main className="relative flex flex-col xl:py-2 py-10 w-full">
       
@@ -655,7 +674,7 @@ function ViewCaseContent() {
                   />
                 </div>
                 <h2 className="text-2xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase">{reporterName}</h2>
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mt-1">Farmer</span>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mt-1">{(caseData?.reporter as any)?.occupation || "Farmer"}</span>
                 
                 <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-[var(--primary-color)]/10 to-transparent my-6" />
                 
@@ -679,6 +698,7 @@ function ViewCaseContent() {
                 isRejected={isRejected}
                 isApproved={isApproved}
               assignedMycologistName={assignedMycologistName}
+              assignedMycologistOccupation={assignedMycologistOccupation}
               caseData={caseData}
               status={status}
               setAssignModalOpen={setAssignModalOpen}
@@ -714,7 +734,7 @@ function ViewCaseContent() {
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-12 pt-10 border-t border-white/10">
                 <div>
-                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Host Crop</span>
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Host Plant Affected</span>
                   <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{cropName}</p>
                 </div>
                 <div>
@@ -722,7 +742,7 @@ function ViewCaseContent() {
                   <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{location}</p>
                 </div>
                 <div className="col-span-2 md:col-span-1">
-                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Log Date</span>
+                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Date Received</span>
                   <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{dateObserved}</p>
                 </div>
               </div>
@@ -760,7 +780,19 @@ function ViewCaseContent() {
           </section>
         </div>
       )}
-      
+
+      {/* Error Alert */}
+      {assignError && (
+        <MessageBanner variant="error" className="fixed top-4 right-4 max-w-md z-50">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="font-[family-name:var(--font-montserrat)] font-bold">Assignment Failed</div>
+              <div className="font-[family-name:var(--font-bricolage-grotesque)] text-sm mt-1">{assignError}</div>
+            </div>
+            <button onClick={() => setAssignError(null)} className="font-black">✕</button>
+          </div>
+        </MessageBanner>
+      )}
 
       {/* Modals */}
       <AssignCaseModal
@@ -786,6 +818,10 @@ function ViewCaseContent() {
         subtitle="This action is irreversible."
         cancelText="Cancel"
         confirmText="Yes, Assign"
+        confirmDisabled={isAssigning}
+        confirmLoadingText="Assigning..."
+
+
         onCancel={() => setConfirmAssignOpen(false)}
         onConfirm={handleConfirmAssign}
       />
@@ -799,7 +835,7 @@ function ViewCaseContent() {
 
 export default function ViewCase() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<PageLoading fullScreen showTopBar />}>
       <ViewCaseContent />
     </Suspense>
   );

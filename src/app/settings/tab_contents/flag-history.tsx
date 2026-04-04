@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import FlaggedHistoryTable, { type FlaggedHistory } from "@/components/tables/flagged_history_table";
+import PageLoading from "@/components/loading/page_loading";
+import MessageBanner from "@/components/feedback/message_banner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 /**
@@ -31,18 +33,20 @@ export default function FlagHistory({ flaggedHistory, isLoading, error }: FlagHi
 
   return (
     <div>
-      <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-        Flag History
-      </h2>
-      <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mb-6">
-        Your record of previously flagged mold identifications below.
-      </p>
+      <header className="mt-10 mb-12 flex flex-col gap-2">
+        <h1 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight leading-none">
+          Flag History
+        </h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">
+          Flagged Mold Identification Records
+        </p>
+      </header>
 
       {/* Error Message Display */}
       {error && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <MessageBanner variant="error" className="mb-4">
           {error}
-        </div>
+        </MessageBanner>
       )}
      
       {/* Flagged Genus Section */}
@@ -83,9 +87,7 @@ export default function FlagHistory({ flaggedHistory, isLoading, error }: FlagHi
 
       {/* Flagged History Table */}
       {isLoading ? (
-        <div className="p-6 text-center text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Loading flagged history...
-        </div>
+        <PageLoading message="Loading flagged history..." />
       ) : (
         <FlaggedHistoryTable 
           data={filteredHistory}

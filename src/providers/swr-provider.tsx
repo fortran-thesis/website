@@ -22,7 +22,7 @@ export default function SwrProvider({ children }: { children: React.ReactNode })
           fetcher,
           revalidateOnFocus: false,
           revalidateOnReconnect: false,
-          revalidateIfStale: false,
+          revalidateIfStale: true,
           dedupingInterval: 5000,
           errorRetryCount: 3,
           shouldRetryOnError(err) {

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { faCircle, faCircleCheck, faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 
 export interface PasswordData {
   oldPassword: string;
@@ -35,7 +35,17 @@ export default function ChangePasswordForm({
 
   const handleInputChange = (field: keyof PasswordData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    onError?.(null);
   };
+
+  const hasLowerCase = /[a-z]/.test(formData.newPassword);
+  const hasUpperCase = /[A-Z]/.test(formData.newPassword);
+  const hasNumber = /[0-9]/.test(formData.newPassword);
+  const hasSpecialChar = /[^a-zA-Z0-9]/.test(formData.newPassword);
+  const hasMinLength = formData.newPassword.length >= 8;
+  const passwordsMatch =
+    formData.confirmNewPassword.length > 0 &&
+    formData.newPassword === formData.confirmNewPassword;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,95 +86,99 @@ export default function ChangePasswordForm({
     setShowPassword((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className={`flex flex-col space-y-8 mt-5 ${isLoading ? "cursor-wait" : ""}`}
-    >
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-          Password
-        </h2>
-        <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Update your account password.
-        </p>
-      </div>
+  const labelStyles = "font-[family-name:var(--font-bricolage-grotesque)] text-[11px] uppercase tracking-[0.15em] text-[var(--primary-color)] font-black mb-2 block opacity-60";
+  const inputStyles = "w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3.5 px-5 rounded-xl border border-transparent focus:border-[var(--primary-color)]/20 focus:bg-white focus:outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed";
 
-      {/* Form Container */}
-      <div className="border border-[var(--moldify-softGrey)] rounded-lg p-8 bg-transparent">
+  return (
+    <form onSubmit={handleSubmit} className={`space-y-12 mt-5 ${isLoading ? "cursor-wait" : ""}`}>
+      {/* Header */}
+      <header className="mt-10 mb-12 flex flex-col gap-2">
+        <h1 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight leading-none">
+          My Password
+        </h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">
+          Account Security Protocol
+        </p>
+      </header>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-7 gap-y-10">
         {[
           {
-            label: "Old Password",
+            label: "Current Password",
             field: "oldPassword",
-            placeholder: "Enter old password",
+            placeholder: "••••••••",
           },
           {
             label: "New Password",
             field: "newPassword",
-            placeholder: "Enter new password",
+            placeholder: "••••••••",
           },
           {
             label: "Confirm New Password",
             field: "confirmNewPassword",
-            placeholder: "Confirm new password",
+            placeholder: "••••••••",
           },
         ].map(({ label, field, placeholder }) => (
-          <div key={field} className="mb-6">
-            <label
-              htmlFor={field}
-              className="block font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-semibold mb-1"
-            >
-              {label}
-            </label>
-
-            <div className="relative flex items-center">
+          <div key={field} className={field === "oldPassword" ? "md:col-span-2" : ""}>
+            <label htmlFor={field} className={labelStyles}>{label}</label>
+            <div className="relative">
               <input
                 id={field}
                 name={field}
                 type={showPassword[field as keyof PasswordData] ? "text" : "password"}
                 placeholder={placeholder}
                 value={formData[field as keyof PasswordData]}
-                onChange={(e) =>
-                  handleInputChange(field as keyof PasswordData, e.target.value)
-                }
+                onChange={(e) => handleInputChange(field as keyof PasswordData, e.target.value)}
                 disabled={isLoading}
                 required
-                className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 rounded-lg focus:outline-none w-full pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                className={`${inputStyles} pr-14`}
               />
 
               <button
                 type="button"
                 onClick={() => togglePasswordVisibility(field as keyof PasswordData)}
-                className={`absolute right-4 text-[var(--primary-color)] opacity-50 transition-all ${
-                  isLoading ? "cursor-not-allowed" : "cursor-pointer hover:opacity-100"
-                }`}
+                className="cursor-pointer absolute right-5 top-1/2 -translate-y-1/2 text-[var(--primary-color)] opacity-20 hover:opacity-100 transition-all p-1 disabled:cursor-not-allowed"
                 tabIndex={-1}
-                aria-label={
-                  showPassword[field as keyof PasswordData]
-                    ? "Hide password"
-                    : "Show password"
-                }
+                aria-label={showPassword[field as keyof PasswordData] ? "Hide password" : "Show password"}
                 disabled={isLoading}
               >
-                <FontAwesomeIcon
-                  icon={
-                    showPassword[field as keyof PasswordData] ? faEye : faEyeSlash
-                  }
-                  className="w-4 h-4"
-                />
+                <FontAwesomeIcon icon={showPassword[field as keyof PasswordData] ? faEye : faEyeSlash} className="w-4 h-4" />
               </button>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Validation Tray */}
+      {formData.newPassword && (
+        <div className="p-8 bg-[var(--taupe)] rounded-[2rem] border border-[var(--primary-color)]/5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-6 gap-x-12">
+          {[
+            { met: hasMinLength, label: "08+ Character Units" },
+            { met: hasLowerCase, label: "Lowercase Sequence" },
+            { met: hasUpperCase, label: "Uppercase Sequence" },
+            { met: hasNumber, label: "Numerical Entry" },
+            { met: hasSpecialChar, label: "Symbolic Integrity" },
+            { met: passwordsMatch, label: "Passwords Match" },
+          ].map((req, i) => (
+            <div key={i} className={`flex items-center gap-3 transition-all duration-300 ${req.met ? "opacity-100" : "opacity-20"}`}>
+              <FontAwesomeIcon
+                icon={req.met ? faCircleCheck : faCircle}
+                className={`w-3.5 h-3.5 transition-colors duration-500 ${req.met ? "text-[var(--accent-color)] shadow-[0_0_15px_var(--accent-color)]/20" : "text-[var(--primary-color)]"}`}
+              />
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)]">
+                {req.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Submit Button */}
-      <div>
+      <div className="flex justify-end pt-4">
         <button
           type="submit"
           disabled={isLoading}
-          className="bg-[var(--primary-color)] hover:bg-[var(--hover-primary)] text-[var(--background-color)] px-10 py-3 rounded-lg font-[family-name:var(--font-bricolage-grotesque)] text-md font-semibold transition w-full md:w-auto disabled:opacity-60 cursor-pointer"
+          className="cursor-pointer px-12 py-4 rounded-xl bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.3em] shadow-[0_15px_30px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_40px_rgba(0,0,0,0.15)] hover:-translate-y-1 active:translate-y-0 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-wait"
         >
           {isLoading ? "Saving..." : "Save Changes"}
         </button>

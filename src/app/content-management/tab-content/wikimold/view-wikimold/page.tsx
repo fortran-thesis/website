@@ -1,21 +1,25 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import BackButton from "@/components/buttons/back_button";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import ConfirmModal from "@/components/modals/confirmation_modal";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPen, faArchive } from "@fortawesome/free-solid-svg-icons";
+import { faPen, faArchive, faRotate } from "@fortawesome/free-solid-svg-icons";
 import dynamic from "next/dynamic";
 import { useMoldipediaArticle } from '@/hooks/swr';
+import { useMoldCatalog, type MoldCatalogEntry } from '@/hooks/swr/use-mold';
 import { apiMutate, ApiError } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
+import PageLoading from '@/components/loading/page_loading';
+import MessageBanner from '@/components/feedback/message_banner';
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
 import { StickyDossierNav } from "@/components/dossier_nav";
+import StatusDropdown from "@/components/StatusDropdown";
 
 type WikiMoldDetail = {
   // Editable article model used by the form and PATCH payload construction.
@@ -48,20 +52,14 @@ type WikiMoldDetail = {
 
 export default function ViewWikiMold() {
   return (
-    <Suspense fallback={
-      <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-        <div
-          className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]"
-          style={{ width: '30%' }}
-        />
-      </div>
-    }>
+    <Suspense fallback={<PageLoading fullScreen showTopBar />}>
       <ViewWikiMoldContent />
     </Suspense>
   );
 }
 
 function ViewWikiMoldContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const wikimoldId = searchParams.get("id") ?? '';
   const userRole = "Mycologist";
@@ -69,6 +67,12 @@ function ViewWikiMoldContent() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isBackModalOpen, setIsBackModalOpen] = useState(false);
+
+  // Mold Catalog States: For auto-fill dropdown
+  const { data: catalogData, isLoading: catalogLoading } = useMoldCatalog();
+  const [showCatalogBanner, setShowCatalogBanner] = useState(false);
+  const [selectedCatalogMold, setSelectedCatalogMold] = useState<MoldCatalogEntry | null>(null);
 
   const fallbackImage = "/assets/wikimold-fallback.png";
 
@@ -188,6 +192,39 @@ function ViewWikiMoldContent() {
     reader.readAsDataURL(file);
   };
 
+  /**
+   * Handle mold catalog selection
+   * - Maps catalog entry fields to form fields
+   * - Auto-fills biological description, affected hosts, symptoms, etc.
+   * - Shows confirmation banner that fields have been auto-filled
+   */
+  const handleMoldCatalogSelect = (mold: MoldCatalogEntry) => {
+    setSelectedCatalogMold(mold);
+    setShowCatalogBanner(true);
+
+    setWikiMoldInfo((prev) => ({
+      ...prev,
+      // Map catalog fields to form fields
+      content: mold.description || mold.overview || prev.content,
+      affected_hosts: mold.affected_hosts || prev.affected_hosts,
+      symptoms: mold.symptoms || prev.symptoms,
+      disease_cycle: mold.disease_cycle || prev.disease_cycle,
+      impact: mold.impact || prev.impact,
+      prevention: mold.preventionSummary || prev.prevention,
+      // Auto-fill treatment controls if available
+      treatments: {
+        mechanical: (mold.prevention as any)?.mechanical || prev.treatments.mechanical,
+        cultural: (mold.prevention as any)?.cultural || prev.treatments.cultural,
+        biological: (mold.prevention as any)?.biological || prev.treatments.biological,
+        physical: (mold.prevention as any)?.physical || prev.treatments.physical,
+        chemical: (mold.prevention as any)?.chemical || prev.treatments.chemical,
+      },
+    }));
+
+    // Auto-dismiss banner after 5 seconds
+    setTimeout(() => setShowCatalogBanner(false), 5000);
+  };
+
   const handlePublish = async () => {
     if (!wikiMoldInfo.title.trim()) return;
 
@@ -300,10 +337,23 @@ function ViewWikiMoldContent() {
 
   const navItems = [
     { id: 'description', label: 'Description' },
-    { id: 'analysis', label: 'Fungal Analysis' },
+    { id: 'analysis', label: 'Host & Pathogen Impact' },
     { id: 'prevention', label: 'Prevention' },
-    { id: 'treatments', label: 'Treatments' },
+    { id: 'treatments', label: 'Remediation Protocols' },
   ];
+
+  const navigateBack = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push('/content-management/tab-content/wikimold');
+  };
+
+  const handleBack = () => {
+    setIsBackModalOpen(true);
+  };
 
   return (
     <main className="relative flex flex-col xl:py-2 py-10 w-full font-[family-name:var(--font-bricolage-grotesque)]">
@@ -327,7 +377,48 @@ function ViewWikiMoldContent() {
       </div>
 
       <div className="mb-8">
-        <BackButton />
+        <BackButton onClick={handleBack} />
+      </div>
+
+      {/* MOLD CATALOG DROPDOWN: Auto-fill fields from catalog */}
+      <div className="w-full px-8 mb-15">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-12 py-10 border-y border-[var(--primary-color)]/10">
+           <div className="flex items-center gap-8">
+              <div className="flex items-center justify-center w-14 h-14 rounded-full border border-[var(--primary-color)]/20 text-[var(--accent-color)] shadow-sm">
+                <FontAwesomeIcon icon={faRotate} className="animate-spin-slow text-sm" />
+              </div>
+
+              <div className="flex flex-col">
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)]">
+                    Update From Catalog
+                  </span>
+                  <div className="w-6 h-[1px] bg-[var(--primary-color)]/20" />
+                </div>
+                <h2 className="text-xl font-black uppercase tracking-tight text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
+                  Archive Synchronization
+                </h2>
+              </div>
+            </div>
+          <div className="w-full md:w-[400px]">
+            <StatusDropdown
+              options={catalogData?.data?.data?.map((m: MoldCatalogEntry) => ({ label: m.name, value: m.name })) || []}
+              onSelect={(value) => {
+                if (catalogLoading) return;
+                const mold = catalogData?.data?.data?.find((m: MoldCatalogEntry) => m.name === value);
+                if (mold) {
+                  handleMoldCatalogSelect(mold);
+                }
+              }}
+              placeholder="CHOOSE A MOLD TO AUTO FILL..."
+              backgroundColor="transparent"
+              textColor="var(--primary-color)"
+              borderColor="transparent"
+              selectedValue={selectedCatalogMold?.name}
+            />
+            <div className="h-[2px] w-full bg-gradient-to-r from-[var(--primary-color)]/20 via-[var(--primary-color)]/5 to-transparent mt-[-4px]" />
+          </div>
+        </div>
       </div>
 
       {/* Cover image hero with immediate preview and optional replacement upload. */}
@@ -348,13 +439,28 @@ function ViewWikiMoldContent() {
         </div>
       </section>
 
+      
+
+      {/* CATALOG AUTO-FILL BANNER: Notification that fields have been updated */}
+      {showCatalogBanner && selectedCatalogMold && (
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-full text-sm font-bold z-50 shadow-lg flex items-center gap-2">
+          <span>✓ Fields updated from "{selectedCatalogMold.name}" • Review before saving</span>
+          <button
+            onClick={() => setShowCatalogBanner(false)}
+            className="ml-4 hover:opacity-75 text-lg leading-none"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Sticky in-page nav keeps long-form editing sections easy to access. */}
       <StickyDossierNav items={navItems} />
 
       <form className="w-full pb-40">
         {/* Alerts */}
-        {successMessage && <div className="mb-4 px-4 py-3 bg-green-100 text-green-800 rounded-lg font-semibold">{successMessage}</div>}
-        {errorMessage && <div className="mb-4 px-4 py-3 bg-red-100 text-red-800 rounded-lg font-semibold">{errorMessage}</div>}
+        {successMessage && <MessageBanner variant="success" className="mb-4">{successMessage}</MessageBanner>}
+        {errorMessage && <MessageBanner variant="error" className="mb-4">{errorMessage}</MessageBanner>}
 
         {/* Article meta fields: high-visibility title/genus inputs above detailed sections. */}
         <div className="max-w-full mx-auto px-4 mb-24 mt-20">
@@ -581,6 +687,19 @@ function ViewWikiMoldContent() {
         subtitle="This will hide the article from the public database."
         onCancel={() => setIsArchiveModalOpen(false)}
         onConfirm={handleArchive}
+      />
+
+      <ConfirmModal
+        isOpen={isBackModalOpen}
+        title="Discard changes?"
+        subtitle="If you leave this page now, unsaved edits will be lost."
+        cancelText="Stay"
+        confirmText="Leave"
+        onCancel={() => setIsBackModalOpen(false)}
+        onConfirm={() => {
+          setIsBackModalOpen(false);
+          navigateBack();
+        }}
       />
     </main>
   );

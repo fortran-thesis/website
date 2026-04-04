@@ -6,15 +6,18 @@ import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import StatusDropdown from '@/components/StatusDropdown';
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
 import { apiUrl, type ApiResponse } from '@/lib/api';
 import type { PaginatedResponse } from '@/hooks/swr/types';
 import type { MoldReportSnapshot, StatusCounts } from '@/hooks/swr/use-mold-reports';
+import PageLoading from '@/components/loading/page_loading';
 
 export default function Investigation() {
         const { user: authUser, loading: authLoading } = useAuth();
+    const router = useRouter();
         
         // Map auth user data  
         const user = authUser ? {
@@ -88,6 +91,7 @@ export default function Investigation() {
                 location,
                 submittedBy,
                 dateSubmitted,
+                dateSubmittedISO,
                 status: it.status
                     ? it.status.charAt(0).toUpperCase() + it.status.slice(1)
                     : 'Pending',
@@ -123,9 +127,10 @@ export default function Investigation() {
         /* ── Search & filter state ── */
         const [searchQuery, setSearchQuery] = useState('');
         const [statusFilter, setStatusFilter] = useState('');
+        const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
         const filteredCases = useMemo(() => {
-            return cases.filter((c) => {
+            const filtered = cases.filter((c) => {
                 const searchLower = searchQuery.toLowerCase();
                 const matchesSearch = !searchQuery ||
                     c.caseName?.toLowerCase().includes(searchLower) ||
@@ -137,7 +142,14 @@ export default function Investigation() {
                 const matchesStatus = !statusFilter || statusFilter === 'all' || c.status?.toLowerCase() === statusFilter;
                 return matchesSearch && matchesStatus;
             });
-        }, [cases, searchQuery, statusFilter]);
+
+            // Sort by date
+            return filtered.sort((a, b) => {
+                const da = a.dateSubmittedISO ? new Date(a.dateSubmittedISO).getTime() : 0;
+                const db = b.dateSubmittedISO ? new Date(b.dateSubmittedISO).getTime() : 0;
+                return sortOrder === 'desc' ? db - da : da - db;
+            });
+        }, [cases, searchQuery, statusFilter, sortOrder]);
 
         /* ── Derived loading / has-more flags ── */
         const loading = authLoading || casesLoading;
@@ -219,6 +231,20 @@ export default function Investigation() {
                                 onSelect={(value) => setStatusFilter(value)}
                             />
                         </div>
+
+                        {/* Sort by Date */}
+                        <div className="w-full lg:w-auto">
+                            <StatusDropdown
+                                placeholder="Sort By Date"
+                                backgroundColor="var(--primary-color)"
+                                textColor="var(--background-color)"
+                                options={[
+                                    { label: "Newest First", value: "desc" },
+                                    { label: "Oldest First", value: "asc" }
+                                ]}
+                                onSelect={(value) => setSortOrder(value as 'asc' | 'desc')}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -226,20 +252,20 @@ export default function Investigation() {
 
             {/* Submitted Cases Table */}
             <div className="w-full">
-                {loading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading cases...</p>}
+                {loading && <PageLoading message="Loading cases..." />}
                 {!loading && (
                     <>
                         <CaseTable
                             cases={filteredCases}
                             onEdit={(c: any) => {
                                 const params = new URLSearchParams({ id: c.id });
-                                window.location.href = `/investigation/view-case?${params.toString()}`;
+                                router.push(`/investigation/view-case?${params.toString()}`);
                             }}
                         />
                         {/* Loading indicator for additional pages */}
-                        {(isLoadingMore || hasMore) && (
+                        {isLoadingMore && (
                             <div className="py-4 text-center">
-                                <p className="text-sm text-[var(--moldify-grey)]">Loading more cases...</p>
+                                <PageLoading message="Loading more cases..." compact />
                             </div>
                         )}
                     </>

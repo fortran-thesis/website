@@ -23,7 +23,7 @@ export default function DonutChart({
 }: DonutChartProps) {
   return (
     <div
-      className="rounded-xl p-6 flex flex-col md:flex-row items-center gap-8 w-full"
+      className="rounded-3xl p-6 flex flex-col md:flex-row items-center gap-8 w-full"
       style={{ backgroundColor }}
     >
       <div className="flex-1 flex flex-col items-center">
