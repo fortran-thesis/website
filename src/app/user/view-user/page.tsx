@@ -76,12 +76,79 @@ function ViewUserContent() {
       : 'Farmer';
 
   // SWR: audit logs
-  const { data: logsData, isLoading: logsLoading } = useAuditLogs({ limit: 10 });
+  const { data: logsData, isLoading: logsLoading } = useAuditLogs({ userId: userId ?? undefined, limit: 20 });
   const userLogs: UserLogTileEntry[] = useMemo(() => {
     const raw = (logsData as any)?.data;
     // getAllAuditLogs returns { snapshot, nextPageToken }; getAuditLogsByAction returns array
     const entries = Array.isArray(raw) ? raw : (raw?.snapshot ?? []);
     if (!Array.isArray(entries) || entries.length === 0) return [];
+
+    const userIdentifiers = [
+      userId,
+      userDetails?.id,
+      userDetails?.username,
+      userDetails?.email,
+      userDetails?.firstName && userDetails?.lastName
+        ? `${userDetails.firstName} ${userDetails.lastName}`
+        : undefined,
+      userDetails?.firstName,
+      userDetails?.lastName,
+    ]
+      .filter((value): value is string => Boolean(value && value.trim()))
+      .map((value) => value.toLowerCase());
+
+    const getCandidateFields = (log: any): string[] => {
+      const meta = log?.metadata ?? {};
+      const actor = log?.actor ?? {};
+      const target = log?.target ?? {};
+      const user = log?.user ?? {};
+
+      return [
+        log?.user_id,
+        log?.uid,
+        log?.username,
+        log?.email,
+        log?.performed_by,
+        log?.performed_by_id,
+        log?.actor_id,
+        log?.target_user_id,
+        log?.targetUserId,
+        log?.reference,
+        actor?.id,
+        actor?.user_id,
+        actor?.uid,
+        actor?.username,
+        target?.id,
+        target?.user_id,
+        target?.uid,
+        target?.username,
+        user?.id,
+        user?.user_id,
+        user?.uid,
+        user?.username,
+        meta?.user_id,
+        meta?.uid,
+        meta?.actor_id,
+        meta?.performed_by,
+        meta?.target_user_id,
+        meta?.reference,
+      ]
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        .map((value) => value.toLowerCase());
+    };
+
+    const filteredEntries = entries.filter((log: any) => {
+      if (userIdentifiers.length === 0) return true;
+
+      const candidates = getCandidateFields(log);
+      if (candidates.some((field) => userIdentifiers.includes(field))) return true;
+
+      const desc = `${log?.description ?? ''}`.toLowerCase();
+      return userIdentifiers.some((id) => id.length > 2 && desc.includes(id));
+    });
+
+    if (filteredEntries.length === 0) return [];
+
     const resolveDate = (ts: any): Date | null => {
       if (!ts) return null;
       // Firestore Timestamp serialized as { _seconds, _nanoseconds }
@@ -89,7 +156,7 @@ function ViewUserContent() {
       const d = new Date(ts);
       return isNaN(d.getTime()) ? null : d;
     };
-    const sortedEntries = [...entries].sort((left: any, right: any) => {
+    const sortedEntries = [...filteredEntries].sort((left: any, right: any) => {
       const leftDate = resolveDate(left.timestamp);
       const rightDate = resolveDate(right.timestamp);
       return (rightDate?.getTime() ?? 0) - (leftDate?.getTime() ?? 0);
@@ -102,7 +169,7 @@ function ViewUserContent() {
         description: `${log.action || 'Unknown Action'}: ${log.description || 'No description'}`,
       };
     });
-  }, [logsData]);
+  }, [logsData, userDetails, userId]);
 
   const handleMycoSubmit = (data: any) => {
     setShowEditMycoModal(false);
@@ -116,13 +183,6 @@ function ViewUserContent() {
   const userPhone = userDetails?.phone || "N/A";
   const userLocation = userDetails?.address || "N/A";
   const userProfileImage = "/assets/default-fallback.png";
-
-  // Fallback mock data if audit logs fail to load
-  const defaultUserLogs: UserLogTileEntry[] = [
-    { date: "Nov 2, 2025", time: "10:15 AM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
-    { date: "Nov 1, 2025", time: "08:45 PM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
-    { date: "Oct 31, 2025", time: "05:10 PM", description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut et massa mi. Aliquam in hendrerit urna. Pellentesque sit amet sapien fringilla, mattis ligula consectetur, ultrices mauris. " },
-  ];
 
   // Show empty state if userLogs is empty array, otherwise use fetched logs
   const displayLogs = userLogs;
@@ -242,6 +302,7 @@ function ViewUserContent() {
       <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold mt-10 mb-5">
         Activity Log
       </p>
+      {logsLoading && <PageLoading message="Loading activity log..." compact />}
       {displayLogs.length > 0 ? (
         <UserLogTile items={displayLogs} />
       ) : (
