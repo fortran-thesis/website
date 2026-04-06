@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, Suspense, useCallback } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
@@ -9,7 +10,7 @@ import TabBar from "@/components/tab_bar";
 import CaseStatusCard from "@/components/CaseStatusCard";
 import AssignCaseModal from "@/components/modals/assign_case_modal";
 import ConfirmModal from "@/components/modals/confirmation_modal";
-import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus, faEye } from "@fortawesome/free-solid-svg-icons";
+import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus, faEye, faBookOpen } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import CaseDetailsTab from "../investigation-tabs/case_details";
 import InVitroTab from "../investigation-tabs/in_vitro";
@@ -295,6 +296,34 @@ function ViewCaseContent() {
     if (!text) return "";
     return text.includes("%") ? text : `${text}%`;
   };
+
+  const finalVerdict = moldCase?.final_verdict;
+  const finalVerdictMoldName = asText(finalVerdict?.moldName, finalVerdict?.moldId);
+  const finalVerdictConfidence = confidenceText(finalVerdict?.confidence);
+  const finalVerdictWikiMoldId = asText(finalVerdict?.moldipedia_id);
+  const finalVerdictNotes = asText(finalVerdict?.mycologist_notes);
+  const finalVerdictTimestamp = (() => {
+    const d = toDate(finalVerdict?.verdict_timestamp as string | { _seconds: number } | undefined);
+    return d
+      ? d.toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        })
+      : '';
+  })();
+  const hasFinalVerdict = Boolean(
+    finalVerdictMoldName ||
+      finalVerdictConfidence ||
+      finalVerdictWikiMoldId ||
+      finalVerdictNotes ||
+      finalVerdictTimestamp,
+  );
+  const finalVerdictWikiMoldHref = finalVerdictWikiMoldId
+    ? `/wikimold/view-wikimold/${encodeURIComponent(finalVerdictWikiMoldId)}`
+    : '';
 
   const normalizeCharacteristics = (value: unknown): Record<string, any> => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -748,6 +777,76 @@ function ViewCaseContent() {
               </div>
             </div>
           </div>
+
+            {hasFinalVerdict && (
+              <div className="rounded-3xl border border-[var(--primary-color)]/15 bg-[var(--background-color)] p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.16em] text-[var(--moldify-grey)]">
+                      Final WikiMold Verdict
+                    </p>
+                    <h3 className="mt-1 font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)]">
+                      {finalVerdictMoldName || 'Unnamed Mold Verdict'}
+                    </h3>
+                  </div>
+
+                  {finalVerdictConfidence && (
+                    <span className="rounded-full bg-[var(--primary-color)]/10 px-4 py-2 font-[family-name:var(--font-bricolage-grotesque)] text-sm font-bold text-[var(--primary-color)]">
+                      Confidence: {finalVerdictConfidence}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-[var(--primary-color)]/10 bg-white p-4">
+                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.12em] text-[var(--moldify-grey)]">
+                      WikiMold Article
+                    </p>
+                    {finalVerdictWikiMoldHref ? (
+                      <Link
+                        href={finalVerdictWikiMoldHref}
+                        className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[var(--primary-color)] px-4 py-2 font-[family-name:var(--font-bricolage-grotesque)] text-sm font-bold text-white transition-opacity hover:opacity-90"
+                      >
+                        <FontAwesomeIcon icon={faBookOpen} />
+                        View on WikiMold
+                      </Link>
+                    ) : (
+                      <p className="mt-2 font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--moldify-grey)]">
+                        No linked WikiMold article yet.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl border border-[var(--primary-color)]/10 bg-white p-4">
+                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.12em] text-[var(--moldify-grey)]">
+                      Verdict Timestamp
+                    </p>
+                    <p className="mt-2 font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)]">
+                      {finalVerdictTimestamp || 'Timestamp unavailable'}
+                    </p>
+                  </div>
+                </div>
+
+                {finalVerdictNotes && (
+                  <div className="mt-4 rounded-2xl border border-[var(--primary-color)]/10 bg-white p-4">
+                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.12em] text-[var(--moldify-grey)]">
+                      Mycologist Notes
+                    </p>
+                    <p className="mt-2 whitespace-pre-wrap font-[family-name:var(--font-bricolage-grotesque)] text-sm leading-relaxed text-[var(--moldify-black)]">
+                      {finalVerdictNotes}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!hasFinalVerdict && caseData?.status?.toLowerCase() === 'resolved' && (
+              <div className="rounded-2xl border border-[var(--primary-color)]/10 bg-[var(--background-color)] p-5">
+                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--moldify-grey)]">
+                  This case is resolved, but no final WikiMold verdict details are available yet.
+                </p>
+              </div>
+            )}
 
             {/* 4.  UTILITY BAR */}
             <div className="flex flex-wrap gap-3 bg-[var(--taupe)]/30 p-2 rounded-2xl border border-[var(--primary-color)]/5">
