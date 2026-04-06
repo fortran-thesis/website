@@ -118,8 +118,14 @@ export function useMoldipediaArticle(id: string | undefined) {
 export interface MoldCaseSummary {
   id?: string;
   name?: string;
+  case_name?: string;
   mold_report_id?: string;
   user_id?: string;
+  crop_name?: string;
+  common_name?: string;
+  crop?: string;
+  cover_photo?: string | string[];
+  report_cover_photo?: string | string[];
   priority?: 'low' | 'medium' | 'high';
   is_archived?: boolean;
   metadata?: {
