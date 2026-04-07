@@ -21,6 +21,9 @@ interface CaseTableProps {
   showStatus?: boolean;
   showAction?: boolean;
   useViewIcon?: boolean;
+  sortKey?: 'caseName' | 'cropName' | 'location' | 'submittedBy' | 'dateSubmitted' | 'status' | null;
+  sortDirection?: 'asc' | 'desc';
+  onSort?: (column: 'caseName' | 'cropName' | 'location' | 'submittedBy' | 'dateSubmitted' | 'status') => void;
 }
 
 export default function CaseTable({
@@ -29,6 +32,9 @@ export default function CaseTable({
   showStatus = true,
   showAction = true,
   useViewIcon = false,
+  sortKey,
+  sortDirection = 'asc',
+  onSort,
 }: CaseTableProps) {
   const [navigatingId, setNavigatingId] = useState<string | null>(null);
 
@@ -56,12 +62,26 @@ export default function CaseTable({
         <table className="min-w-full table-fixed text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)]">
           <thead className="sticky top-0 z-10 bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center">
             <tr>
-              <th className="py-3 px-4 rounded-tl-xl">Case Name</th>
-              <th className="py-3 px-4">Crop Name</th>
-              <th className="py-3 px-4">Location</th>
-              <th className="py-3 px-4">Submitted By</th>
-              <th className="py-3 px-4">Date Submitted</th>
-              {showStatus && <th className="py-3 px-4">Status</th>}
+              <th className="py-3 px-4 rounded-tl-xl cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('caseName')}>
+                Case Name {sortKey === 'caseName' && (sortDirection === 'asc' ? '↑' : '↓')}
+              </th>
+              <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('cropName')}>
+                Crop Name {sortKey === 'cropName' && (sortDirection === 'asc' ? '↑' : '↓')}
+              </th>
+              <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('location')}>
+                Location {sortKey === 'location' && (sortDirection === 'asc' ? '↑' : '↓')}
+              </th>
+              <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('submittedBy')}>
+                Submitted By {sortKey === 'submittedBy' && (sortDirection === 'asc' ? '↑' : '↓')}
+              </th>
+              <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('dateSubmitted')}>
+                Date Submitted {sortKey === 'dateSubmitted' && (sortDirection === 'asc' ? '↑' : '↓')}
+              </th>
+              {showStatus && (
+                <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('status')}>
+                  Status {sortKey === 'status' && (sortDirection === 'asc' ? '↑' : '↓')}
+                </th>
+              )}
               {showAction && <th className="py-3 px-4 rounded-tr-xl text-center">Action</th>}
             </tr>
           </thead>
