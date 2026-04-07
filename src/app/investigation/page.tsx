@@ -67,6 +67,15 @@ export default function Investigation() {
             }
         }, [casePagesData, isLoadingMore, setSize]);
 
+        const normalizeDisplayStatus = (status?: string) => {
+            const raw = (status ?? '').trim().toLowerCase();
+            if (raw === 'pending' || raw === 'pending review') return 'For Approval';
+            if (raw === 'in progress') return 'In Progress';
+            if (raw === 'resolved') return 'Resolved';
+            if (raw === 'rejected') return 'Rejected';
+            return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'For Approval';
+        };
+
         /* ── Map report snapshot → display row ── */
         const mapReportToCase = (it: MoldReportSnapshot) => {
             let dateSubmittedISO = '';
@@ -92,9 +101,7 @@ export default function Investigation() {
                 submittedBy,
                 dateSubmitted,
                 dateSubmittedISO,
-                status: it.status
-                    ? it.status.charAt(0).toUpperCase() + it.status.slice(1)
-                    : 'Pending',
+                status: normalizeDisplayStatus(it.status),
                 description,
             };
         };
@@ -112,8 +119,8 @@ export default function Investigation() {
             if (isAdministrator && adminStatsRes?.data) return adminStatsRes.data;
             return cases.reduce(
                 (acc, c) => {
-                    const s = c.status?.toLowerCase() || 'pending';
-                    if (s === 'pending') acc.pending++;
+                    const s = c.status?.toLowerCase() || 'for approval';
+                    if (s === 'for approval') acc.pending++;
                     else if (s === 'in progress') acc.in_progress++;
                     else if (s === 'resolved') acc.resolved++;
                     else if (s === 'rejected') acc.rejected++;
@@ -127,7 +134,25 @@ export default function Investigation() {
         /* ── Search & filter state ── */
         const [searchQuery, setSearchQuery] = useState('');
         const [statusFilter, setStatusFilter] = useState('');
-        const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+        const [sortKey, setSortKey] = useState<'caseName' | 'cropName' | 'location' | 'submittedBy' | 'dateSubmitted' | 'status' | null>(null);
+        const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+        const handleSort = (column: 'caseName' | 'cropName' | 'location' | 'submittedBy' | 'dateSubmitted' | 'status') => {
+            if (sortKey !== column) {
+                setSortKey(column);
+                setSortDirection('asc');
+                return;
+            }
+
+            if (sortDirection === 'asc') {
+                setSortDirection('desc');
+                return;
+            }
+
+            // Third click restores default sort (latest to oldest).
+            setSortKey(null);
+            setSortDirection('asc');
+        };
 
         const filteredCases = useMemo(() => {
             const filtered = cases.filter((c) => {
@@ -143,13 +168,28 @@ export default function Investigation() {
                 return matchesSearch && matchesStatus;
             });
 
-            // Sort by date
+            if (!sortKey) {
+                // Default state: latest to oldest.
+                return filtered.sort((a, b) => {
+                    const da = a.dateSubmittedISO ? new Date(a.dateSubmittedISO).getTime() : 0;
+                    const db = b.dateSubmittedISO ? new Date(b.dateSubmittedISO).getTime() : 0;
+                    return db - da;
+                });
+            }
+
             return filtered.sort((a, b) => {
-                const da = a.dateSubmittedISO ? new Date(a.dateSubmittedISO).getTime() : 0;
-                const db = b.dateSubmittedISO ? new Date(b.dateSubmittedISO).getTime() : 0;
-                return sortOrder === 'desc' ? db - da : da - db;
+                if (sortKey === 'dateSubmitted') {
+                    const da = a.dateSubmittedISO ? new Date(a.dateSubmittedISO).getTime() : 0;
+                    const db = b.dateSubmittedISO ? new Date(b.dateSubmittedISO).getTime() : 0;
+                    return sortDirection === 'asc' ? da - db : db - da;
+                }
+
+                const av = (a[sortKey] ?? '').toString();
+                const bv = (b[sortKey] ?? '').toString();
+                const cmp = av.localeCompare(bv, undefined, { sensitivity: 'base' });
+                return sortDirection === 'asc' ? cmp : -cmp;
             });
-        }, [cases, searchQuery, statusFilter, sortOrder]);
+        }, [cases, searchQuery, statusFilter, sortKey, sortDirection]);
 
         /* ── Derived loading / has-more flags ── */
         const loading = authLoading || casesLoading;
@@ -174,7 +214,7 @@ export default function Investigation() {
             <div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 mt-6 ${isMycologist ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
                 <StatisticsTile icon={faSeedling} iconColor="var(--moldify-black)" title="Total Cases" statNum={caseStats.total} />
                 {!isMycologist && (
-                    <StatisticsTile icon={faClockRotateLeft} iconColor="var(--accent-color)" title="Pending Mold Cases" statNum={caseStats.pending} />
+                    <StatisticsTile icon={faClockRotateLeft} iconColor="var(--accent-color)" title="For Approval Cases" statNum={caseStats.pending} />
                 )}
                 <StatisticsTile icon={faHourglassHalf} iconColor="var(--moldify-blue)" title="In Progress Mold Cases" statNum={caseStats.in_progress} />
                 <StatisticsTile icon={faCircleCheck} iconColor="var(--primary-color)" title="Resolved Mold Cases" statNum={caseStats.resolved} />
@@ -216,33 +256,20 @@ export default function Investigation() {
                                     isMycologist
                                         ? [
                                             { label: "All", value: "all" },
+                                            { label: "For Approval", value: "for approval" },
                                             { label: "In Progress", value: "in progress" },
                                             { label: "Resolved", value: "resolved" },
                                             { label: "Rejected", value: "rejected" }
                                         ]
                                         : [
                                             { label: "All", value: "all" },
-                                            { label: "Pending", value: "pending" },
+                                            { label: "For Approval", value: "for approval" },
                                             { label: "In Progress", value: "in progress" },
                                             { label: "Resolved", value: "resolved" },
                                             { label: "Rejected", value: "rejected"}
                                         ]
                                 }
                                 onSelect={(value) => setStatusFilter(value)}
-                            />
-                        </div>
-
-                        {/* Sort by Date */}
-                        <div className="w-full lg:w-auto">
-                            <StatusDropdown
-                                placeholder="Sort By Date"
-                                backgroundColor="var(--primary-color)"
-                                textColor="var(--background-color)"
-                                options={[
-                                    { label: "Newest First", value: "desc" },
-                                    { label: "Oldest First", value: "asc" }
-                                ]}
-                                onSelect={(value) => setSortOrder(value as 'asc' | 'desc')}
                             />
                         </div>
                     </div>
@@ -257,6 +284,10 @@ export default function Investigation() {
                     <>
                         <CaseTable
                             cases={filteredCases}
+                            showAction={false}
+                            sortKey={sortKey}
+                            sortDirection={sortDirection}
+                            onSort={handleSort}
                             onEdit={(c: any) => {
                                 const params = new URLSearchParams({ id: c.id });
                                 router.push(`/investigation/view-case?${params.toString()}`);
