@@ -5,6 +5,7 @@ import {
   faCubes,
   faHeartPulse,
   faSeedling,
+  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import ObservationImageViewer from "../../../components/tiles/initial_observation_components/observation_image_viewer";
 import ObservationDataTile from "../../../components/tiles/initial_observation_components/observation_data_tile";
@@ -37,6 +38,7 @@ interface InVivoObservation {
   macroTexture: string;
   macroSymptoms: string | string[];
   macroCharacteristics: string | string[];
+  cultureName?: string;
 }
 
 /**
@@ -230,7 +232,18 @@ export default function InVivoTab({
               </section>
               )}
 
-              {!hasMicroscopicEvidence && !hasMacroscopicEvidence && (
+              {/* CULTURE SOURCE SECTION */}
+              {(obs.cultureName ?? "").trim().length > 0 && (
+                <section className="space-y-3">
+                  <ObservationDataTile
+                    label="Culture Source"
+                    value={obs.cultureName!}
+                    icon={faClock}
+                  />
+                </section>
+              )}
+
+              {!hasMicroscopicEvidence && !hasMacroscopicEvidence && (obs.cultureName ?? "").trim().length === 0 && (
                 <ObservationEmptyStateCard
                   message="No microscopic or macroscopic evidence in this log"
                   height={120}

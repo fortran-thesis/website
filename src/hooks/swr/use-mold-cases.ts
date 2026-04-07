@@ -43,6 +43,8 @@ export interface CultivationLog {
     macroCharacteristics?: string | string[];
     symptoms?: string | string[];
     characteristics?: string | string[];
+    culture_id?: string;
+    culture_name?: string;
   };
   additional_info?:
     | string

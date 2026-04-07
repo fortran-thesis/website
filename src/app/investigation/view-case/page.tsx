@@ -427,6 +427,10 @@ function ViewCaseContent() {
             characteristics?.macroCharacteristics ??
             characteristics?.characteristics,
         ),
+        cultureName: asText(
+          characteristics?.culture_name,
+          characteristics?.cultureName,
+        ),
       };
     });
 
@@ -483,6 +487,10 @@ function ViewCaseContent() {
           characteristics?.macro_characteristics ??
             characteristics?.macroCharacteristics ??
             characteristics?.characteristics,
+        ),
+        cultureName: asText(
+          characteristics?.culture_name,
+          characteristics?.cultureName,
         ),
       };
     });
