@@ -62,6 +62,14 @@ export interface MoldCase {
   mycologist_name?: string;
   is_archived?: boolean;
   start_date?: string | { _seconds: number };
+  final_verdict?: {
+    moldId?: string;
+    moldName?: string;
+    confidence?: number | string;
+    moldipedia_id?: string;
+    mycologist_notes?: string;
+    verdict_timestamp?: { _seconds: number } | string;
+  };
   cultivation_details?: {
     growth_medium?: string;
     in_vitro_details?: {

@@ -87,6 +87,7 @@ export const endpoints = {
     countMonthly: `${API_PREFIX}/mold-report/counts/monthly`,
     countPriorities: `${API_PREFIX}/mold-report/counts/priorities`,
     countStatuses: `${API_PREFIX}/mold-report/counts/statuses`,
+    publicResolvedCount: `${API_PREFIX}/mold-report/public/resolved-count`,
   },
 
   // Mold Cases

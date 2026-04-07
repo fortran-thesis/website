@@ -6,11 +6,15 @@ import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import ReportsTable, { Report } from '@/components/tables/report_table';
 import { useEffect, useState, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useFlagReportsInfinite } from '@/hooks/swr';
+import PageLoading from '@/components/loading/page_loading';
+import MessageBanner from '@/components/feedback/message_banner';
 
 export default function Reports() {
        
     const userRole = "Administrator";
+  const router = useRouter();
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -188,17 +192,17 @@ export default function Reports() {
 
             {/* Submitted Cases Table */}
             <div className="mt-6 w-full">
-              {isInitialLoading && <p className="text-center text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl mt-10">Loading reports...</p>}
-              {error && <p className="text-red-600">{error}</p>}
+              {isInitialLoading && <PageLoading message="Loading reports..." />}
+              {error && <MessageBanner variant="error" className="mb-4">{error}</MessageBanner>}
               {!isInitialLoading && !error && <ReportsTable data={filteredReports} 
                 onEdit={(c: Report) => {
-                        window.location.href = `/reports/view-report?id=${c.id}`;
+                        router.push(`/reports/view-report?id=${c.id}`);
                     }}
                 />}
 
               {/* Infinite scroll trigger */}
               <div ref={loadMoreRef} className="py-4 text-center">
-                {isLoadingMoreOnly && <p className="text-sm text-[var(--moldify-grey)]">Loading more reports...</p>}
+                {isLoadingMoreOnly && <PageLoading message="Loading more reports..." compact />}
               </div>
             </div>
             

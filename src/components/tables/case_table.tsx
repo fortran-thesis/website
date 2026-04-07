@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen, faSeedling, faEye } from "@fortawesome/free-solid-svg-icons";
 import StatusBox from "../tiles/status_tile";
 import EmptyState from "../empty_state";
+import TopLoadingBar from "@/components/loading/top_loading_bar";
 
 interface CaseData {
   caseName: string;
@@ -39,14 +40,7 @@ export default function CaseTable({
   return (
     <>
       {/* Top Loading Bar */}
-      {navigatingId && (
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div 
-            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
-            style={{ width: '30%' }}
-          />
-        </div>
-      )}
+      <TopLoadingBar isVisible={Boolean(navigatingId)} />
 
       <div className="min-w-full overflow-x-auto mt-4 rounded-xl border border-[var(--primary-color)] bg-[var(--background-color)] shadow">
         <div className="h-[600px] overflow-y-auto">
@@ -100,7 +94,7 @@ export default function CaseTable({
                       title={useViewIcon ? "View Case" : "Edit Case"}
                     >
                       <FontAwesomeIcon 
-                        icon={useViewIcon ? faEye : faPen} 
+                        icon={faEye} 
                         className={navigatingId === item.caseName ? 'animate-pulse' : ''}
                         style={{ width: "12px", height: "12px" }} 
                       />

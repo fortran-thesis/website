@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import CaseTable from "@/components/tables/case_table";
+import PageLoading from "@/components/loading/page_loading";
+import MessageBanner from "@/components/feedback/message_banner";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch } from "@fortawesome/free-solid-svg-icons";
 import { useClosedReportsInfinite, type MoldReportSnapshot } from "@/hooks/swr";
@@ -20,6 +23,7 @@ interface CaseData {
  * Only shows cases with terminal rejected status
  */
 export default function CaseHistory() {
+  const router = useRouter();
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const {
@@ -112,25 +116,27 @@ export default function CaseHistory() {
    */
   const handleViewCase = (caseItem: CaseData) => {
     console.log("Viewing rejected case:", caseItem.caseName);
-    // Navigate to view case page using window.location (same as investigation page)
+    // Use client-side navigation so returning preserves consistent UI state.
     const params = new URLSearchParams({ id: caseItem.caseName });
-    window.location.href = `/investigation/view-case?${params.toString()}`;
+    router.push(`/investigation/view-case?${params.toString()}`);
   };
 
   return (
     <div>
-      <h2 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-        Case History
-      </h2>
-      <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mb-6">
-        Your record of rejected mold investigations.
-      </p>
+      <header className="mt-10 mb-12 flex flex-col gap-2">
+        <h1 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] uppercase tracking-tight leading-none">
+          Case History
+        </h1>
+        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">
+          Rejected Mold Investigation Records
+        </p>
+      </header>
 
       {/* Error Message Display */}
       {errorMessage && (
-        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+        <MessageBanner variant="error" className="mb-4">
           {errorMessage}
-        </div>
+        </MessageBanner>
       )}
     
       {/* Mold Genus Section */}
@@ -170,9 +176,7 @@ export default function CaseHistory() {
       </div>
       {/* Case Table - Shows only closed cases with eye icon for viewing */}
       {isLoading ? (
-        <div className="p-6 text-center text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Loading closed cases...
-        </div>
+        <PageLoading message="Loading closed cases..." />
       ) : (
         <CaseTable
           cases={filteredClosedCases}
@@ -185,7 +189,7 @@ export default function CaseHistory() {
 
       <div ref={loadMoreRef} className="py-4 text-center">
         {isValidating && hasMore && (
-          <p className="text-sm text-[var(--moldify-grey)]">Loading more closed cases...</p>
+          <PageLoading message="Loading more closed cases..." compact />
         )}
       </div>
     </div>

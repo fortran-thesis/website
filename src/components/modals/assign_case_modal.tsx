@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faCalendar } from "@fortawesome/free-solid-svg-icons";
 import StatusDropdown from "../StatusDropdown";
+import Holidays from "date-holidays";
 
 
 {/* IMAGES */}
@@ -25,6 +26,22 @@ interface AssignCaseModalProps {
 }
 
 const CAPACITY_THRESHOLD = 2; // Mycologists with >2 active cases are at capacity
+const HOLIDAY_COUNTRY = process.env.NEXT_PUBLIC_HOLIDAY_COUNTRY || "PH";
+const ASSIGNMENT_CUTOFF_HOUR = 17; // 5:00 PM local time
+
+const parseDateInput = (value: string): Date | null => {
+  const parts = value.split("-").map(Number);
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
+  const [year, month, day] = parts;
+  return new Date(year, month - 1, day);
+};
+
+const formatDateForInput = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
@@ -33,24 +50,21 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
   const [endDateError, setEndDateError] = useState<string>("");
   const [mycologists, setMycologists] = useState<Mycologist[]>(propMycologists || []);
   const [loading, setLoading] = useState(false);
+  const [holidayCalendar] = useState(() => new Holidays(HOLIDAY_COUNTRY));
 
-  // Calculate minimum working date (3 working days from today)
-  const getMinimumWorkingDate = (): Date => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    let workingDaysCount = 0;
-    let checkDate = new Date(today);
+  const getHolidayInfo = (date: Date) => {
+    return holidayCalendar.isHoliday(date);
+  };
 
-    while (workingDaysCount < 3) {
-      checkDate.setDate(checkDate.getDate() + 1);
-      const dayOfWeek = checkDate.getDay();
-      // Skip weekends (Saturday = 6, Sunday = 0)
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        workingDaysCount++;
-      }
+  const isHoliday = (date: Date): boolean => Boolean(getHolidayInfo(date));
+
+  const getHolidayName = (date: Date): string => {
+    const holiday = getHolidayInfo(date);
+    if (!holiday) return "";
+    if (Array.isArray(holiday)) {
+      return holiday.map((item: { name?: string }) => item.name || "holiday").join(", ");
     }
-
-    return checkDate;
+    return (holiday as { name?: string }).name || "holiday";
   };
 
   // Check if a date is a weekend
@@ -58,6 +72,13 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
     const dayOfWeek = date.getDay();
     return dayOfWeek === 0 || dayOfWeek === 6;
   };
+
+  const hasPassedAssignmentCutoff = (): boolean => {
+    const now = new Date();
+    return now.getHours() >= ASSIGNMENT_CUTOFF_HOUR;
+  };
+
+  const isAfterCutoff = hasPassedAssignmentCutoff();
 
   // Handle end date change with validation
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,13 +90,19 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
       return;
     }
 
-    const selectedDate = new Date(value);
+    const selectedDate = parseDateInput(value);
+    if (!selectedDate) {
+      setEndDateError("Invalid date selected.");
+      setEndDate(null);
+      return;
+    }
     selectedDate.setHours(0, 0, 0, 0);
-    const minDate = getMinimumWorkingDate();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Validate date is not in past and is at least 3 working days away
-    if (selectedDate < minDate) {
-      setEndDateError("End date must be at least 3 working days from today");
+    // Validate date is not in the past.
+    if (selectedDate < today) {
+      setEndDateError("End date cannot be in the past.");
       setEndDate(null);
       return;
     }
@@ -83,6 +110,13 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
     // Validate date is not a weekend
     if (isWeekend(selectedDate)) {
       setEndDateError("End date cannot fall on a weekend (Saturday or Sunday)");
+      setEndDate(null);
+      return;
+    }
+
+    if (isHoliday(selectedDate)) {
+      const holidayName = getHolidayName(selectedDate);
+      setEndDateError(`End date cannot fall on a holiday${holidayName ? ` (${holidayName})` : ""}`);
       setEndDate(null);
       return;
     }
@@ -190,8 +224,29 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
       return;
     }
 
+    if (isAfterCutoff) {
+      setEndDateError("Assignments are closed for today after 5:00 PM. Please assign on the next working day.");
+      return;
+    }
+
     if (!endDate) {
       setEndDateError("End date is required");
+      return;
+    }
+
+    if (isWeekend(endDate)) {
+      setEndDateError("End date cannot fall on a weekend (Saturday or Sunday)");
+      return;
+    }
+
+    if (isHoliday(endDate)) {
+      const holidayName = getHolidayName(endDate);
+      setEndDateError(`End date cannot fall on a holiday${holidayName ? ` (${holidayName})` : ""}`);
+      return;
+    }
+
+    if (selectedMycologist.status !== "available") {
+      setEndDateError("Selected mycologist is at capacity and cannot be assigned.");
       return;
     }
 
@@ -202,7 +257,7 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-50 overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[9999] overflow-hidden">
       <form
         className="bg-[var(--background-color)] rounded-xl w-full max-w-md p-6 relative"
         onSubmit={handleSubmit}
@@ -272,11 +327,18 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
                 options={filteredMycologists.map((m) => ({
                   label: `${m.name} (${m.cases} cases)`,
                   value: m.id || m.name,
-                  variant: m.status === "at-capacity" ? "danger" : "default"
+                  variant: m.status === "at-capacity" ? "danger" : "default",
+                  disabled: m.status === "at-capacity"
                 }))}
                 onSelect={(value) => {
                   const m = filteredMycologists.find(m => (m.id || m.name) === value);
+                  if (m?.status === "at-capacity") {
+                    setSelectedMycologist(null);
+                    setEndDateError("This mycologist is at capacity and cannot be selected.");
+                    return;
+                  }
                   console.log('🔍 Selected mycologist:', m);
+                  setEndDateError("");
                   setSelectedMycologist(m || null);
                 }}
               />
@@ -314,7 +376,7 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
                 type="date"
                 value={endDate ? endDate.toISOString().slice(0, 10) : ""}
                 onChange={handleEndDateChange}
-                min={getMinimumWorkingDate().toISOString().slice(0, 10)}
+              min={formatDateForInput(new Date())}
                 className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 mb-1 rounded-lg focus:outline-none appearance-none
                 [&::-webkit-calendar-picker-indicator]:opacity-0
                 [&::-webkit-calendar-picker-indicator]:absolute
@@ -329,11 +391,16 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
             />
             </div>
             {endDateError && <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">* {endDateError}</p>}
+            {isAfterCutoff && (
+              <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">
+                * Assignments are unavailable after 5:00 PM. Please continue on the next working day.
+              </p>
+            )}
         </div>
         <button
           type="submit"
           className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-xl hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!selectedMycologist || !endDate}
+          disabled={!selectedMycologist || !endDate || isAfterCutoff}
         >
           Assign Case
         </button>

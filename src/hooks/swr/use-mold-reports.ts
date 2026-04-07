@@ -103,7 +103,6 @@ export function useMoldReport(id: string | undefined) {
 export function useUnassignedReports(limit = 50, enabled = true) {
   return useSWR<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
     enabled ? apiUrl('/api/v1/mold-reports/unassigned', { limit }) : null,
-    undefined,
     { revalidateOnFocus: true },
   );
 }
@@ -120,7 +119,6 @@ export function useAssignedReports(
           pageToken: params?.pageToken,
         })
       : null,
-    undefined,
     { revalidateOnFocus: true },
   );
 }
@@ -137,7 +135,6 @@ export function useClosedReports(
           pageToken: params?.pageToken,
         })
       : null,
-    undefined,
     { revalidateOnFocus: true },
   );
 }

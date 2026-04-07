@@ -11,6 +11,6 @@ export async function GET(req: NextRequest) {
 
   return proxyFetch(req, {
     upstream: action ? endpoints.auditLog.byAction(action) : endpoints.auditLog.list,
-    forwardParams: ['limit', 'pageToken'],
+    forwardParams: ['limit', 'pageToken', 'userId'],
   });
 }

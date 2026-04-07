@@ -13,6 +13,7 @@
   import { useMoldList, useMoldipediaList } from '@/hooks/swr';
   import { apiMutate, ApiError } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
+import PageLoading from '@/components/loading/page_loading';
   export default function ContentManagement() {
       console.log('🚀 ContentManagement component rendering');
       const router = useRouter();
@@ -52,6 +53,7 @@ import { useInvalidationFunctions } from '@/utils/cache-invalidation';
       return snapshot.map((m: any) => ({
         id: m.id || '',
         genusName: m.name || 'Unknown',
+        status: typeof m.status === 'string' ? m.status : 'draft',
         reviewedBy: 'N/A',
         dateReviewed: 'N/A',
       }));
@@ -176,15 +178,7 @@ import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 
       // Show loading state while checking authentication
       if (authLoading) {
-          return (
-              <main className="relative flex flex-col xl:py-2 py-10 items-center justify-center min-h-screen">
-                  <div className="text-center">
-                      <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">
-                          Loading content management...
-                      </p>
-                  </div>
-              </main>
-          );
+          return <PageLoading message="Loading content management..." fullScreen />;
       }
 
       return (

@@ -4,10 +4,12 @@ import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen, faBacterium } from "@fortawesome/free-solid-svg-icons";
 import EmptyState from "@/components/empty_state";
+import StatusBox from "@/components/tiles/status_tile";
 
 export interface MoldGenus {
   id: string;
   genusName: string;
+  status: string;
   reviewedBy: string;
   dateReviewed: string;
 }
@@ -64,6 +66,7 @@ export default function MoldGenusTable({ data, onEdit, isLoading = false }: Mold
               <tr>
                 <th className="py-3 px-6 text-center">Mold ID</th>
                 <th className="py-3 px-6 text-center">Genus Name</th>
+                <th className="py-3 px-6 text-center">Status</th>
                 <th className="py-3 px-6 text-center">Reviewed By</th>
                 <th className="py-3 px-6 text-center">Date Reviewed</th>
                 <th className="py-3 px-6 text-center">Action</th>
@@ -77,6 +80,9 @@ export default function MoldGenusTable({ data, onEdit, isLoading = false }: Mold
                 >
                   <td className="py-3 px-6 text-center text-[var(--moldify-black)]">{mold.id}</td>
                   <td className="py-3 px-6 text-center">{mold.genusName}</td>
+                  <td className="py-3 px-6 text-center">
+                    <StatusBox status={mold.status || "Draft"} fontSize="0.65rem" />
+                  </td>
                   <td className="py-3 px-6 text-center">{mold.reviewedBy}</td>
                   <td className="py-3 px-6 text-center">{mold.dateReviewed}</td>
                   <td className="py-3 px-6 text-center">

@@ -9,6 +9,8 @@ import { faSearch, faInbox, faPlusCircle } from '@fortawesome/free-solid-svg-ico
 import WikimoldTile from '@/components/tiles/wikimold_tile';
 import EmptyState from '@/components/empty_state';
 import { useMoldipediaInfinite, extractArticles } from '@/hooks/swr';
+import TopLoadingBar from '@/components/loading/top_loading_bar';
+import PageLoading from '@/components/loading/page_loading';
 
 const mockArticles = [
   { id: 1, title: "The Rise of Molds: Dive into the Fungal Kingdom", author: "Dr. Aris Mendoza", image: "/assets/mold.jpg" },
@@ -145,14 +147,7 @@ export default function WikiMold() {
       className="relative w-full bg-[var(--background-color)]"
     >
       {/* Top Loading Bar */}
-      {isNavigating && (
-        <div className="fixed top-0 left-0 w-full h-1 bg-transparent z-[9999]">
-          <div 
-            className="h-full bg-[var(--accent-color)] animate-[loading_1s_ease-in-out_infinite]" 
-            style={{ width: '30%' }}
-          />
-        </div>
-      )}
+      <TopLoadingBar isVisible={isNavigating} />
 
       <Navbar />
 
@@ -188,7 +183,7 @@ export default function WikiMold() {
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <motion.div animate={{ opacity: [0.5, 1, 0.5] }} transition={{ duration: 2, repeat: Infinity }}>
-                <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">Loading articles...</p>
+                <PageLoading message="Loading articles..." />
               </motion.div>
             </div>
           ) : error ? (
@@ -253,10 +248,10 @@ export default function WikiMold() {
                         <motion.div 
                           initial={{ opacity: 0 }} 
                           animate={{ opacity: 1 }} 
-                          className="text-gray-500 flex items-center gap-2"
+                          className="flex items-center gap-2"
                         >
                           <span className="animate-spin text-xl">⟳</span>
-                          <span>Loading more articles...</span>
+                          <PageLoading message="Loading more articles..." compact />
                         </motion.div>
                       )}
                     </div>
