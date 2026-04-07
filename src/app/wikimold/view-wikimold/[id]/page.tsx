@@ -159,6 +159,12 @@ export default function ViewWikiMold() {
   const [activeTreatment, setActiveTreatment] = useState(0);
   const [expandedPathogenItems, setExpandedPathogenItems] = useState<Record<number, boolean>>({});
 
+  // Helper: Check if content is long enough to warrant expanding
+  const isContentLong = (html: string): boolean => {
+    const plainText = html.replace(/<[^>]*>/g, '').trim();
+    return plainText.length > 300; // Show button if more than 300 characters
+  };
+
   const togglePathogenItem = (index: number) => {
     setExpandedPathogenItems((prev) => ({
       ...prev,
@@ -653,6 +659,7 @@ const ProseContent = ({
             {/* Main content */}
             <div className="space-y-4 relative">
               {pathogenItems.map((item, index) => {
+                const isLong = isContentLong(item.content);
                 const isExpanded = expandedPathogenItems[index] || false;
                 
                 return (
@@ -826,71 +833,30 @@ const ProseContent = ({
                     `Log#${(idx + 1).toString().padStart(2, '0')}`;
                   
                   const sections = [
-                    { label: 'Initial Observation', content: [asText(initial['initial_microscopic']), asText(initial['initial_macroscopic'])].filter(Boolean).join(' | ') || 'Observation metadata incomplete.' },
-                    { label: 'In Vivo Analysis', content: asText(inVivo['symptoms'] ?? inVivo['characteristics']) || 'No active bio-logs.' },
-                    { label: 'In Vitro Results', content: asText(inVitro['characteristics'] ?? inVitro['colony_color']) || 'Laboratory culture pending.' }
+                    { label: "[01] Initial Observation", content: [asText(initial['initial_microscopic']), asText(initial['initial_macroscopic'])].filter(Boolean).join(' // ') || 'Observation metadata incomplete.' },
+                    { label: "[02] In Vivo Analysis", content: asText(inVivo['symptoms'] ?? inVivo['characteristics']) || 'No active bio-logs.' },
+                    { label: "[03] In Vitro Results", content: asText(inVitro['characteristics'] ?? inVitro['colony_color']) || 'Laboratory culture pending.' }
                   ];
-
-                  const quickSummary = [
-                    asText(initial['initial_macroscopic_symptoms'], initial['initial_symptoms']),
-                    asText(inVivo['symptoms']),
-                    asText(inVitro['colony_color']),
-                  ]
-                    .filter(Boolean)
-                    .slice(0, 3);
 
                   return (
                     <div key={caseKey} className={`group pb-12 transition-all duration-700 relative ${isExpanded ? 'bg-[var(--primary-color)]/[0.01]' : ''}`}>
-                      <div className="flex flex-col md:flex-row gap-6 md:items-start justify-between relative z-10 border border-[var(--primary-color)]/10 rounded-3xl p-5 md:p-7 bg-white/70 backdrop-blur-sm">
-                        <div className="flex items-start gap-4 md:gap-6">
-                          <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-2xl overflow-hidden border border-[var(--primary-color)]/10 bg-[var(--primary-color)]/5 shrink-0">
-                            <Image
-                              src={caseThumb}
-                              alt={`${cropName} case thumbnail`}
-                              fill
-                              sizes="(max-width: 768px) 112px, 128px"
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="flex flex-col gap-3">
-                            <span className="font-[family-name:var(--font-montserrat)] font-black text-[10px] text-[var(--accent-color)] tracking-[0.3em] uppercase block">Crop Name</span>
-                            <h4 className="font-[family-name:var(--font-montserrat)] font-black text-2xl md:text-3xl text-[var(--primary-color)] uppercase tracking-tight leading-tight">
-                              {cropName} <span className="opacity-25 ml-2 font-light text-base italic tabular-nums">{caseKey.slice(-6)}</span>
-                            </h4>
-                            {quickSummary.length > 0 ? (
-                              <div className="flex flex-wrap gap-2">
-                                {quickSummary.map((item, summaryIndex) => (
-                                  <span
-                                    key={`${caseKey}-summary-${summaryIndex}`}
-                                    className="inline-flex items-center rounded-full border border-[var(--primary-color)]/15 px-3 py-1 text-xs font-semibold text-[var(--primary-color)]/80"
-                                  >
-                                    {item}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : null}
-                          </div>
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+                        <div className="flex flex-col">
+                          <span className="font-[family-name:var(--font-montserrat)] font-black text-[10px] text-[var(--accent-color)] tracking-[0.3em] uppercase block mb-1">Crop Name</span>
+                          <h4 className="font-[family-name:var(--font-montserrat)] font-black text-3xl text-[var(--primary-color)] uppercase tracking-tight">
+                            {cropName} <span className="opacity-20 ml-2 font-light text-xl italic tabular-nums">{caseKey.slice(-6)}</span>
+                          </h4>
                         </div>
-
-                        <div className="flex md:flex-col gap-3 md:items-end">
-                          <button
-                            type="button"
-                            onClick={() => toggleCase(caseKey)}
-                            className={`cursor-pointer px-6 py-3 transition-all duration-500 rounded-full font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-[0.3em] ${
-                              isExpanded ? 'bg-[var(--accent-color)] text-white shadow-lg shadow-[var(--accent-color)]/20' : 'bg-transparent border border-[var(--primary-color)]/20 text-[var(--primary-color)] hover:border-[var(--primary-color)]'
-                            }`}
-                          >
-                            {isExpanded ? 'Hide Notes' : 'Quick Notes'}
-                          </button>
-                          {caseHref ? (
-                            <Link
-                              href={caseHref}
-                              className="px-6 py-3 rounded-full bg-[var(--primary-color)] text-white text-[10px] font-[family-name:var(--font-montserrat)] font-black uppercase tracking-[0.3em] hover:opacity-90 transition-opacity"
-                            >
-                              Open Investigation
-                            </Link>
-                          ) : null}
-                        </div>
+                        
+                        <button
+                          type="button"
+                          onClick={() => toggleCase(caseKey)}
+                          className={`cursor-pointer px-8 py-3 transition-all duration-500 rounded-full font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-[0.4em] ${
+                            isExpanded ? 'bg-[var(--accent-color)] text-white shadow-lg shadow-[var(--accent-color)]/20' : 'bg-transparent border border-[var(--primary-color)]/20 text-[var(--primary-color)] hover:border-[var(--primary-color)]'
+                          }`}
+                        >
+                          {isExpanded ? 'Close Case' : 'View Case'}
+                        </button>
                       </div>
 
                       <AnimatePresence>
@@ -901,7 +867,7 @@ const ProseContent = ({
                             exit={{ opacity: 0, height: 0 }}
                             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                           >
-                            <div className="mt-8 space-y-4 pl-6 relative">
+                            <div className="mt-12 space-y-6 pl-6 relative">
                               {/* Investigation Line Spores */}
                               <div className="absolute left-0 top-0 bottom-0 w-[1px] bg-gradient-to-b from-[var(--accent-color)]/40 via-[var(--accent-color)]/10 to-transparent" />
                               {[0, 50, 95].map((pos) => (
@@ -910,11 +876,11 @@ const ProseContent = ({
                               
                               {sections.map((section, sIdx) => (
                                 <div key={sIdx} className="relative group/card">
-                                  <div className="p-6 rounded-2xl bg-[var(--primary-color)]/[0.02] border border-[var(--primary-color)]/5 backdrop-blur-sm transition-all duration-500 hover:bg-[var(--primary-color)]/[0.04] hover:border-[var(--accent-color)]/20">
-                                    <label className="block font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] mb-2 opacity-80">
+                                  <div className="p-8 rounded-2xl bg-[var(--primary-color)]/[0.02] border border-[var(--primary-color)]/5 backdrop-blur-sm transition-all duration-500 hover:bg-[var(--primary-color)]/[0.04] hover:border-[var(--accent-color)]/20">
+                                    <label className="block font-[family-name:var(--font-montserrat)] text-[9px] font-black uppercase tracking-[0.5em] text-[var(--accent-color)] mb-4 opacity-70">
                                       {section.label}
                                     </label>
-                                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-base md:text-lg leading-relaxed text-[var(--primary-color)]/80 font-medium line-clamp-3">
+                                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-lg leading-relaxed text-[var(--primary-color)]/80 font-medium">
                                       {section.content}
                                     </p>
                                   </div>
