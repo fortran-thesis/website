@@ -284,7 +284,7 @@ export default function Investigation() {
                     <>
                         <CaseTable
                             cases={filteredCases}
-                            showAction={false}
+                            showAction={true}
                             sortKey={sortKey}
                             sortDirection={sortDirection}
                             onSort={handleSort}
