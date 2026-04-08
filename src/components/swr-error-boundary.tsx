@@ -25,6 +25,7 @@ export function SwrErrorBoundary({ children }: { children: React.ReactNode }) {
     return (
       path.startsWith('/auth') ||
       path.startsWith('/support') ||
+      path.startsWith('/wikimold') ||
       path === '/' ||
       path.startsWith('/terms-of-agreement') ||
       path.startsWith('/privacy-policy') ||

@@ -5,4 +5,5 @@ import { endpoints } from '@/services/endpoints';
 export const GET = createProxyHandler({
   upstream: (params) => endpoints.moldipedia.casesById(params.id),
   auth: false,
+  forwardParams: ['includeEvidence'],
 });

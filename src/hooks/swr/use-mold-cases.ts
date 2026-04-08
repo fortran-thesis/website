@@ -88,6 +88,7 @@ export interface MoldCase {
     specimen_types?: string[];
     specimen_quantities?: string[];
     initial_symptoms?: string[];
+    initial_signs?: string[];
     initial_characteristics?: string[];
     location_gathered?: string;
     initial_microscopic?: string;
@@ -124,6 +125,7 @@ export interface MoldCase {
       macro_characteristics?: string | string[];
       macroCharacteristics?: string | string[];
       initial_symptoms?: string[];
+      initial_signs?: string[];
       initial_characteristics?: string[];
       initial_microscopic?: string;
       initial_macroscopic?: string;

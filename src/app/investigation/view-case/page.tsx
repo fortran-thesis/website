@@ -623,6 +623,14 @@ function ViewCaseContent() {
       initialLogCharacteristics?.macroSymptoms ??
       initialLogCharacteristics?.symptoms,
     );
+    const macroSigns = asTextList(
+      initialObs?.initial_signs ??
+      cultivationDetails?.initial_signs ??
+      initialLogCharacteristics?.signs ??
+      initialLogCharacteristics?.signsDisplay ??
+      initialLogCharacteristics?.symptoms_signs ??
+      initialLogCharacteristics?.symptomsSigns,
+    );
     const macroCharacteristics = asTextList(
       initialObs?.initial_macroscopic_characteristics ??
       initialObs?.macro_characteristics ??
@@ -643,6 +651,7 @@ function ViewCaseContent() {
         macroColor={macroColor}
         macroTexture={macroTexture}
         macroSymptoms={macroSymptoms}
+        macroSigns={macroSigns}
         macroCharacteristics={macroCharacteristics}
         emptyMicroscopicMessage="No microscopic analysis recorded"
         emptyMacroscopicMessage="No macroscopic analysis recorded"

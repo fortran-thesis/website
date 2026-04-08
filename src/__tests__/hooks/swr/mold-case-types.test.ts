@@ -40,11 +40,12 @@ describe('MoldCase Type (Website)', () => {
       ]);
     });
 
-    it('should accept initial_symptoms and initial_characteristics', () => {
+    it('should accept initial_symptoms, initial_signs, and initial_characteristics', () => {
       const moldCase: MoldCase = {
         id: 'case-123',
         cultivation_details: {
           initial_symptoms: ['Leaf spots', 'Wilting'],
+          initial_signs: ['Powdery residue'],
           initial_characteristics: ['Cottony', 'Powdery'],
         },
       };
@@ -52,6 +53,9 @@ describe('MoldCase Type (Website)', () => {
       expect(moldCase.cultivation_details?.initial_symptoms).toEqual([
         'Leaf spots',
         'Wilting',
+      ]);
+      expect(moldCase.cultivation_details?.initial_signs).toEqual([
+        'Powdery residue',
       ]);
       expect(
         moldCase.cultivation_details?.initial_characteristics
@@ -81,6 +85,7 @@ describe('MoldCase Type (Website)', () => {
           specimen_types: ['Leaf', 'Stem'],
           specimen_quantities: ['5', '3'],
           initial_symptoms: ['Leaf spots'],
+          initial_signs: ['Powdery residue'],
           initial_characteristics: ['Cottony'],
           location_gathered: 'Farm A',
           in_vitro_details: {
@@ -97,6 +102,7 @@ describe('MoldCase Type (Website)', () => {
       expect(cultDetails?.specimen_types).toHaveLength(2);
       expect(cultDetails?.specimen_quantities).toHaveLength(2);
       expect(cultDetails?.initial_symptoms).toHaveLength(1);
+      expect(cultDetails?.initial_signs).toHaveLength(1);
       expect(cultDetails?.initial_characteristics).toHaveLength(1);
       expect(cultDetails?.location_gathered).toBeDefined();
     });

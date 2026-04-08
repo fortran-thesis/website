@@ -5,6 +5,7 @@ import {
   faPalette,
   faCubes,
   faHeartPulse,
+  faStethoscope,
   faFlask,
 } from "@fortawesome/free-solid-svg-icons";
 import ObservationImageViewer from "../../../components/tiles/initial_observation_components/observation_image_viewer";
@@ -29,6 +30,7 @@ import ObservationEmptyStateCard from "../../../components/tiles/initial_observa
  * @property {string} [macroColor] - Macroscopic colony color observation
  * @property {string} [macroTexture] - Macroscopic texture characteristics
  * @property {string | string[]} [macroSymptoms] - Host symptoms (array recommended)
+ * @property {string | string[]} [macroSigns] - Host signs (array recommended)
  * @property {string | string[]} [macroCharacteristics] - Mold characteristics (array recommended)
  * @property {string} [emptyMicroscopicMessage] - Custom message for empty microscopic state
  * @property {string} [emptyMacroscopicMessage] - Custom message for empty macroscopic state
@@ -41,6 +43,7 @@ interface InitialObservationTabProps {
   macroColor?: string;
   macroTexture?: string;
   macroSymptoms?: string | string[];
+  macroSigns?: string | string[];
   macroCharacteristics?: string | string[];
   emptyMicroscopicMessage?: string;
   emptyMacroscopicMessage?: string;
@@ -54,7 +57,7 @@ interface InitialObservationTabProps {
  *
  * This is a read-only presentation component that shows:
  * - Microscopic image with overlaid identified mold species and confidence
- * - Macroscopic image with 4 data tiles below (Color, Texture, Symptoms, Characteristics)
+ * - Macroscopic image with data tiles below (Color, Texture, Symptoms, Signs, Characteristics)
  *
  * Both sections support flexible image sources (assets, URLs, local paths)
  * and display fallback states when data is unavailable.
@@ -82,6 +85,7 @@ export default function InitialObservationTab({
   macroColor = "",
   macroTexture = "",
   macroSymptoms = "",
+  macroSigns = "",
   macroCharacteristics = "",
   emptyMicroscopicMessage = "No microscopic analysis recorded",
   emptyMacroscopicMessage = "No macroscopic analysis recorded",
@@ -194,6 +198,11 @@ export default function InitialObservationTab({
               label="Symptoms"
               value={macroSymptoms}
               icon={faHeartPulse}
+            />
+            <ObservationDataTile
+              label="Signs"
+              value={macroSigns}
+              icon={faStethoscope}
             />
             <ObservationDataTile
               label="Characteristics"
