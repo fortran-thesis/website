@@ -18,7 +18,7 @@ import InVivoTab from "../investigation-tabs/in_vivo";
 import InitialObservationTab from "../investigation-tabs/initial_observation";
 import AddTreatmentModal from "@/components/modals/add_treatment_modal";
 import { useAuth } from "@/hooks/useAuth";
-import { useMoldReport, useMoldCaseByReport, useMoldCaseLogs, useUser } from "@/hooks/swr";
+import { useMoldReport, useMoldCase, useMoldCaseByReport, useMoldCaseLogs, useUser } from "@/hooks/swr";
 import { apiMutate } from "@/lib/api";
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 import PageLoading from "@/components/loading/page_loading";
@@ -33,15 +33,22 @@ type Mycologist = {
 
 function ViewCaseContent() {
   const searchParams = useSearchParams();
-  const caseId = searchParams.get('id');
+  const resourceId = searchParams.get('id') ?? undefined;
   const { invalidateMoldReports } = useInvalidationFunctions();
   
+  /*
+   * The route receives `id` from notifications/activity links.
+   * It can be either a report ID or a mold-case ID, so resolve both paths.
+   */
+  const { data: moldCaseByIdRes, isLoading: moldCaseByIdLoading } = useMoldCase(resourceId);
+  const reportId = moldCaseByIdRes?.data?.mold_report_id || resourceId;
+
   /* ── SWR: mold report + mold case ── */
-  const { data: reportRes, isLoading: reportLoading, mutate: mutateReport } = useMoldReport(caseId ?? undefined);
-  const { data: moldCaseRes, isLoading: moldCaseLoading, mutate: mutateMoldCase } = useMoldCaseByReport(caseId ?? undefined);
+  const { data: reportRes, isLoading: reportLoading, mutate: mutateReport } = useMoldReport(reportId);
+  const { data: moldCaseRes, isLoading: moldCaseByReportLoading, mutate: mutateMoldCase } = useMoldCaseByReport(reportId);
 
   const caseData = reportRes?.data ?? null;
-  const moldCase = moldCaseRes?.data ?? null;
+  const moldCase = moldCaseRes?.data ?? moldCaseByIdRes?.data ?? null;
   const moldCaseId = moldCase?.id;
   const { data: logsRes, isLoading: logsLoading } = useMoldCaseLogs(moldCaseId, 200, !!moldCaseId);
   
@@ -50,8 +57,8 @@ function ViewCaseContent() {
   const { data: mycologistRes } = useUser(mycologistId);
   const mycologistData = mycologistRes?.data;
   
-  const loading = reportLoading || moldCaseLoading || (!!moldCaseId && logsLoading);
-  const error = !caseId ? 'No case ID provided' : null;
+  const loading = reportLoading || moldCaseByIdLoading || moldCaseByReportLoading || (!!moldCaseId && logsLoading);
+  const error = !resourceId ? 'No case ID provided' : null;
 
   /* ── UI modal state ── */
   const [isAssignModalOpen, setAssignModalOpen] = useState(false);
@@ -72,14 +79,14 @@ function ViewCaseContent() {
 
   // Called from confirmation modal -> finalize assignment
   const handleConfirmAssign = useCallback(async () => {
-    if (!pendingAssign || !caseId || !caseData) return;
+    if (!pendingAssign || !reportId || !caseData) return;
 
     try {
       setAssignError(null);
       setIsAssigning(true);
 
       // Assigning a report auto-creates the mold case on backend.
-      await apiMutate(`/api/v1/mold-reports/${caseId}/assign`, {
+      await apiMutate(`/api/v1/mold-reports/${reportId}/assign`, {
         method: 'PATCH',
         body: {
           assigned_mycologist_id: pendingAssign.mycologist.id,
@@ -116,10 +123,10 @@ function ViewCaseContent() {
     } finally {
       setIsAssigning(false);
     }
-  }, [pendingAssign, caseId, caseData, mutateReport, mutateMoldCase]);
+  }, [pendingAssign, reportId, caseData, mutateReport, mutateMoldCase]);
 
   const handleReject = useCallback(async () => {
-    if (!caseId) return;
+    if (!reportId) return;
 
     try {
       const rejectionReason = window.prompt('Enter rejection reason:')?.trim();
@@ -128,7 +135,7 @@ function ViewCaseContent() {
         return;
       }
 
-      await apiMutate(`/api/v1/mold-reports/${caseId}/reject`, {
+      await apiMutate(`/api/v1/mold-reports/${reportId}/reject`, {
         method: 'PATCH',
         body: { rejection_reason: rejectionReason },
       });
@@ -149,7 +156,7 @@ function ViewCaseContent() {
       console.error('Rejection failed:', err);
       alert(err?.message || 'Failed to reject case');
     }
-  }, [caseId, mutateReport]);
+  }, [reportId, mutateReport]);
 
   type UserRole = "Administrator" | "Mycologist";
   const { user: authUser } = useAuth();
@@ -905,7 +912,7 @@ function ViewCaseContent() {
       <AssignCaseModal
         isOpen={isAssignModalOpen}
         onClose={() => setAssignModalOpen(false)}
-        caseId={caseId || undefined}
+        caseId={reportId}
         onAssign={handleAssignClick}
       />
 

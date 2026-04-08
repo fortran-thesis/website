@@ -3,7 +3,7 @@ import Breadcrumbs from "@/components/breadcrumbs_nav";
 import BackButton from "@/components/buttons/back_button";
 import Image from "next/image";
 import { useMemo, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import StatusBox from "@/components/tiles/status_tile";
 import UserLogTile, { UserLogTileEntry } from "@/components/tiles/user_log_tile";
 import EmptyState from "@/components/empty_state";
@@ -11,6 +11,7 @@ import { faClipboard } from "@fortawesome/free-solid-svg-icons";
 import { useUser, useAuditLogs } from '@/hooks/swr';
 import PageLoading from "@/components/loading/page_loading";
 import MessageBanner from "@/components/feedback/message_banner";
+import { resolveAuditLogRedirect } from "@/lib/redirect-resolver";
 
 
 type UserRole = "Farmer" | "Administrator" | "Mycologist";
@@ -38,6 +39,7 @@ export default function ViewUser() {
 }
 
 function ViewUserContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get("id");
   console.log('👤 ViewUser page loaded:', { userId, isUndefined: userId === "undefined", isNull: userId === null });
@@ -161,15 +163,35 @@ function ViewUserContent() {
       const rightDate = resolveDate(right.timestamp);
       return (rightDate?.getTime() ?? 0) - (leftDate?.getTime() ?? 0);
     });
+    const toNonEmptyString = (value: unknown): string | undefined => {
+      if (typeof value !== 'string') return undefined;
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    };
+
     return sortedEntries.map((log: any) => {
       const d = resolveDate(log.timestamp);
+      const action = toNonEmptyString(log.action) || 'Unknown Action';
+      const targetId =
+        toNonEmptyString(log.target_id) ||
+        toNonEmptyString(log.targetId) ||
+        toNonEmptyString(log.reference) ||
+        toNonEmptyString(log?.target?.id) ||
+        toNonEmptyString(log?.metadata?.reference);
+
       return {
         date: d ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A',
         time: d ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-        description: `${log.action || 'Unknown Action'}: ${log.description || 'No description'}`,
+        description: `${action}: ${log.description || 'No description'}`,
+        href: resolveAuditLogRedirect(action, targetId),
       };
     });
   }, [logsData, userDetails, userId]);
+
+  const handleLogClick = (entry: UserLogTileEntry) => {
+    if (!entry.href) return;
+    router.push(entry.href);
+  };
 
   const handleMycoSubmit = (data: any) => {
     setShowEditMycoModal(false);
@@ -304,7 +326,7 @@ function ViewUserContent() {
       </p>
       {logsLoading && <PageLoading message="Loading activity log..." compact />}
       {displayLogs.length > 0 ? (
-        <UserLogTile items={displayLogs} />
+        <UserLogTile items={displayLogs} onItemClick={handleLogClick} />
       ) : (
         <EmptyState 
           icon={faClipboard}

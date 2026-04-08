@@ -59,6 +59,7 @@ export interface CultivationLogsPage {
 
 export interface MoldCase {
   id?: string;
+  mold_report_id?: string;
   priority?: string;
   mycologist_id?: string;
   mycologist_name?: string;
@@ -154,6 +155,13 @@ export interface MoldCaseMetadata {
 export function useMoldCaseByReport(reportId: string | undefined) {
   return useSWR<ApiResponse<MoldCase>>(
     reportId ? `/api/v1/mold-cases/by-report/${reportId}` : null,
+  );
+}
+
+/** Fetch a mold case by case ID. */
+export function useMoldCase(caseId: string | undefined) {
+  return useSWR<ApiResponse<MoldCase>>(
+    caseId ? `/api/v1/mold-cases/${caseId}` : null,
   );
 }
 

@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBell, faCheck, faCheckDouble, faTrash } from '@fortawesome/free-solid-svg-icons';
 import EmptyState from './empty_state';
 import type { Notification } from '@/hooks/swr/use-notifications';
+import { resolveNotificationRedirect } from '@/lib/redirect-resolver';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -58,30 +59,9 @@ export default function NotificationsPanel({
       onMarkRead(notification.id);
     }
 
-    // Navigate based on reference_type
-    if (notification.reference_id && notification.reference_type) {
-      switch (notification.reference_type) {
-        case 'mold_report':
-          router.push(`/investigation?id=${notification.reference_id}`);
-          onClose();
-          break;
-        case 'mold_case':
-          router.push(`/investigation?id=${notification.reference_id}`);
-          onClose();
-          break;
-        case 'flag_report':
-          router.push(`/flag-report/${notification.reference_id}`);
-          onClose();
-          break;
-        case 'user':
-          router.push(`/user/view-user?id=${notification.reference_id}`);
-          onClose();
-          break;
-        default:
-          // Just close the panel if reference_type is unknown
-          onClose();
-      }
-    }
+    const href = resolveNotificationRedirect(notification.reference_type, notification.reference_id);
+    if (href) router.push(href);
+    onClose();
   };
 
   return (
@@ -170,7 +150,10 @@ export default function NotificationsPanel({
                   <div className="flex items-center gap-3 mt-2">
                     {!item.is_read && onMarkRead && (
                       <button
-                        onClick={() => onMarkRead(item.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onMarkRead(item.id);
+                        }}
                         className="text-[10px] font-bold text-[var(--moldify-blue)] hover:underline cursor-pointer font-[family-name:var(--font-bricolage-grotesque)]"
                       >
                         <FontAwesomeIcon icon={faCheck} className="mr-0.5" />
@@ -179,7 +162,10 @@ export default function NotificationsPanel({
                     )}
                     {onDelete && (
                       <button
-                        onClick={() => onDelete(item.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDelete(item.id);
+                        }}
                         className="text-[10px] font-bold text-[var(--moldify-red)] hover:underline cursor-pointer font-[family-name:var(--font-bricolage-grotesque)]"
                       >
                         <FontAwesomeIcon icon={faTrash} className="mr-0.5" />

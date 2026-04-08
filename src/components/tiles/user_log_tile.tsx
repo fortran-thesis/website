@@ -5,13 +5,15 @@ export interface UserLogTileEntry {
   date: string;
   time: string;
   description: string;
+  href?: string | null;
 }
 
 interface UserLogTileProps {
   items: UserLogTileEntry[];
+  onItemClick?: (entry: UserLogTileEntry) => void;
 }
 
-export default function UserLogTile({ items }: UserLogTileProps) {
+export default function UserLogTile({ items, onItemClick }: UserLogTileProps) {
   if (!items || items.length === 0) return null;
 
   return (
@@ -24,10 +26,29 @@ export default function UserLogTile({ items }: UserLogTileProps) {
       </div>
 
       <div className="flex flex-col">
-        {items.map((entry, index) => (
+        {items.map((entry, index) => {
+          const isClickable = Boolean(entry.href && onItemClick);
+
+          return (
           <div 
             key={index} 
-            className="grid grid-cols-[100px_1fr_120px] gap-6 items-center px-4 py-5 border-b border-[var(--primary-color)]/[0.04] hover:bg-[var(--primary-color)]/[0.02] transition-colors group"
+            className={`grid grid-cols-[100px_1fr_120px] gap-6 items-center px-4 py-5 border-b border-[var(--primary-color)]/[0.04] transition-colors group ${
+              isClickable
+                ? 'hover:bg-[var(--primary-color)]/[0.02] cursor-pointer'
+                : 'hover:bg-[var(--primary-color)]/[0.02] cursor-default'
+            }`}
+            onClick={() => {
+              if (isClickable) onItemClick?.(entry);
+            }}
+            onKeyDown={(event) => {
+              if (!isClickable) return;
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onItemClick?.(entry);
+              }
+            }}
+            role={isClickable ? 'button' : undefined}
+            tabIndex={isClickable ? 0 : undefined}
           >
             
             {/* 1. Time Column */}
@@ -51,13 +72,18 @@ export default function UserLogTile({ items }: UserLogTileProps) {
 
             {/* 3. Action/Meta Column */}
             <div className="flex justify-end">
-               <span className="text-[9px] font-black text-[var(--primary-color)]/20 uppercase tracking-[0.2em] group-hover:text-[var(--primary-color)] group-hover:opacity-100 transition-all cursor-default">
-                Details
+               <span className={`text-[9px] font-black uppercase tracking-[0.2em] transition-all ${
+                isClickable
+                  ? 'text-[var(--primary-color)]/30 group-hover:text-[var(--primary-color)] group-hover:opacity-100'
+                  : 'text-[var(--primary-color)]/20'
+               }`}>
+                {isClickable ? 'Open' : 'Details'}
               </span>
             </div>
             
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

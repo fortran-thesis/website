@@ -44,8 +44,8 @@ export default function FlaggedHistoryTable({ data, isLoading = false }: Flagged
             <thead className="sticky top-0 z-10 bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center">
               <tr>
                 <th className="py-3 px-6 text-center">Flag ID</th>
-                <th className="py-3 px-6 text-center">System Predicted</th>
-                <th className="py-3 px-6 text-center">Corrected Genus</th>
+                <th className="py-3 px-6 text-center">Content Type</th>
+                <th className="py-3 px-6 text-center">Details</th>
                 <th className="py-3 px-6 text-center">Date Flagged</th>
               </tr>
             </thead>
