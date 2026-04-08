@@ -33,7 +33,7 @@ const parseDateInput = (value: string): Date | null => {
   const parts = value.split("-").map(Number);
   if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
   const [year, month, day] = parts;
-  return new Date(year, month - 1, day);
+  return new Date(Date.UTC(year, month - 1, day));
 };
 
 const formatDateForInput = (date: Date): string => {

@@ -874,26 +874,17 @@ function ViewCaseContent() {
 
             {/* 4.  UTILITY BAR */}
             <div className="flex flex-wrap gap-3 bg-[var(--taupe)]/30 p-2 rounded-2xl border border-[var(--primary-color)]/5">
-              {userRole !== "Administrator" && (
-                <button 
-                  className="font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase bg-white text-[var(--primary-color)] px-4 py-4 rounded-xl hover:bg-[var(--primary-color)] hover:text-white transition-all shadow-sm group cursor-pointer"
-                  onClick={() => setAddTreatmentOpen(true)}
-                >
-                  <FontAwesomeIcon icon={faPlus} className="group-hover:scale-125 transition-transform" /> Add Treatment
-                </button>
-              )}
               <button 
                 className={`font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase px-4 py-4 rounded-xl transition-all shadow-sm ${
-                  caseData?.status?.toLowerCase() === 'resolved'
+                  ['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')
                     ? 'bg-white text-[var(--primary-color)] hover:bg-[var(--primary-color)] hover:text-white cursor-pointer'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
                 }`}
-                disabled={caseData?.status?.toLowerCase() !== 'resolved'}
-                title={caseData?.status?.toLowerCase() !== 'resolved' ? 'PDF export is only available for resolved cases' : 'Export case as PDF'}
+                disabled={!['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')}
+                title={['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '') ? 'Export case as PDF' : 'PDF export is only available for resolved or closed cases'}
               >
                 <FontAwesomeIcon icon={faFilePdf} /> Export PDF
               </button>
-             
             </div>
 
             {/* 5. DATA TABS */}
