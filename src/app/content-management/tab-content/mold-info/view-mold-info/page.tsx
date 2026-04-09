@@ -373,6 +373,36 @@ function ViewMoldInfoContent() {
     <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-[var(--primary-color)]/20 mt-4 italic">
       Public Facing Record Title
     </p>
+
+    {/* MODEL ID AND NAME FIELDS */}
+    <div className="grid grid-cols-2 gap-6 mt-8 pt-8 border-t border-[var(--primary-color)]/10">
+      <div>
+        <label htmlFor="predictedClassId" className="text-[9px] font-bold uppercase tracking-[0.25em] text-[var(--primary-color)]/50 block mb-2">
+          Model ID
+        </label>
+        <input
+          id="predictedClassId"
+          type="text"
+          value={moldInfo.predictedClassId}
+          onChange={(e) => setMoldInfo({ ...moldInfo, predictedClassId: e.target.value })}
+          placeholder="e.g., 1, 2, 3..."
+          className={inputClass}
+        />
+      </div>
+      <div>
+        <label htmlFor="predictedClassName" className="text-[9px] font-bold uppercase tracking-[0.25em] text-[var(--primary-color)]/50 block mb-2">
+          Model Name
+        </label>
+        <input
+          id="predictedClassName"
+          type="text"
+          value={moldInfo.predictedClassName}
+          onChange={(e) => setMoldInfo({ ...moldInfo, predictedClassName: e.target.value })}
+          placeholder="e.g., Alternaria_spp..."
+          className={inputClass}
+        />
+      </div>
+    </div>
   </div>
 </div>
             </div>
