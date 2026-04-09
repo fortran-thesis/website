@@ -134,6 +134,7 @@ export default function Investigation() {
         /* ── Search & filter state ── */
         const [searchQuery, setSearchQuery] = useState('');
         const [statusFilter, setStatusFilter] = useState('');
+        const [dateOrder, setDateOrder] = useState<'newest' | 'oldest'>('newest');
         const [sortKey, setSortKey] = useState<'caseName' | 'cropName' | 'location' | 'submittedBy' | 'dateSubmitted' | 'status' | null>(null);
         const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
@@ -169,11 +170,11 @@ export default function Investigation() {
             });
 
             if (!sortKey) {
-                // Default state: latest to oldest.
+                // Date order filter (client-side): newest first or oldest first.
                 return filtered.sort((a, b) => {
                     const da = a.dateSubmittedISO ? new Date(a.dateSubmittedISO).getTime() : 0;
                     const db = b.dateSubmittedISO ? new Date(b.dateSubmittedISO).getTime() : 0;
-                    return db - da;
+                    return dateOrder === 'newest' ? db - da : da - db;
                 });
             }
 
@@ -189,7 +190,7 @@ export default function Investigation() {
                 const cmp = av.localeCompare(bv, undefined, { sensitivity: 'base' });
                 return sortDirection === 'asc' ? cmp : -cmp;
             });
-        }, [cases, searchQuery, statusFilter, sortKey, sortDirection]);
+        }, [cases, searchQuery, statusFilter, dateOrder, sortKey, sortDirection]);
 
         /* ── Derived loading / has-more flags ── */
         const loading = authLoading || casesLoading;
@@ -270,6 +271,20 @@ export default function Investigation() {
                                         ]
                                 }
                                 onSelect={(value) => setStatusFilter(value)}
+                            />
+                        </div>
+
+                        {/* Filter by Date Order (client-side) */}
+                        <div className="w-full lg:w-auto">
+                            <StatusDropdown
+                                placeholder="Filter By Date"
+                                backgroundColor="var(--primary-color)"
+                                textColor="var(--background-color)"
+                                options={[
+                                    { label: "Newest First", value: "newest" },
+                                    { label: "Oldest First", value: "oldest" },
+                                ]}
+                                onSelect={(value) => setDateOrder(value === 'oldest' ? 'oldest' : 'newest')}
                             />
                         </div>
                     </div>

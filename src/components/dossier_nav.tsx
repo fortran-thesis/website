@@ -66,7 +66,7 @@ export function StickyDossierNav({ items }: { items: NavItem[] }) {
   return (
     <>
       <div ref={navRef} className="relative">
-        <nav className={`${isFixed ? 'fixed top-0 left-0 right-0' : 'relative'} z-[60] w-full bg-white/5 backdrop-blur-xl border-y border-[var(--primary-color)]/10 transition-all`}>
+        <nav className={`${isFixed ? 'fixed top-0 left-0 right-0' : 'relative'} z-[60] w-full bg-[var(--background-color)] backdrop-blur-xl border-y border-[var(--primary-color)]/10 transition-all`}>
           <div className="max-w-5xl mx-auto flex justify-center items-center gap-2 md:gap-8 py-2">
             {items.map((item) => (
               <button

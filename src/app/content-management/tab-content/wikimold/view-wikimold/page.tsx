@@ -338,8 +338,7 @@ function ViewWikiMoldContent() {
   const navItems = [
     { id: 'description', label: 'Description' },
     { id: 'analysis', label: 'Host & Pathogen Impact' },
-    { id: 'prevention', label: 'Prevention' },
-    { id: 'treatments', label: 'Remediation Protocols' },
+    { id: 'treatments', label: 'Prevention & Treatment' },
   ];
 
   const navigateBack = () => {
@@ -526,7 +525,7 @@ function ViewWikiMoldContent() {
                 <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Host & Pathogen Impact</h2>
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 gap-12">
               {/* AFFECTED HOSTS/CROPS */}
               <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
                 <div className="flex flex-col gap-2">
@@ -575,7 +574,7 @@ function ViewWikiMoldContent() {
               {/* IMPACT ANALYSIS */}
               <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
                 <div className="flex flex-col gap-2">
-                  <h3 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tight">Impact</h3>
+                  <h3 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tight">Impact Analysis</h3>
                 </div>
                 <div className="space-y-4">
                   <ReactQuill
@@ -589,36 +588,29 @@ function ViewWikiMoldContent() {
             </div>
           </section>
 
-          {/* 03. PREVENTION SECTION */}
-          {/* Prevention Strategies in separate section */}
-          <section id="prevention" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
-            <div className="flex flex-col gap-2 mb-8">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 03</label>
-                <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Prevention</h2>
-            </div>
-            <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
-              <div className="flex flex-col gap-2">
-                <h3 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tight">Prevention Strategies</h3>
-              </div>
-              <div className="space-y-4">
-                <ReactQuill
-                  value={wikiMoldInfo.prevention ?? ""}
-                  onChange={(val) => setWikiMoldInfo((prev) => ({ ...prev, prevention: val }))}
-                  theme="snow"
-                  placeholder="Cultural practices and environmental controls..."
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* 04. TREATMENT CONTROLS: separate remediation strategies per control category. */}
+          {/* 03. TREATMENT CONTROLS: separate remediation strategies per control category. */}
           <section id="treatments" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
             <div className="flex flex-col gap-2 mb-8">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 04</label>
-                <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Remediation Protocols</h2>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 03</label>
+                <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Prevention & Treatment</h2>
             </div>
             
             <div className="grid grid-cols-1 gap-12">
+              <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Protocol 00</label>
+                  <h3 className="font-black text-2xl text-[var(--primary-color)]">Prevention Summary</h3>
+                </div>
+                <div className="space-y-4">
+                  <ReactQuill
+                    value={wikiMoldInfo.prevention ?? ""}
+                    onChange={(val) => setWikiMoldInfo((prev) => ({ ...prev, prevention: val }))}
+                    theme="snow"
+                    placeholder="Cultural practices and environmental controls..."
+                  />
+                </div>
+              </div>
+
               {Object.entries({
                 mechanical: 'Mechanical',
                 cultural: 'Cultural',

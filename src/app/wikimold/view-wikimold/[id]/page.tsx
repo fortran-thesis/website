@@ -158,6 +158,7 @@ export default function ViewWikiMold() {
 
   const [activeTreatment, setActiveTreatment] = useState(0);
   const [expandedPathogenItems, setExpandedPathogenItems] = useState<Record<number, boolean>>({});
+  const [isPreventionExpanded, setIsPreventionExpanded] = useState(false);
 
   // Helper: Check if content is long enough to warrant expanding
   const isContentLong = (html: string): boolean => {
@@ -312,11 +313,6 @@ export default function ViewWikiMold() {
         title: 'Impact Analysis',
         summary: 'Expected severity and downstream damage.',
         content: article?.impact ?? '',
-      },
-      {
-        title: 'Prevention Strategies',
-        summary: 'Expected steps to reduce infection.',
-        content: article?.prevention ?? '',
       },
     ],
     [article],
@@ -638,7 +634,7 @@ const ProseContent = ({
             <SectionHeader number="01" title="Biological Description" />
             
             {/* Background Radial Glow (Accent Color at 5% opacity) */}
-            <div className="absolute -top-20 -left-20 w-96 h-96 bg-[var(--accent-color)]/20 blur-[120px] rounded-full pointer-events-none" />
+            <div className="absolute -top-20 -left-20 w-96 h-96 bg-[var(--accent-color)]/15 blur-[120px] rounded-full pointer-events-none" />
             
             <motion.div className="relative z-10">
               <ProseContent 
@@ -680,9 +676,24 @@ const ProseContent = ({
             </div>
           </section>
           
-        {/* --- 02. TREATMENT --- */}
+        {/* --- 02. PREVENTION & TREATMENT --- */}
           <section className="mb-30 relative max-w-5xl mx-auto">
-            <SectionHeader number="03" title="Treatment Protocols" />
+            <SectionHeader number="03" title="Prevention & Treatment" />
+
+            <CollapsibleEntry
+              number="00"
+              title="Prevention Summary"
+              description="Expected steps to reduce infection."
+              isExpanded={isPreventionExpanded}
+              onToggle={() => setIsPreventionExpanded((prev) => !prev)}
+              className="mb-6"
+              bodyClassName="text-[var(--moldify-black)]/80"
+            >
+              <ProseContent
+                html={article.prevention}
+                className="text-lg leading-relaxed text-[var(--primary-color)]/70 font-light"
+              />
+            </CollapsibleEntry>
             
             <div className="space-y-4 relative">
               {TREATMENT_CONTROLS.map((ctrl, idx) => {

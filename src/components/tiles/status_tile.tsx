@@ -11,7 +11,7 @@ export default function StatusBox({ status, fontSize = "10px" }: StatusBoxProps)
     const s = status.toLowerCase();
     switch (s) {
       // 01. SUCCESS / COMPLETED (Deep Forest Green)
-      case "resolved": case "active": case "low":
+      case "resolved": case "active": case "low": case "completed": case "success": case "reviewed":
         return { dot: "#3E5C0A", bg: "rgba(62, 92, 10, 0.05)", text: "#3E5C0A" };
       
       // 02. ATTENTION / DRAFT (Burnt Gold/Accent)

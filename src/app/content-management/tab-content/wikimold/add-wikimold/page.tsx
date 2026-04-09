@@ -444,8 +444,7 @@ export default function AddWikiMold() {
         <StickyDossierNav items={[
           { id: 'overview', label: 'Overview' },
           { id: 'analysis', label: 'Host & Pathogen Impact' },
-          { id: 'prevention', label: 'Prevention' },
-          { id: 'management', label: 'Remediation Protocols' }
+          { id: 'management', label: 'Prevention & Treatment' }
         ]} />
 
         <div className="max-w-full mx-auto px-4 space-y-32 mt-10">
@@ -485,7 +484,7 @@ export default function AddWikiMold() {
               <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--primary-color)]/40 italic">Technical Analysis & Observations</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div className="grid grid-cols-1 gap-12">
               {/* AFFECTED HOSTS/CROPS: What plants/crops this mold affects */}
               <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 space-y-4">
                 <h3 className="font-black text-xl text-[var(--primary-color)] uppercase tracking-tight">Affected Crops / Hosts</h3>
@@ -525,34 +524,28 @@ export default function AddWikiMold() {
             </div>
           </section>
 
-          {/* SECTION 03: PREVENTION */}
-          {/* Shows prevention and control strategies before moving to treatment */}
-          <section id="prevention" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
-            <div className="flex flex-col gap-2 mb-12">
-              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Phase 03</label>
-              <h2 className="font-black text-4xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Prevention</h2>
-            </div>
-            {/* PREVENTION STRATEGIES: Cultural practices, environmental controls */}
-            <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 space-y-4">
-              <h3 className="font-black text-xl text-[var(--primary-color)] uppercase tracking-tight">Prevention Strategies</h3>
-              <ReactQuill
-                value={wikiMoldData.prevention || ""}
-                onChange={(val) => setWikiMoldData(prev => ({ ...prev, prevention: val }))}
-                placeholder="Cultural practices and environmental controls..."
-              />
-            </div>
-          </section>
-
-          {/* SECTION 04: TREATMENT MANAGEMENT */}
+          {/* SECTION 03: TREATMENT MANAGEMENT */}
           {/* 5 Treatment Control Types: Mechanical, Cultural, Biological, Physical, Chemical */}
           {/* Each control type is displayed as an expandable accordion on the public page */}
           <section id="management" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10 pb-32">
             <div className="flex flex-col gap-2 mb-12">
-              <h2 className="font-black text-4xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Treatment Management</h2>
+              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Phase 03</label>
+              <h2 className="font-black text-4xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Prevention & Treatment</h2>
             </div>
             {/* TREATMENT CONTROL OPTIONS: 5 different control methods */}
             {/* On public page, each expands to show the HTML content entered here */}
             <div className="grid grid-cols-1 gap-12">
+              <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-4">
+                <span className="text-[10px] font-black text-[var(--accent-color)] opacity-40 uppercase tracking-widest">Protocol 00</span>
+                <h3 className="font-black text-xl text-[var(--primary-color)] uppercase tracking-tight">Prevention Summary</h3>
+                <ReactQuill
+                  className="flex-1"
+                  value={wikiMoldData.prevention || ""}
+                  onChange={(val) => setWikiMoldData((prev) => ({ ...prev, prevention: val }))}
+                  placeholder="Cultural practices and environmental controls..."
+                />
+              </div>
+
               {['mechanical', 'cultural', 'biological', 'physical', 'chemical'].map((key, index) => (
                 <div key={key} className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-4">
                   <span className="text-[10px] font-black text-[var(--accent-color)] opacity-40 uppercase tracking-widest">Protocol 0{index + 1}</span>

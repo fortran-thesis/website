@@ -674,7 +674,7 @@ function ViewCaseContent() {
       ),
     },
     {
-      label: "Initial Observation",
+      label: "Initial Diagnosis",
       icon: faEye,
       content: getInitialObservationContent(),
     },
@@ -741,7 +741,7 @@ function ViewCaseContent() {
             <span className="font-black text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">{reporterEmail}</span>
           </div>
           <div className="flex justify-between items-center text-sm">
-            <span className="font-bold opacity-30 text-[10px] uppercase tracking-widest font-[family-name:var(--font-montserrat)]">Phone</span>
+            <span className="font-bold opacity-30 text-[10px] uppercase tracking-widest font-[family-name:var(--font-montserrat)]">Contact Number</span>
             <span className="font-black text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">{reporterPhone}</span>
           </div>
         </div>
@@ -766,7 +766,6 @@ function ViewCaseContent() {
   {/* RIGHT COLUMN: Main Content */}
   <section className="xl:col-span-8 space-y-6">
     
-    {/* THE BALANCED HERO - Solid Primary with Depth */}
     <div className="relative overflow-hidden rounded-[3.5rem] bg-[var(--primary-color)] p-12 shadow-2xl shadow-[var(--primary-color)]/20">
       <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/10 pointer-events-none" />
       <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, var(--background-color) 1px, transparent 0)`, backgroundSize: '32px 32px' }} />
@@ -786,7 +785,7 @@ function ViewCaseContent() {
             }`}
             disabled={!['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')}
           >
-            <FontAwesomeIcon icon={faFilePdf} /> Export Case PDF
+            <FontAwesomeIcon icon={faFilePdf} /> Export PDF
           </button>
         </div>
 
@@ -796,22 +795,22 @@ function ViewCaseContent() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 pt-10 border-t border-[var(--background-color)]/20">
           <div className="space-y-1">
-            <span className="block text-[10px] font-black uppercase tracking-widest text-[var(--background-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Host Organism</span>
+            <span className="block text-[10px] font-black uppercase tracking-widest text-[var(--background-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Host Plant Affected</span>
             <p className="text-2xl font-bold font-[family-name:var(--font-montserrat)] text-[var(--background-color)]">{cropName}</p>
           </div>
           <div className="space-y-1">
-            <span className="block text-[10px] font-black uppercase tracking-widest text-[var(--background-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Regional Sector</span>
+            <span className="block text-[10px] font-black uppercase tracking-widest text-[var(--background-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Address</span>
             <p className="text-2xl font-bold font-[family-name:var(--font-montserrat)] text-[var(--background-color)]">{location}</p>
           </div>
           <div className="space-y-1">
-            <span className="block text-[10px] font-black uppercase tracking-widest text-[var(--background-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Entry Date</span>
+            <span className="block text-[10px] font-black uppercase tracking-widest text-[var(--background-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Date First Observed</span>
             <p className="text-2xl font-bold font-[family-name:var(--font-montserrat)] text-[var(--background-color)]">{dateObserved}</p>
           </div>
         </div>
       </div>
     </div>
 
-    {/* VERDICT BOX - Restored Links & View Article */}
+    {/* VERDICT BOX */}
     {hasFinalVerdict && (
         <div className="rounded-[3rem] border-2 border-[var(--primary-color)]/10 bg-[var(--background-color)] p-10 shadow-sm relative overflow-hidden">
           
@@ -821,7 +820,7 @@ function ViewCaseContent() {
                 <FontAwesomeIcon icon={faBookOpen} />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">Mycologist Verdict</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">Findings & Remarks</p>
                 <h3 className="text-3xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase tracking-tight">
                   {finalVerdictMoldName || 'Pending'}
                 </h3>
@@ -830,7 +829,7 @@ function ViewCaseContent() {
             
             {finalVerdictConfidence && (
               <div className="px-5 py-2.5 rounded-2xl bg-[var(--primary-color)]/5 border border-[var(--primary-color)]/5 text-right">
-                <span className="block text-[8px] font-black uppercase tracking-widest text-[var(--primary-color)] opacity-40">Confidence Index</span>
+                <span className="block text-[8px] font-black uppercase tracking-widest text-[var(--primary-color)] opacity-40">Confidence Level</span>
                 <span className="text-lg font-black text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">{finalVerdictConfidence}</span>
               </div>
             )}
@@ -838,7 +837,7 @@ function ViewCaseContent() {
 
           <div className="grid md:grid-cols-2 gap-4 mb-8">
             <div className="bg-[var(--primary-color)]/[0.03] rounded-2xl p-6 border border-[var(--primary-color)]/5 flex justify-between items-center group">
-              <span className="font-[family-name:var(--font-bricolage-grotesque)] text-[10px] font-black uppercase text-[var(--moldify-grey)] opacity-50">Reference Archive</span>
+              <span className="font-[family-name:var(--font-bricolage-grotesque)] text-[10px] font-black uppercase text-[var(--moldify-grey)] opacity-50">Reference Article</span>
               {finalVerdictWikiMoldHref && (
                 <Link 
                   href={finalVerdictWikiMoldHref} 
@@ -859,7 +858,7 @@ function ViewCaseContent() {
               <div className="flex flex-col lg:flex-row justify-between items-center gap-8">
                 <div className="max-w-sm">
                   <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[10px] font-black uppercase tracking-[0.18em] text-[var(--accent-color)] mb-2">
-                    Mycologist Notes Overview
+                    Mycologist Remarks Overview
                   </p>
                   <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs leading-relaxed text-[var(--moldify-grey)] font-medium italic">
                     Detailed mycologist notes are available in the dedicated reading view. Use it to review the full message without crowding the case summary.

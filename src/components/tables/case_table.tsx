@@ -63,19 +63,19 @@ export default function CaseTable({
           <thead className="sticky top-0 z-10 bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center">
             <tr>
               <th className="py-3 px-4 rounded-tl-xl cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('caseName')}>
-                Case Name {sortKey === 'caseName' && (sortDirection === 'asc' ? '↑' : '↓')}
+                Laboratory Code {sortKey === 'caseName' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('cropName')}>
-                Crop Name {sortKey === 'cropName' && (sortDirection === 'asc' ? '↑' : '↓')}
+                Host Plant Affected {sortKey === 'cropName' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('location')}>
-                Location {sortKey === 'location' && (sortDirection === 'asc' ? '↑' : '↓')}
+                Address {sortKey === 'location' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('submittedBy')}>
-                Submitted By {sortKey === 'submittedBy' && (sortDirection === 'asc' ? '↑' : '↓')}
+                Name of Client {sortKey === 'submittedBy' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('dateSubmitted')}>
-                Date Submitted {sortKey === 'dateSubmitted' && (sortDirection === 'asc' ? '↑' : '↓')}
+                Date Received {sortKey === 'dateSubmitted' && (sortDirection === 'asc' ? '↑' : '↓')}
               </th>
               {showStatus && (
                 <th className="py-3 px-4 cursor-pointer hover:opacity-80 select-none" onClick={() => onSort?.('status')}>

@@ -107,7 +107,7 @@ export default function InitialObservationTab({
       {/* ─────────────────────────────────────────────────────────────── */}
       <div>
         <h2 className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-          Initial Observation
+          Initial Diagnosis
         </h2>
         <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
           Baseline microscopic and macroscopic data captured during setup
@@ -204,11 +204,13 @@ export default function InitialObservationTab({
               value={macroSigns}
               icon={faStethoscope}
             />
-            <ObservationDataTile
-              label="Characteristics"
-              value={macroCharacteristics}
-              icon={faFlask}
-            />
+            <div className="col-span-2">
+              <ObservationDataTile
+                label="Characteristics"
+                value={macroCharacteristics}
+                icon={faFlask}
+              />
+            </div>
           </div>
         </div>
       </section>

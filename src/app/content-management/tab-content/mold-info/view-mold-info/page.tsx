@@ -44,6 +44,7 @@ interface MoldInfoFormData {
 }
 
 interface MoldManagementFormData {
+  preventionSummary: string;
   physicalControl: string;
   mechanicalControl: string;
   culturalControl: string;
@@ -93,6 +94,7 @@ function ViewMoldInfoContent() {
   });
 
   const [moldManagement, setMoldManagement] = useState<MoldManagementFormData>({
+    preventionSummary: "",
     physicalControl: "",
     mechanicalControl: "",
     culturalControl: "",
@@ -117,6 +119,8 @@ function ViewMoldInfoContent() {
     const apiTax = mold.mold_details?.info?.taxonomy || mold.info?.taxonomy || {};
     const info = mold.mold_details?.info || mold.info || {};
     const additionalInfo = normalizeInfoSections(info as Record<string, unknown>);
+    const preventionSummary = additionalInfo.preventionSummary || (mold as any)?.details?.info?.prevention_summary || "";
+    const preventionDetails = (mold.mold_details?.prevention || {}) as Record<string, unknown>;
 
     setMoldInfo((prev) => ({
       ...prev,
@@ -133,7 +137,7 @@ function ViewMoldInfoContent() {
         affectedHosts: additionalInfo.affectedHosts,
         symptomsSigns: additionalInfo.symptomsSigns,
         diseaseCycleImpact: additionalInfo.diseaseCycleImpact,
-        preventionSummary: additionalInfo.preventionSummary,
+        preventionSummary,
       },
       taxonomy: {
         kingdom: apiTax.kingdom ?? prev.taxonomy.kingdom ?? "",
@@ -148,18 +152,18 @@ function ViewMoldInfoContent() {
     const rawStatus = (mold as any).status;
     setMoldStatus(rawStatus === "reviewed" ? "reviewed" : "draft");
 
-    if (mold.mold_details?.prevention) {
-      const prev = mold.mold_details.prevention as any;
-      setMoldManagement((curr) => ({
-        physicalControl: prev.physicalControl ?? curr.physicalControl ?? "",
-        mechanicalControl: prev.mechanicalControl ?? curr.mechanicalControl ?? "",
-        culturalControl: prev.culturalControl ?? curr.culturalControl ?? "",
-        biologicalControl: prev.biologicalControl ?? curr.biologicalControl ?? "",
-        chemicalControl: Array.isArray(prev.fungicide)
-          ? prev.fungicide.join(", ")
-          : prev.chemicalControl ?? curr.chemicalControl ?? "",
-      }));
-    }
+    setMoldManagement((curr) => ({
+      preventionSummary: preventionSummary || curr.preventionSummary || "",
+      physicalControl: typeof preventionDetails.physicalControl === "string" ? preventionDetails.physicalControl : curr.physicalControl,
+      mechanicalControl: typeof preventionDetails.mechanicalControl === "string" ? preventionDetails.mechanicalControl : curr.mechanicalControl,
+      culturalControl: typeof preventionDetails.culturalControl === "string" ? preventionDetails.culturalControl : curr.culturalControl,
+      biologicalControl: typeof preventionDetails.biologicalControl === "string" ? preventionDetails.biologicalControl : curr.biologicalControl,
+      chemicalControl: Array.isArray(preventionDetails.fungicide)
+        ? preventionDetails.fungicide.join(", ")
+        : typeof preventionDetails.chemicalControl === "string"
+          ? preventionDetails.chemicalControl
+          : curr.chemicalControl,
+    }));
   }, [moldSwr]);
 
   const handleTaxonomyChange = (field: keyof MoldInfoFormData["taxonomy"], value: string) => {
@@ -223,7 +227,7 @@ function ViewMoldInfoContent() {
             affected_hosts: moldInfo.additionalInfo.affectedHosts.trim(),
             symptoms_and_signs: moldInfo.additionalInfo.symptomsSigns.trim(),
             disease_cycle_spread_impact: moldInfo.additionalInfo.diseaseCycleImpact.trim(),
-            prevention_summary: moldInfo.additionalInfo.preventionSummary.trim(),
+            prevention_summary: moldManagement.preventionSummary.trim(),
           },
           prevention: moldManagement,
         },
@@ -236,7 +240,6 @@ function ViewMoldInfoContent() {
       const url = moldId ? `/api/v1/mold/${moldId}` : "/api/v1/mold";
       await apiMutate(url, { method: method as "POST" | "PATCH", body: payload });
 
-      await invalidateMolds();
       setTimeout(() => {
         router.push("./");
       }, 500);
@@ -302,7 +305,7 @@ function ViewMoldInfoContent() {
     { id: "description", label: "Description" },
     { id: "taxonomy", label: "Taxonomy" },
     { id: "additional-info", label: "Additional Info" },
-    { id: "management", label: "Management" },
+    { id: "management", label: "Prevention & Treatment" },
   ];
 
   return (
@@ -354,7 +357,7 @@ function ViewMoldInfoContent() {
   {/* MOLD NAME SECTION */}
   <div className="relative group">
     <div className="flex items-center gap-3 mb-4">
-      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)]">
+      <span className="text-xs font-black uppercase tracking-[0.4em] text-[var(--accent-color)]">
         01. Mold Name
       </span>
       <div className="h-[1px] w-8 bg-[var(--accent-color)] opacity-30" />
@@ -377,8 +380,8 @@ function ViewMoldInfoContent() {
     {/* MODEL ID AND NAME FIELDS */}
     <div className="grid grid-cols-2 gap-6 mt-8 pt-8 border-t border-[var(--primary-color)]/10">
       <div>
-        <label htmlFor="predictedClassId" className="text-[9px] font-bold uppercase tracking-[0.25em] text-[var(--primary-color)]/50 block mb-2">
-          Model ID
+        <label htmlFor="predictedClassId" className="text-xs font-bold uppercase tracking-[0.25em] text-[var(--primary-color)] block mb-2">
+          Predicted Class ID
         </label>
         <input
           id="predictedClassId"
@@ -390,8 +393,8 @@ function ViewMoldInfoContent() {
         />
       </div>
       <div>
-        <label htmlFor="predictedClassName" className="text-[9px] font-bold uppercase tracking-[0.25em] text-[var(--primary-color)]/50 block mb-2">
-          Model Name
+        <label htmlFor="predictedClassName" className="text-xs font-bold uppercase tracking-[0.25em] text-[var(--primary-color)] block mb-2">
+          Predicted Class Name
         </label>
         <input
           id="predictedClassName"
@@ -417,7 +420,7 @@ function ViewMoldInfoContent() {
                 </div>
                 <div className={sectionCardClass}>
                   <div className="flex flex-col gap-2">
-                    <h3 className={cardTitleClass}>Core Description</h3>
+                    <h3 className={cardTitleClass}>Mold Description</h3>
                     <span className={cardNoteClass}>Biological Overview</span>
                   </div>
                   <textarea
@@ -472,14 +475,13 @@ function ViewMoldInfoContent() {
                     Additional Information
                   </h2>
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <div className="grid grid-cols-1 gap-12">
                   {[
                     ["overview", "Overview", "Short background and context"],
                     ["healthRisks", "Health Risks", "Known risks and safety concerns"],
                     ["affectedHosts", "Affected Hosts", "Crops, hosts, and contexts affected"],
                     ["symptomsSigns", "Symptoms and Signs", "Field-visible symptoms and signs"],
                     ["diseaseCycleImpact", "Disease Cycle / Spread / Impact", "Lifecycle, spread behavior, and practical impact"],
-                    ["preventionSummary", "Prevention Summary", "Quick prevention summary for operators"],
                   ].map(([key, label, placeholder]) => (
                     <div key={key} className={sectionCardClass}>
                       <div className="flex flex-col gap-2">
@@ -503,11 +505,12 @@ function ViewMoldInfoContent() {
                 <div className="flex flex-col gap-2 mb-8">
                   <label className={fieldLabelClass}>Section 04</label>
                   <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">
-                    Management
+                    Prevention & Treatment
                   </h2>
                 </div>
                 <div className="grid grid-cols-1 gap-12">
                   {[
+                    ["preventionSummary", "Prevention Summary", "Quick prevention summary for operators"],
                     ["physicalControl", "Physical Control"],
                     ["mechanicalControl", "Mechanical Control"],
                     ["culturalControl", "Cultural Control"],

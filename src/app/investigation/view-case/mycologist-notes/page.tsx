@@ -216,45 +216,38 @@ function MycologistNotesContent() {
 
   return (
     <main ref={pageContentRef} className="relative flex flex-col xl:py-2 py-10 w-full bg-[var(--background-color)] text-[var(--primary-color)]">
-  {/* HEADER SECTION: mirrors view-case hierarchy */}
-  <header className="mb-12 border-b border-[var(--primary-color)]/5 pb-10">
-  <div className="space-y-2">
-    <Breadcrumbs role={userRole} />
-    <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-4xl uppercase tracking-tighter">
-      Case Management
-    </h1>
-  </div>
+    <header className="mb-12 border-b border-[var(--primary-color)]/5 pb-10">
+        <div className="space-y-2">
+            <Breadcrumbs role={userRole} />
+            <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-4xl uppercase tracking-tighter">
+            Case Management
+            </h1>
+        </div>
 
-<div className="inline-flex items-center gap-2.5 rounded-full border border-[var(--accent-color)]/20 bg-[var(--accent-color)]/5 px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-[var(--accent-color)] mt-8">
-      <FontAwesomeIcon icon={faBookOpen} className="text-[8px]" />
-      Technical Archive / Intel Reading
-    </div>
-  <div className="mt-3 flex items-center justify-between">
-    <div className="flex items-center gap-4">
-      <BackButton onClick={openCase} />
-      <h2 className="font-[family-name:var(--font-montserrat)] text-4xl font-black uppercase tracking-tighter leading-none text-[var(--primary-color)]">
-        Mycologist Notes
-      </h2>
-    </div>
-
- 
-  </div>
-
-  <div className="mt-3 pace-y-4">
-
-    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-base font-medium leading-relaxed opacity-60 max-w-2xl text-[var(--primary-color)]">
-      Full notes are separated from the case summary so the message can be read without crowding the investigation page.
-    </p>
-  </div>
-</header>
+            <div className="inline-flex items-center gap-2.5 rounded-full border border-[var(--accent-color)]/20 bg-[var(--accent-color)]/5 px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.3em] text-[var(--accent-color)] mt-20">
+                <FontAwesomeIcon icon={faBookOpen} className="text-[8px]" />
+                Mycologist Remarks Overview
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                <BackButton onClick={openCase} />
+                <h2 className="font-[family-name:var(--font-montserrat)] text-4xl font-black uppercase tracking-tighter leading-none text-[var(--primary-color)]">
+                    Findings & Remarks
+                </h2>
+                </div>
+            </div>
+            <div className="mt-3 pace-y-4">
+                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-base font-medium leading-relaxed opacity-60 max-w-2xl text-[var(--primary-color)]">
+                    This page displays the full documented observations for the current case.   
+                </p>
+            </div>
+        </header>
 
   <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-    {/* SIDEBAR: Data Snapshots */}
     <aside className="xl:col-span-4 space-y-8">
-      {/* Case Overview */}
       <div className="rounded-[2.5rem] border border-[var(--primary-color)]/10 bg-[var(--background-color)] p-10 shadow-sm">
         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--accent-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Case Overview
+          Laboratory Code
         </span>
         <h2 className="mt-4 font-[family-name:var(--font-montserrat)] text-3xl font-black uppercase tracking-tight">
           {caseName}
@@ -287,7 +280,7 @@ function MycologistNotesContent() {
     <div className="flex items-center gap-3 mb-8">
       <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-color)] animate-pulse" />
       <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--accent-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-        Determination Registry
+        Findings
       </span>
     </div>
 
@@ -297,14 +290,14 @@ function MycologistNotesContent() {
     
     <div className="grid grid-cols-2 gap-8 border-y border-[var(--primary-color)]/5 py-8 mb-8">
       <div className="space-y-1">
-        <span className="block text-[8px] font-bold uppercase tracking-widest text-[var(--moldify-grey)] opacity-60">Certainty Index</span>
+        <span className="block text-[8px] font-bold uppercase tracking-widest text-[var(--moldify-grey)] opacity-60 font-[family-name:var(--font-montserrat)]">Confidence Level</span>
         <span className="text-3xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
           {finalVerdictConfidence || "N/A"}
         </span>
       </div>
       <div className="space-y-2">
-        <span className="block text-[8px] font-bold uppercase tracking-widest text-[var(--moldify-grey)] opacity-60">Auth Timestamp</span>
-        <span className="text-[10px] font-bold uppercase text-[var(--primary-color)] leading-tight block">
+        <span className="block text-[8px] font-bold uppercase tracking-widest text-[var(--moldify-grey)] opacity-60 font-[family-name:var(--font-montserrat)]">Last Sync</span>
+        <span className="text-[10px] font-bold uppercase text-[var(--primary-color)] leading-tight block font-[family-name:var(--font-bricolage-grotesque)]">
           {finalVerdictTimestamp || "Pending..."}
         </span>
       </div>
@@ -340,7 +333,7 @@ function MycologistNotesContent() {
         <div className="mb-12 flex items-center justify-between border-b border-[var(--primary-color)]/5 pb-12">
           <div className="space-y-2">
             <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)]">
-              Full Mycologist Note
+              Findings and Remarks
             </p>
             <h2 className="font-[family-name:var(--font-montserrat)] text-4xl font-black uppercase tracking-tighter">
               Read carefully
