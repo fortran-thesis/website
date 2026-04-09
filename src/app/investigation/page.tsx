@@ -69,11 +69,11 @@ export default function Investigation() {
 
         const normalizeDisplayStatus = (status?: string) => {
             const raw = (status ?? '').trim().toLowerCase();
-            if (raw === 'pending' || raw === 'pending review') return 'For Approval';
+            if (raw === 'pending' || raw === 'pending review' || raw === 'for approval') return 'Pending';
             if (raw === 'in progress') return 'In Progress';
             if (raw === 'resolved') return 'Resolved';
             if (raw === 'rejected') return 'Rejected';
-            return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'For Approval';
+            return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Pending';
         };
 
         /* ── Map report snapshot → display row ── */
@@ -119,8 +119,8 @@ export default function Investigation() {
             if (isAdministrator && adminStatsRes?.data) return adminStatsRes.data;
             return cases.reduce(
                 (acc, c) => {
-                    const s = c.status?.toLowerCase() || 'for approval';
-                    if (s === 'for approval') acc.pending++;
+                    const s = c.status?.toLowerCase() || 'pending';
+                    if (s === 'pending' || s === 'for approval') acc.pending++;
                     else if (s === 'in progress') acc.in_progress++;
                     else if (s === 'resolved') acc.resolved++;
                     else if (s === 'rejected') acc.rejected++;
@@ -214,7 +214,7 @@ export default function Investigation() {
             <div className={`grid grid-cols-1 lg:grid-cols-2 gap-3 mt-6 ${isMycologist ? 'xl:grid-cols-3' : 'xl:grid-cols-4'}`}>
                 <StatisticsTile icon={faSeedling} iconColor="var(--moldify-black)" title="Total Cases" statNum={caseStats.total} />
                 {!isMycologist && (
-                    <StatisticsTile icon={faClockRotateLeft} iconColor="var(--accent-color)" title="For Approval Cases" statNum={caseStats.pending} />
+                    <StatisticsTile icon={faClockRotateLeft} iconColor="var(--accent-color)" title="Pending Cases" statNum={caseStats.pending} />
                 )}
                 <StatisticsTile icon={faHourglassHalf} iconColor="var(--moldify-blue)" title="In Progress Mold Cases" statNum={caseStats.in_progress} />
                 <StatisticsTile icon={faCircleCheck} iconColor="var(--primary-color)" title="Resolved Mold Cases" statNum={caseStats.resolved} />
@@ -256,14 +256,14 @@ export default function Investigation() {
                                     isMycologist
                                         ? [
                                             { label: "All", value: "all" },
-                                            { label: "For Approval", value: "for approval" },
+                                            { label: "Pending", value: "pending" },
                                             { label: "In Progress", value: "in progress" },
                                             { label: "Resolved", value: "resolved" },
                                             { label: "Rejected", value: "rejected" }
                                         ]
                                         : [
                                             { label: "All", value: "all" },
-                                            { label: "For Approval", value: "for approval" },
+                                            { label: "Pending", value: "pending" },
                                             { label: "In Progress", value: "in progress" },
                                             { label: "Resolved", value: "resolved" },
                                             { label: "Rejected", value: "rejected"}

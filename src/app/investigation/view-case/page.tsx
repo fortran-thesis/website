@@ -10,7 +10,7 @@ import TabBar from "@/components/tab_bar";
 import CaseStatusCard from "@/components/CaseStatusCard";
 import AssignCaseModal from "@/components/modals/assign_case_modal";
 import ConfirmModal from "@/components/modals/confirmation_modal";
-import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus, faEye, faBookOpen } from "@fortawesome/free-solid-svg-icons";
+import { faSeedling, faClipboardList, faClockRotateLeft, faFilePdf, faFlask, faSprayCan, faPlus, faEye, faBookOpen, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import CaseDetailsTab from "../investigation-tabs/case_details";
 import InVitroTab from "../investigation-tabs/in_vitro";
@@ -309,6 +309,9 @@ function ViewCaseContent() {
   const finalVerdictConfidence = confidenceText(finalVerdict?.confidence);
   const finalVerdictWikiMoldId = asText(finalVerdict?.moldipedia_id);
   const finalVerdictNotes = asText(finalVerdict?.mycologist_notes);
+  const finalVerdictNotesHref = resourceId
+    ? `/investigation/view-case/mycologist-notes?id=${encodeURIComponent(resourceId)}`
+    : '';
   const finalVerdictTimestamp = (() => {
     const d = toDate(finalVerdict?.verdict_timestamp as string | { _seconds: number } | undefined);
     return d
@@ -708,191 +711,180 @@ function ViewCaseContent() {
       </div>
 
       {!loading && !error && caseData && (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
-          
-          {/* LEFT COLUMN: Sidebar Info (Farmer + Metadata) */}
-          <aside className="xl:col-span-4 space-y-6">
-            
-            {/* Farmer Profile Card - Earthy & Modern */}
-            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5">
-              <div className="flex flex-col items-center text-center">
-                <div className="relative w-32 h-32 rounded-3xl overflow-hidden mb-4 border-4 border-[var(--taupe)] shadow-md">
-                   <Image
-                    key={imgSrc}
-                    src={imgSrc}
-                    alt="Profile"
-                    fill
-                    className="object-cover "
-                    onError={() => setImgSrc("/assets/default-fallback.png")}
-                  />
-                </div>
-                <h2 className="text-2xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase">{reporterName}</h2>
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] mt-1">{(caseData?.reporter as any)?.occupation || "Farmer"}</span>
-                
-                <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-[var(--primary-color)]/10 to-transparent my-6" />
-                
-                <div className="w-full space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-[family-name:var(--font-montserrat)] font-bold opacity-40">Email</span>
-                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[var(--primary-color)]">{reporterEmail}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="font-[family-name:var(--font-montserrat)] font-bold opacity-40">Phone</span>
-                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[var(--primary-color)]">{reporterPhone}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Case Status Card */}
-            <CaseStatusCard
-              userRole={userRole}
-                isAssigned={isAssigned}
-                isRejected={isRejected}
-                isApproved={isApproved}
-              assignedMycologistName={assignedMycologistName}
-              assignedMycologistOccupation={assignedMycologistOccupation}
-              caseData={caseData}
-              status={status}
-              setAssignModalOpen={setAssignModalOpen}
-              setRejectModalOpen={setRejectModalOpen}
-              mycologistLoading={!mycologistId || !mycologistRes}
-            />
-          </aside>
-
-          {/* RIGHT COLUMN: Case Core Data */}
-          <section className="xl:col-span-8 space-y-4">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 max-w-7xl mx-auto">
   
-          {/* MINIMALIST STATUS LINE - No boxes, just clean typography on the cream bg */}
-          <div className="font-[family-name:var(--font-montserrat)] flex items-center gap-6 px-2">
-            <div className="flex items-center gap-2">
-              <div 
-                className="w-2 h-2 rounded-full" 
-                style={{ backgroundColor: getStatusColor(status) }}
-              />
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-[var(--primary-color)]">
-                {status}
-              </span>
-            </div>
+  {/* LEFT COLUMN: Sidebar */}
+  <aside className="xl:col-span-4 space-y-6">
+    {/* Farmer Profile Card - Solid & Tonal */}
+    <div className="bg-[var(--background-color)] rounded-[2.5rem] p-10 border-2 border-[var(--primary-color)]/10 shadow-sm relative overflow-hidden group">
+      <div className="flex flex-col items-center text-center relative z-10">
+        <div className="relative mb-6">
+          <div className="w-36 h-36 rounded-[2.5rem] overflow-hidden border-8 border-[var(--primary-color)]/5 shadow-xl transition-transform group-hover:rotate-2 duration-500">
+            <Image
+              key={imgSrc}
+              src={imgSrc}
+              alt="Profile"
+              fill
+              className="object-cover"
+              onError={() => setImgSrc("/assets/default-fallback.png")}
+            />
+          </div>
+        </div>
+        <h2 className="text-2xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase tracking-tight">{reporterName}</h2>
+        <span className="mt-1 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">
+          {(caseData?.reporter as any)?.occupation || "Farmer"}
+        </span>
+        <div className="w-full h-px bg-[var(--primary-color)]/10 my-8" />
+        <div className="w-full space-y-4">
+          <div className="flex justify-between items-center text-sm">
+            <span className="font-bold opacity-30 text-[10px] uppercase tracking-widest font-[family-name:var(--font-montserrat)]">Email</span>
+            <span className="font-black text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">{reporterEmail}</span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="font-bold opacity-30 text-[10px] uppercase tracking-widest font-[family-name:var(--font-montserrat)]">Phone</span>
+            <span className="font-black text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">{reporterPhone}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <CaseStatusCard
+      userRole={userRole}
+      isAssigned={isAssigned}
+      isRejected={isRejected}
+      isApproved={isApproved}
+      assignedMycologistName={assignedMycologistName}
+      assignedMycologistOccupation={assignedMycologistOccupation}
+      caseData={caseData}
+      status={status}
+      setAssignModalOpen={setAssignModalOpen}
+      setRejectModalOpen={setRejectModalOpen}
+      mycologistLoading={!mycologistId || !mycologistRes}
+    />
+  </aside>
+
+  {/* RIGHT COLUMN: Main Content */}
+  <section className="xl:col-span-8 space-y-6">
+    
+    {/* THE BALANCED HERO - Solid Primary with Depth */}
+    <div className="relative overflow-hidden rounded-[3.5rem] bg-[var(--primary-color)] p-12 shadow-2xl shadow-[var(--primary-color)]/20">
+      <div className="absolute inset-0 bg-gradient-to-tr from-black/20 via-transparent to-white/10 pointer-events-none" />
+      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at 2px 2px, var(--background-color) 1px, transparent 0)`, backgroundSize: '32px 32px' }} />
+
+      <div className="relative z-10">
+        <div className="flex items-center justify-between mb-16">
+          <div className="flex items-center gap-3 px-4 py-2 rounded-full bg-[var(--background-color)]/10 border border-[var(--background-color)]/20">
+            <div className="w-2 h-2 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)]" style={{ backgroundColor: getStatusColor(status) }} />
+            <span className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.3em] text-[var(--background-color)]">{status}</span>
           </div>
 
-          {/* THE ACTUAL HERO CARD - Now completely clean */}
-          <div className="bg-[var(--primary-color)] text-[var(--background-color)] rounded-[2.5rem] p-12 relative overflow-hidden">
-            <FontAwesomeIcon icon={faSeedling} className="absolute -right-10 -bottom-10 text-white/5 text-[18rem]" />
-            
-            <div className="relative z-10">
-              <h2 className="text-5xl font-black font-[family-name:var(--font-montserrat)] uppercase tracking-tighter leading-[0.9] mb-12">
-                {caseName}
-              </h2>
+          <button 
+            className={`cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all font-[family-name:var(--font-bricolage-grotesque)] ${
+              ['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')
+                ? 'bg-[var(--background-color)] text-[var(--primary-color)] hover:scale-105 active:scale-95 shadow-lg'
+                : 'bg-[var(--background-color)]/10 text-[var(--background-color)]/40 cursor-not-allowed border border-[var(--background-color)]/20'
+            }`}
+            disabled={!['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')}
+          >
+            <FontAwesomeIcon icon={faFilePdf} /> Export Case PDF
+          </button>
+        </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-12 pt-10 border-t border-white/10">
-                <div>
-                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Host Plant Affected</span>
-                  <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{cropName}</p>
-                </div>
-                <div>
-                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Location</span>
-                  <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{location}</p>
-                </div>
-                <div className="col-span-2 md:col-span-1">
-                  <span className="block font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest opacity-50 mb-2">Date Received</span>
-                  <p className="font-[family-name:var(--font-montserrat)] text-2xl font-bold">{dateObserved}</p>
-                </div>
+        <h2 className="text-5xl md:text-6xl font-black font-[family-name:var(--font-montserrat)] uppercase tracking-tighter leading-[0.85] mb-16 text-[var(--background-color)]">
+          {caseName}
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 pt-10 border-t border-[var(--background-color)]/20">
+          <div className="space-y-1">
+            <span className="block text-[10px] font-black uppercase tracking-widest text-[var(--background-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Host Organism</span>
+            <p className="text-2xl font-bold font-[family-name:var(--font-montserrat)] text-[var(--background-color)]">{cropName}</p>
+          </div>
+          <div className="space-y-1">
+            <span className="block text-[10px] font-black uppercase tracking-widest text-[var(--background-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Regional Sector</span>
+            <p className="text-2xl font-bold font-[family-name:var(--font-montserrat)] text-[var(--background-color)]">{location}</p>
+          </div>
+          <div className="space-y-1">
+            <span className="block text-[10px] font-black uppercase tracking-widest text-[var(--background-color)] opacity-40 font-[family-name:var(--font-bricolage-grotesque)]">Entry Date</span>
+            <p className="text-2xl font-bold font-[family-name:var(--font-montserrat)] text-[var(--background-color)]">{dateObserved}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* VERDICT BOX - Restored Links & View Article */}
+    {hasFinalVerdict && (
+        <div className="rounded-[3rem] border-2 border-[var(--primary-color)]/10 bg-[var(--background-color)] p-10 shadow-sm relative overflow-hidden">
+          
+          <div className="flex flex-wrap items-center justify-between gap-6 mb-8">
+            <div className="flex gap-4 items-center">
+              <div className="w-12 h-12 rounded-2xl bg-[var(--primary-color)] flex items-center justify-center text-[var(--background-color)] shadow-lg shadow-[var(--primary-color)]/10">
+                <FontAwesomeIcon icon={faBookOpen} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)] opacity-60">Mycologist Verdict</p>
+                <h3 className="text-3xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] uppercase tracking-tight">
+                  {finalVerdictMoldName || 'Pending'}
+                </h3>
               </div>
             </div>
+            
+            {finalVerdictConfidence && (
+              <div className="px-5 py-2.5 rounded-2xl bg-[var(--primary-color)]/5 border border-[var(--primary-color)]/5 text-right">
+                <span className="block text-[8px] font-black uppercase tracking-widest text-[var(--primary-color)] opacity-40">Confidence Index</span>
+                <span className="text-lg font-black text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">{finalVerdictConfidence}</span>
+              </div>
+            )}
           </div>
 
-            {hasFinalVerdict && (
-              <div className="rounded-3xl border border-[var(--primary-color)]/15 bg-[var(--background-color)] p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.16em] text-[var(--moldify-grey)]">
-                      Final WikiMold Verdict
-                    </p>
-                    <h3 className="mt-1 font-[family-name:var(--font-montserrat)] text-2xl font-black text-[var(--primary-color)]">
-                      {finalVerdictMoldName || 'Unnamed Mold Verdict'}
-                    </h3>
-                  </div>
+          <div className="grid md:grid-cols-2 gap-4 mb-8">
+            <div className="bg-[var(--primary-color)]/[0.03] rounded-2xl p-6 border border-[var(--primary-color)]/5 flex justify-between items-center group">
+              <span className="font-[family-name:var(--font-bricolage-grotesque)] text-[10px] font-black uppercase text-[var(--moldify-grey)] opacity-50">Reference Archive</span>
+              {finalVerdictWikiMoldHref && (
+                <Link 
+                  href={finalVerdictWikiMoldHref} 
+                  className="font-[family-name:var(--font-bricolage-grotesque)] text-[10px] font-black text-[var(--primary-color)] uppercase hover:opacity-80 transition-all flex items-center gap-2"
+                >
+                  View related WikiMold article <FontAwesomeIcon icon={faChevronRight} className="text-[8px]" />
+                </Link>
+              )}
+            </div>
+            <div className="bg-[var(--primary-color)]/[0.03] rounded-2xl p-6 border border-[var(--primary-color)]/5">
+              <span className="font-[family-name:var(--font-bricolage-grotesque)] text-[10px] font-black uppercase text-[var(--moldify-grey)] opacity-50 block mb-1">Last Sync</span>
+              <p className="font-[family-name:var(--font-montserrat)] text-sm font-bold text-[var(--primary-color)] uppercase tracking-tighter">{finalVerdictTimestamp || 'Awaiting Data'}</p>
+            </div>
+          </div>
 
-                  {finalVerdictConfidence && (
-                    <span className="rounded-full bg-[var(--primary-color)]/10 px-4 py-2 font-[family-name:var(--font-bricolage-grotesque)] text-sm font-bold text-[var(--primary-color)]">
-                      Confidence: {finalVerdictConfidence}
-                    </span>
-                  )}
+          {finalVerdictNotes && (
+            <div className="bg-[var(--primary-color)]/[0.03] rounded-3xl p-8 border border-[var(--primary-color)]/5">
+              <div className="flex flex-col lg:flex-row justify-between items-center gap-8">
+                <div className="max-w-sm">
+                  <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[10px] font-black uppercase tracking-[0.18em] text-[var(--accent-color)] mb-2">
+                    Mycologist Notes Overview
+                  </p>
+                  <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs leading-relaxed text-[var(--moldify-grey)] font-medium italic">
+                    Detailed mycologist notes are available in the dedicated reading view. Use it to review the full message without crowding the case summary.
+                  </p>
                 </div>
-
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-[var(--primary-color)]/10 bg-white p-4">
-                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.12em] text-[var(--moldify-grey)]">
-                      WikiMold Article
-                    </p>
-                    {finalVerdictWikiMoldHref ? (
-                      <Link
-                        href={finalVerdictWikiMoldHref}
-                        className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[var(--primary-color)] px-4 py-2 font-[family-name:var(--font-bricolage-grotesque)] text-sm font-bold text-white transition-opacity hover:opacity-90"
-                      >
-                        <FontAwesomeIcon icon={faBookOpen} />
-                        View on WikiMold
-                      </Link>
-                    ) : (
-                      <p className="mt-2 font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--moldify-grey)]">
-                        No linked WikiMold article yet.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="rounded-2xl border border-[var(--primary-color)]/10 bg-white p-4">
-                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.12em] text-[var(--moldify-grey)]">
-                      Verdict Timestamp
-                    </p>
-                    <p className="mt-2 font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)]">
-                      {finalVerdictTimestamp || 'Timestamp unavailable'}
-                    </p>
-                  </div>
-                </div>
-
-                {finalVerdictNotes && (
-                  <div className="mt-4 rounded-2xl border border-[var(--primary-color)]/10 bg-white p-4">
-                    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.12em] text-[var(--moldify-grey)]">
-                      Mycologist Notes
-                    </p>
-                    <p className="mt-2 whitespace-pre-wrap font-[family-name:var(--font-bricolage-grotesque)] text-sm leading-relaxed text-[var(--moldify-black)]">
-                      {finalVerdictNotes}
-                    </p>
-                  </div>
+                {finalVerdictNotesHref && (
+                  <Link 
+                    href={finalVerdictNotesHref} 
+                    className="font-[family-name:var(--font-bricolage-grotesque)] px-10 py-4 bg-[var(--primary-color)] text-[var(--background-color)] rounded-xl font-black text-xs uppercase shadow-md hover:translate-x-1 transition-all"
+                  >
+                    View Mycologist Notes
+                  </Link>
                 )}
               </div>
-            )}
-
-            {!hasFinalVerdict && caseData?.status?.toLowerCase() === 'resolved' && (
-              <div className="rounded-2xl border border-[var(--primary-color)]/10 bg-[var(--background-color)] p-5">
-                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--moldify-grey)]">
-                  This case is resolved, but no final WikiMold verdict details are available yet.
-                </p>
-              </div>
-            )}
-
-            {/* 4.  UTILITY BAR */}
-            <div className="flex flex-wrap gap-3 bg-[var(--taupe)]/30 p-2 rounded-2xl border border-[var(--primary-color)]/5">
-              <button 
-                className={`font-[family-name:var(--font-bricolage-grotesque)] flex-1 min-w-[150px] flex items-center justify-center gap-2 text-xs font-black uppercase px-4 py-4 rounded-xl transition-all shadow-sm ${
-                  ['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')
-                    ? 'bg-white text-[var(--primary-color)] hover:bg-[var(--primary-color)] hover:text-white cursor-pointer'
-                    : 'bg-gray-200 text-gray-400 cursor-not-allowed opacity-60'
-                }`}
-                disabled={!['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')}
-                title={['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '') ? 'Export case as PDF' : 'PDF export is only available for resolved or closed cases'}
-              >
-                <FontAwesomeIcon icon={faFilePdf} /> Export PDF
-              </button>
             </div>
-
-            {/* 5. DATA TABS */}
-            <div className="bg-[var(--background-color)] rounded-3xl p-8 border-3 border-[var(--primary-color)]/5">
-              <TabBar tabs={tabs} initialIndex={0} />
-            </div>
-          </section>
+          )}
         </div>
+      )}
+
+        {/* DATA TABS */}
+        <div className="bg-[var(--background-color)] rounded-[3rem] p-10 border-2 border-[var(--primary-color)]/5">
+          <TabBar tabs={tabs} initialIndex={0} />
+        </div>
+      </section>
+    </div>
       )}
 
       {/* Error Alert */}

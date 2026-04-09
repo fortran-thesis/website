@@ -36,7 +36,7 @@ export default function StatusBox({ status, fontSize = "10px" }: StatusBoxProps)
 
   return (
     <div 
-      className="inline-flex items-center gap-3 px-5 py-2 rounded-full border border-[var(--primary-color)]/5"
+      className="inline-flex min-w-[9rem] justify-center items-center gap-3 px-5 py-2 rounded-full border border-[var(--primary-color)]/5"
       style={{ 
         backgroundColor: theme.bg,
         backdropFilter: "blur(12px)", // Premium 'Nordic Glass' feel
