@@ -52,6 +52,10 @@ export async function POST(req: NextRequest) {
     // Must match Path, Domain, and other attributes exactly
     const clearCookie = `session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
     response.headers.set('Set-Cookie', clearCookie);
+    response.headers.append(
+      'Set-Cookie',
+      `csrfToken=; Path=/; SameSite=Lax; Max-Age=0${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`,
+    );
     
     console.log('🍪 Session cookie CLEARED with header:', clearCookie);
     console.log('🍪 Response Set-Cookie header:', response.headers.get('Set-Cookie'));

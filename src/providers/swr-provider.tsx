@@ -26,9 +26,33 @@ export default function SwrProvider({ children }: { children: React.ReactNode })
           dedupingInterval: 5000,
           errorRetryCount: 3,
           shouldRetryOnError(err) {
-            // Don't retry on 4xx client errors (auth failures, validation, not-found, rate-limit)
-            if (err?.status && err.status >= 400 && err.status < 500) return false;
+            const status = err?.status;
+            if (!status) return true;
+
+            // Respect hard auth and validation failures.
+            if (status === 401 || status === 403 || status === 404 || status === 422) return false;
+
+            // Allow adaptive retries for throttling and transient upstream errors.
+            if (status === 429) return true;
+            if (status >= 500) return true;
+
+            // Default for other 4xx: do not retry.
+            if (status >= 400 && status < 500) return false;
             return true;
+          },
+          onErrorRetry(err, _key, _config, revalidate, { retryCount }) {
+            if (retryCount >= 3) return;
+
+            const status = err?.status;
+            if (status === 401 || status === 403 || status === 404 || status === 422) return;
+
+            const retryAfterMs = typeof err?.retryAfterMs === 'number' ? err.retryAfterMs : null;
+            const baseDelayMs = retryAfterMs ?? Math.min(1000 * Math.pow(2, retryCount), 10000);
+            const jitterMs = Math.floor(Math.random() * 250);
+
+            setTimeout(() => {
+              revalidate({ retryCount });
+            }, baseDelayMs + jitterMs);
           },
         }}
       >

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { envOptions } from '@/configs/envOptions';
 import { endpoints } from '@/services/endpoints';
+import { randomUUID } from 'crypto';
 
 /**
  * Proxy login route
@@ -43,6 +44,8 @@ export async function POST(req: Request) {
     console.log('🍪 Backend Set-Cookie header:', backendCookie ? 'FOUND' : 'NOT FOUND');
 
     const res = NextResponse.json(fbJson, { status: fbRes.status });
+    const csrfToken = randomUUID().replace(/-/g, '');
+    const csrfCookie = `csrfToken=${csrfToken}; Path=/; SameSite=Lax; Max-Age=${60 * 60 * 24 * 7}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
 
     // If we got the cookie from backend, forward it but strip the domain
     if (backendCookie) {
@@ -65,6 +68,7 @@ export async function POST(req: Request) {
       const finalCookie = `${nameValue}; ${attrs.join('; ')}`;
       console.log('🍪 Final cookie:', finalCookie.substring(0, 100) + '...');
       res.headers.set('Set-Cookie', finalCookie);
+      res.headers.append('Set-Cookie', csrfCookie);
       return res;
     }
 
@@ -76,6 +80,7 @@ export async function POST(req: Request) {
       const maxAge = 60 * 60 * 24 * 7; // 7 days
       const cookieString = `session=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`;
       res.headers.set('Set-Cookie', cookieString);
+      res.headers.append('Set-Cookie', csrfCookie);
       return res;
     }
 

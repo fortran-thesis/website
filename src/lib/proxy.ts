@@ -32,6 +32,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { envOptions } from '@/configs/envOptions';
 
+const MUTATING_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
+
+function isAllowedOrigin(req: NextRequest): boolean {
+  const origin = req.headers.get('origin');
+  if (!origin) return true;
+  return origin === req.nextUrl.origin;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
@@ -143,6 +151,33 @@ export async function proxyFetch(
     );
   }
 
+  const httpMethod = (method ?? req.method).toUpperCase();
+  if (envOptions.isProduction && auth && MUTATING_METHODS.has(httpMethod)) {
+    const csrfCookie = req.cookies.get('csrfToken')?.value;
+    const csrfHeader = req.headers.get('x-csrf-token');
+
+    if (!isAllowedOrigin(req)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request origin' },
+        { status: 403 },
+      );
+    }
+
+    if (!csrfCookie) {
+      return NextResponse.json(
+        { success: false, error: 'CSRF validation failed' },
+        { status: 403 },
+      );
+    }
+
+    if (csrfHeader && csrfCookie !== csrfHeader) {
+      return NextResponse.json(
+        { success: false, error: 'CSRF validation failed' },
+        { status: 403 },
+      );
+    }
+  }
+
   // --- Build upstream URL ----------------------------------------------------
   const upstreamPath = typeof upstream === 'function' ? upstream(resolvedParams) : upstream;
   const upstreamUrl = new URL(`${envOptions.apiUrl}${upstreamPath}`);
@@ -178,7 +213,6 @@ export async function proxyFetch(
   }
 
   // --- Determine body --------------------------------------------------------
-  const httpMethod = (method ?? req.method) as string;
   let fetchBody: BodyInit | null | undefined = body ?? undefined;
 
   if (fetchBody === undefined && ['POST', 'PATCH', 'PUT'].includes(httpMethod)) {

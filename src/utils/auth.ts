@@ -3,22 +3,18 @@
  * Helper functions for managing authentication tokens
  */
 
+const AUTH_TOKEN_SESSION_KEY = 'authToken';
+const CSRF_COOKIE_NAME = 'csrfToken';
+
 /**
  * Set authentication token in both localStorage and cookies
  * For Firebase Functions (cross-origin), we store token client-side
  */
 export const setAuthToken = (token: string) => {
   if (typeof window === 'undefined') return;
-  
-  // Store in localStorage for API calls
-  localStorage.setItem('authToken', token);
-  
-  // Store in cookies for middleware (expires in 7 days)
-  const maxAge = 60 * 60 * 24 * 7; // 7 days in seconds
-  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `authToken=${token}; path=/; max-age=${maxAge}; SameSite=Lax${secureFlag}`;
-  
-  console.log('🍪 Token stored in localStorage and cookie for middleware');
+
+  // Keep auth token in sessionStorage only to reduce long-lived XSS exposure.
+  sessionStorage.setItem(AUTH_TOKEN_SESSION_KEY, token);
 };
 
 /**
@@ -26,20 +22,8 @@ export const setAuthToken = (token: string) => {
  */
 export const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  
-  // Try localStorage first
-  const localToken = localStorage.getItem('authToken');
-  if (localToken) return localToken;
-  
-  // Fallback to cookies
-  const cookieToken = getCookie('authToken');
-  if (cookieToken) {
-    // Sync back to localStorage
-    localStorage.setItem('authToken', cookieToken);
-    return cookieToken;
-  }
-  
-  return null;
+
+  return sessionStorage.getItem(AUTH_TOKEN_SESSION_KEY);
 };
 
 /**
@@ -47,9 +31,10 @@ export const getAuthToken = (): string | null => {
  */
 export const removeAuthToken = () => {
   if (typeof window === 'undefined') return;
-  
-  // Remove from localStorage
-  localStorage.removeItem('authToken');
+
+  // Remove from sessionStorage and legacy localStorage key.
+  sessionStorage.removeItem(AUTH_TOKEN_SESSION_KEY);
+  localStorage.removeItem(AUTH_TOKEN_SESSION_KEY);
   localStorage.removeItem('user');
   
   // Remove from cookies
@@ -72,6 +57,7 @@ export const removeAuthToken = () => {
   };
 
   removeFor('authToken');
+  removeFor(CSRF_COOKIE_NAME);
 
   // Debug: log cookies after attempted removal
   try {
@@ -86,7 +72,23 @@ export const removeAuthToken = () => {
  * Check if user is authenticated
  */
 export const isAuthenticated = (): boolean => {
-  return !!getAuthToken();
+  if (typeof window === 'undefined') return false;
+  return document.cookie.split(';').some((cookie) => cookie.trim().startsWith('session='));
+};
+
+/**
+ * Returns CSRF token from cookie for double-submit validation.
+ */
+export const getCsrfToken = (): string | null => getCookie(CSRF_COOKIE_NAME);
+
+/**
+ * Set CSRF token cookie (non-httpOnly by design so frontend can echo header).
+ */
+export const setCsrfToken = (token: string) => {
+  if (typeof window === 'undefined') return;
+  const maxAge = 60 * 60 * 24 * 7;
+  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = `${CSRF_COOKIE_NAME}=${token}; path=/; max-age=${maxAge}; SameSite=Lax${secureFlag}`;
 };
 
 /**
