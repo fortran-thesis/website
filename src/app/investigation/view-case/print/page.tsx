@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useMoldReportExport } from "@/hooks/swr";
 
@@ -50,18 +50,7 @@ function PrintableCaseReportContent() {
 
   const { data, isLoading, error } = useMoldReportExport(reportId);
   const payload = data?.data;
-  const printedRef = useRef(false);
-
-  useEffect(() => {
-    if (!payload || printedRef.current) return;
-    printedRef.current = true;
-
-    const timeout = window.setTimeout(() => {
-      window.print();
-    }, 250);
-
-    return () => window.clearTimeout(timeout);
-  }, [payload]);
+  const canPrint = Boolean(payload && !isLoading && !error);
 
   const affectedHosts = useMemo(
     () => textList(payload?.sections?.affected_hosts),
@@ -130,6 +119,25 @@ function PrintableCaseReportContent() {
           }
         }
       `}</style>
+
+      <div className="no-print flex items-center justify-between gap-4 border-b border-[var(--primary-color)]/10 bg-[var(--background-color)] px-6 py-4">
+        <div>
+          <p className="font-[family-name:var(--font-montserrat)] text-xs font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">
+            Print Preview
+          </p>
+          <p className="mt-1 text-sm text-[var(--moldify-grey)]">
+            Review the report first, then open the browser print dialog when ready.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          disabled={!canPrint}
+          className="cursor-pointer rounded-xl bg-[var(--primary-color)] px-5 py-2.5 font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-widest text-[var(--background-color)] transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Print PDF
+        </button>
+      </div>
 
       <section className="overflow-hidden rounded-t-3xl bg-[var(--primary-color)]">
         <div className="flex items-center justify-between border-b border-[var(--accent-color)] px-8 py-8 text-[var(--background-color)]">
