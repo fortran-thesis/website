@@ -5,7 +5,7 @@ import StatisticsTile from '@/components/tiles/statistics_tile';
 import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import StatusDropdown from '@/components/StatusDropdown';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import useSWR from 'swr';
@@ -58,14 +58,7 @@ export default function Investigation() {
             { revalidateFirstPage: false },
         );
 
-        /* Auto-expand remaining pages so all data loads eagerly */
-        useEffect(() => {
-            if (!casePagesData || isLoadingMore) return;
-            const lastPage = casePagesData[casePagesData.length - 1];
-            if (lastPage?.data?.nextPageToken) {
-                setSize(s => s + 1);
-            }
-        }, [casePagesData, isLoadingMore, setSize]);
+        /* Load More is triggered manually — no eager auto-expand. */
 
         const normalizeDisplayStatus = (status?: string) => {
             const raw = (status ?? '').trim().toLowerCase();
@@ -308,10 +301,20 @@ export default function Investigation() {
                                 router.push(`/investigation/view-case?${params.toString()}`);
                             }}
                         />
-                        {/* Loading indicator for additional pages */}
+                        {/* Load More */}
                         {isLoadingMore && (
                             <div className="py-4 text-center">
                                 <PageLoading message="Loading more cases..." compact />
+                            </div>
+                        )}
+                        {!isLoadingMore && hasMore && (
+                            <div className="py-6 flex justify-center">
+                                <button
+                                    onClick={() => setSize(s => s + 1)}
+                                    className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-sm uppercase tracking-widest px-8 py-3 rounded-full border-2 border-[var(--primary-color)] text-[var(--primary-color)] hover:bg-[var(--primary-color)] hover:text-[var(--background-color)] transition-colors"
+                                >
+                                    Load More Cases
+                                </button>
                             </div>
                         )}
                     </>
