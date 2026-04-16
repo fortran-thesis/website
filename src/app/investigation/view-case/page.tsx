@@ -51,6 +51,12 @@ function ViewCaseContent() {
   const moldCase = moldCaseRes?.data ?? moldCaseByIdRes?.data ?? null;
   const moldCaseId = moldCase?.id;
   const { data: logsRes, isLoading: logsLoading } = useMoldCaseLogs(moldCaseId, 200, !!moldCaseId);
+
+  const handleExportPdf = useCallback(() => {
+    if (!reportId) return;
+    const printUrl = `/investigation/view-case/print?id=${encodeURIComponent(reportId)}`;
+    window.open(printUrl, "_blank", "noopener,noreferrer");
+  }, [reportId]);
   
   /* ── SWR: fetch mycologist by ID if assigned ── */
   const mycologistId = caseData?.assigned_mycologist_id;
@@ -778,6 +784,8 @@ function ViewCaseContent() {
           </div>
 
           <button 
+            type="button"
+            onClick={handleExportPdf}
             className={`cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all font-[family-name:var(--font-bricolage-grotesque)] ${
               ['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')
                 ? 'bg-[var(--background-color)] text-[var(--primary-color)] hover:scale-105 active:scale-95 shadow-lg'

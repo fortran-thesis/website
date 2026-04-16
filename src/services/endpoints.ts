@@ -77,6 +77,7 @@ export const endpoints = {
   moldReport: {
     list: `${API_PREFIX}/mold-report`,
     getById: (id: string) => `${API_PREFIX}/mold-report/${id}`,
+    exportById: (id: string) => `${API_PREFIX}/mold-report/${id}/export`,
     unassigned: `${API_PREFIX}/mold-report/unassigned`,
     assigned: `${API_PREFIX}/mold-report/assigned`,
     assignedCount: `${API_PREFIX}/mold-report/assigned/count`,
