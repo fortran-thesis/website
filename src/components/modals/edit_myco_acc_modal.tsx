@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const MoldifyLogov2 = "/assets/moldify-logo-v3.svg";
 
@@ -20,6 +21,8 @@ export interface MycoFormData {
 }
 
 export default function EditMycoModal({ isOpen, onClose, onSubmit }: EditMycoModalProps) {
+  useBodyScrollLock(isOpen);
+
   const [formData, setFormData] = useState<MycoFormData>({
     firstName: "",
     lastName: "",

@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faCalendar } from "@fortawesome/free-solid-svg-icons";
 import StatusDropdown from "../StatusDropdown";
 import Holidays from "date-holidays";
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
 {/* IMAGES */}
@@ -44,6 +45,8 @@ const formatDateForInput = (date: Date): string => {
 };
 
 export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
+  useBodyScrollLock(isOpen);
+
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
   const [filter, setFilter] = useState<"all" | "available" | "at-capacity">("all");
   const [endDate, setEndDate] = useState<Date | null>(null);

@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useState } from "react";
 import Image from "next/image";
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 {/* IMAGES */}
 const MoldifyLogov2 = "/assets/moldify-logo-v3.svg";
@@ -13,6 +14,8 @@ interface AddTreatmentModalProps {
 }
 
 export default function AddTreatmentModal({ isOpen, onClose }: AddTreatmentModalProps) {
+  useBodyScrollLock(isOpen);
+
   const [fungicides, setFungicides] = useState([{ id: Date.now(), name: "" }]);
   const [notes, setNotes] = useState("");
 
