@@ -34,37 +34,57 @@ type Mycologist = {
 function ViewCaseContent() {
   const searchParams = useSearchParams();
   const resourceId = searchParams.get('id') ?? undefined;
+  const explicitEntityType = searchParams.get('entityType')?.toLowerCase().trim();
+  const inferredEntityType = explicitEntityType
+    ?? (resourceId?.toLowerCase().startsWith('case-')
+      ? 'mold_case'
+      : resourceId?.toLowerCase().startsWith('rep-') || resourceId?.toLowerCase().startsWith('report-')
+        ? 'mold_report'
+        : 'mold_report');
+  const isCaseResource = inferredEntityType === 'mold_case';
   const { invalidateMoldReports } = useInvalidationFunctions();
   
   /*
    * The route receives `id` from notifications/activity links.
    * It can be either a report ID or a mold-case ID, so resolve both paths.
    */
-  const { data: moldCaseByIdRes, isLoading: moldCaseByIdLoading } = useMoldCase(resourceId);
-  const reportId = moldCaseByIdRes?.data?.mold_report_id || resourceId;
+  const { data: moldCaseByIdRes, isLoading: moldCaseByIdLoading } = useMoldCase(
+    isCaseResource ? resourceId : undefined,
+  );
+  const reportId = isCaseResource
+    ? moldCaseByIdRes?.data?.mold_report_id || resourceId
+    : resourceId;
 
   /* ── SWR: mold report + mold case ── */
   const { data: reportRes, isLoading: reportLoading, mutate: mutateReport } = useMoldReport(reportId);
-  const { data: moldCaseRes, isLoading: moldCaseByReportLoading, mutate: mutateMoldCase } = useMoldCaseByReport(reportId);
+  const { data: moldCaseRes, isLoading: moldCaseByReportLoading, mutate: mutateMoldCase } = useMoldCaseByReport(
+    isCaseResource ? undefined : reportId,
+  );
 
   const caseData = reportRes?.data ?? null;
   const moldCase = moldCaseRes?.data ?? moldCaseByIdRes?.data ?? null;
+  const canExportPdf = Boolean(reportId && ['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || ''));
   const moldCaseId = moldCase?.id;
   const { data: logsRes, isLoading: logsLoading } = useMoldCaseLogs(moldCaseId, 200, !!moldCaseId);
+
+  const handleExportPdf = useCallback(() => {
+    if (!canExportPdf || !reportId) return;
+
+    const printUrl = `/investigation/view-case/print?id=${encodeURIComponent(reportId)}`;
+    window.location.assign(printUrl);
+  }, [canExportPdf, reportId]);
   
   /* ── SWR: fetch mycologist by ID if assigned ── */
   const mycologistId = caseData?.assigned_mycologist_id;
   const { data: mycologistRes } = useUser(mycologistId);
   const mycologistData = mycologistRes?.data;
   
-  // Don't block on moldCaseByIdLoading once the report itself has loaded.
-  // When resourceId is a report ID (the common web navigation path) useMoldCase fires
-  // a redundant request that returns null; gating the page on it adds unnecessary latency.
-  // We only need to wait for it when we have no report data yet (resourceId is a case ID).
+  // Resolve one canonical detail path at a time.
+  // Case-originated routes load the case first and derive the report id; report-originated
+  // routes go directly through the report and by-report case hooks.
   const loading =
     reportLoading ||
-    (!reportRes?.data && moldCaseByIdLoading) ||
-    moldCaseByReportLoading ||
+    (isCaseResource ? moldCaseByIdLoading : moldCaseByReportLoading) ||
     (!!moldCaseId && logsLoading);
   const error = !resourceId ? 'No case ID provided' : null;
 
@@ -318,7 +338,7 @@ function ViewCaseContent() {
   const finalVerdictWikiMoldId = asText(finalVerdict?.moldipedia_id);
   const finalVerdictNotes = asText(finalVerdict?.mycologist_notes);
   const finalVerdictNotesHref = resourceId
-    ? `/investigation/view-case/mycologist-notes?id=${encodeURIComponent(resourceId)}`
+    ? `/investigation/view-case/mycologist-notes?id=${encodeURIComponent(resourceId)}&entityType=${encodeURIComponent(inferredEntityType)}`
     : '';
   const finalVerdictTimestamp = (() => {
     const d = toDate(finalVerdict?.verdict_timestamp as string | { _seconds: number } | undefined);
@@ -787,11 +807,13 @@ function ViewCaseContent() {
 
           <button 
             className={`cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all font-[family-name:var(--font-bricolage-grotesque)] ${
-              ['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')
+              canExportPdf
                 ? 'bg-[var(--background-color)] text-[var(--primary-color)] hover:scale-105 active:scale-95 shadow-lg'
                 : 'bg-[var(--background-color)]/10 text-[var(--background-color)]/40 cursor-not-allowed border border-[var(--background-color)]/20'
             }`}
-            disabled={!['resolved', 'closed'].includes(caseData?.status?.toLowerCase() || '')}
+            onClick={handleExportPdf}
+            disabled={!canExportPdf}
+            title={canExportPdf ? 'Open printable preview' : 'PDF export is only available for resolved or closed cases'}
           >
             <FontAwesomeIcon icon={faFilePdf} /> Export PDF
           </button>
