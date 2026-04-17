@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 interface CaseDetailsTabProps {
   entries: {
@@ -72,6 +73,8 @@ function CaseTimelineTile({
   const [isModalOpen, setModalOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  useBodyScrollLock(isModalOpen);
+
   return (
     <div className="relative pl-6">
        {/* Timeline line */}
@@ -123,7 +126,7 @@ function CaseTimelineTile({
 
       {/* Image Viewer Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex flex-col items-center justify-center">
           <button
             onClick={() => setModalOpen(false)}
             className="absolute top-6 right-6 text-white text-3xl cursor-pointer"

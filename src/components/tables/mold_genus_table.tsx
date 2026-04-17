@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen, faBacterium } from "@fortawesome/free-solid-svg-icons";
 import EmptyState from "@/components/empty_state";
 import StatusBox from "@/components/tiles/status_tile";
+import PageLoading from "@/components/loading/page_loading";
 
 export interface MoldGenus {
   id: string;
@@ -30,11 +31,7 @@ export default function MoldGenusTable({ data, onEdit, isLoading = false }: Mold
 
   if (isLoading) {
     return (
-      <div className="text-center">
-          <p className="text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-xl">
-              Loading mold data...
-          </p>
-      </div>
+      <PageLoading message="Loading mold data..." />
     );
   }
 

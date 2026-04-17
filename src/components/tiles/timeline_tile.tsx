@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 export interface TimelineEntry {
   date: string;
@@ -22,6 +23,8 @@ export default function ExperimentTimelineTile({
   isLast = false,
 }: ExperimentTimelineTileProps) {
   const [isModalOpen, setModalOpen] = useState(false);
+
+  useBodyScrollLock(isModalOpen);
 
   return (
     <div className="relative pl-6 mb-6">
@@ -86,7 +89,7 @@ export default function ExperimentTimelineTile({
 
         {/* IMAGE MODAL */}
         {isModalOpen && (
-          <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
             <button
               onClick={() => setModalOpen(false)}
               className="absolute top-6 right-6 text-white text-3xl cursor-pointer"
@@ -94,7 +97,7 @@ export default function ExperimentTimelineTile({
               &times;
             </button>
             <Image
-              src={entry.imagePath}
+              src={entry.imagePath} 
               alt="Preview"
               width={600}
               height={400}

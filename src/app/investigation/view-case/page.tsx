@@ -719,7 +719,7 @@ function ViewCaseContent() {
       </div>
 
       {!loading && !error && caseData && (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 w-full">
   
   {/* LEFT COLUMN: Sidebar */}
   <aside className="xl:col-span-4 space-y-6">
