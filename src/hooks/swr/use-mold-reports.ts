@@ -48,6 +48,47 @@ export interface MoldReportSnapshot {
   metadata?: { created_at?: { _seconds: number } };
 }
 
+export interface MoldReportPrintSectionPayload {
+  fungus_name: string;
+  overview: string;
+  description: string;
+  health_risks: string;
+  affected_hosts: string[];
+  symptoms_and_signs: string;
+  disease_cycle: string;
+  impact: string;
+  prevention_summary: string;
+  physical_control: string;
+  cultural_control: string;
+  biological_control: string;
+  mechanical_control: string;
+  chemical_control: string;
+}
+
+export interface MoldReportPrintPayload {
+  report: {
+    report_id: string;
+    report_date: string;
+    case_name: string;
+    host_plant_affected: string;
+    case_status: string;
+    confidence_level: string;
+    location: string;
+    date_observed: string;
+  };
+  identities: {
+    reporter_name: string;
+    mycologist_name: string;
+  };
+  sections: MoldReportPrintSectionPayload;
+  source: {
+    mold_catalog_used: boolean;
+    wikimold_used: boolean;
+    mold_catalog_id?: string;
+    wikimold_id?: string;
+  };
+}
+
 export interface StatusCounts {
   total: number;
   pending: number;
@@ -88,7 +129,7 @@ export function useMoldReportsInfinite(
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false, revalidateOnFocus: true },
+    { revalidateFirstPage: false, revalidateOnFocus: false },
   );
 }
 
@@ -99,11 +140,18 @@ export function useMoldReport(id: string | undefined) {
   );
 }
 
+/** Fetch printable report payload for PDF export. */
+export function useMoldReportExport(id: string | undefined) {
+  return useSWR<ApiResponse<MoldReportPrintPayload>>(
+    id ? `/api/v1/mold-reports/${id}/export` : null,
+  );
+}
+
 /** Unassigned mold reports. */
 export function useUnassignedReports(limit = 50, enabled = true) {
   return useSWR<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
     enabled ? apiUrl('/api/v1/mold-reports/unassigned', { limit }) : null,
-    { revalidateOnFocus: true },
+    { revalidateOnFocus: false },
   );
 }
 
@@ -119,7 +167,7 @@ export function useAssignedReports(
           pageToken: params?.pageToken,
         })
       : null,
-    { revalidateOnFocus: true },
+    { revalidateOnFocus: false },
   );
 }
 
@@ -135,7 +183,7 @@ export function useClosedReports(
           pageToken: params?.pageToken,
         })
       : null,
-    { revalidateOnFocus: true },
+    { revalidateOnFocus: false },
   );
 }
 
@@ -151,7 +199,7 @@ export function useClosedReportsInfinite(limit = 50, enabled = true) {
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false, revalidateOnFocus: true },
+    { revalidateFirstPage: false, revalidateOnFocus: false },
   );
 }
 
@@ -166,7 +214,7 @@ export function useAssignedReportsInfinite(limit = 100) {
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false, revalidateOnFocus: true },
+    { revalidateFirstPage: false, revalidateOnFocus: false },
   );
 }
 
