@@ -117,7 +117,7 @@ export default function CaseHistory() {
   const handleViewCase = (caseItem: CaseData) => {
     console.log("Viewing rejected case:", caseItem.caseName);
     // Use client-side navigation so returning preserves consistent UI state.
-    const params = new URLSearchParams({ id: caseItem.caseName });
+    const params = new URLSearchParams({ id: caseItem.caseName, entityType: 'mold_report' });
     router.push(`/investigation/view-case?${params.toString()}`);
   };
 

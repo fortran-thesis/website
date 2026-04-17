@@ -842,7 +842,9 @@ const ProseContent = ({
                   const caseKey = getCaseKey(entry, idx);
                   const isExpanded = !!expandedCases[caseKey];
                   const caseRouteId = getCaseRouteId(entry);
-                  const caseHref = caseRouteId ? `/investigation/view-case?id=${encodeURIComponent(caseRouteId)}` : '';
+                  const caseHref = caseRouteId
+                    ? `/investigation/view-case?id=${encodeURIComponent(caseRouteId)}&entityType=mold_report`
+                    : '';
                   const caseThumb = getCaseThumbnail(entry);
                   
                   const initial = asRecord(entry.cultivation_details);

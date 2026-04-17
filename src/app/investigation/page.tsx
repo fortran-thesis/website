@@ -297,7 +297,7 @@ export default function Investigation() {
                             sortDirection={sortDirection}
                             onSort={handleSort}
                             onEdit={(c: any) => {
-                                const params = new URLSearchParams({ id: c.id });
+                                const params = new URLSearchParams({ id: c.id, entityType: 'mold_report' });
                                 router.push(`/investigation/view-case?${params.toString()}`);
                             }}
                         />
