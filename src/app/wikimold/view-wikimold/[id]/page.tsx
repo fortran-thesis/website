@@ -242,6 +242,20 @@ export default function ViewWikiMold() {
     return {};
   };
 
+  const getRecordText = (
+    record: Record<string, unknown> | null | undefined,
+    fields: string[],
+  ): string => {
+    if (!record) return '';
+
+    for (const field of fields) {
+      const text = asText(record[field]);
+      if (text) return text;
+    }
+
+    return '';
+  };
+
   const parseDateValue = (value: unknown): number => {
     if (!value) return 0;
     if (typeof value === 'object' && value !== null && '_seconds' in value) {
@@ -273,7 +287,7 @@ export default function ViewWikiMold() {
       });
 
     if (matching.length === 0) return null;
-    return asRecord(matching[0].characteristics);
+    return asRecord(matching[0]);
   };
 
   const getCaseRouteId = (entry: MoldCaseSummary): string => {
@@ -832,8 +846,12 @@ const ProseContent = ({
                   const caseThumb = getCaseThumbnail(entry);
                   
                   const initial = asRecord(entry.cultivation_details);
+                  const evidenceSummary = asRecord(entry.evidence_summary);
+                  const initialSummary = asRecord(evidenceSummary.initial);
                   const inVivo = getLatestLogByType(entry, 'vivo') ?? {};
                   const inVitro = getLatestLogByType(entry, 'vitro') ?? {};
+                  const inVivoCharacteristics = asRecord(inVivo.characteristics);
+                  const inVitroCharacteristics = asRecord(inVitro.characteristics);
                   
                   const cropRecord = entry as Record<string, unknown>;
                   const cropName =
@@ -844,9 +862,35 @@ const ProseContent = ({
                     `Log#${(idx + 1).toString().padStart(2, '0')}`;
                   
                   const sections = [
-                    { label: "[01] Initial Observation", content: [asText(initial['initial_microscopic']), asText(initial['initial_macroscopic'])].filter(Boolean).join(' // ') || 'Observation metadata incomplete.' },
-                    { label: "[02] In Vivo Analysis", content: asText(inVivo['symptoms'] ?? inVivo['characteristics']) || 'No active bio-logs.' },
-                    { label: "[03] In Vitro Results", content: asText(inVitro['characteristics'] ?? inVitro['colony_color']) || 'Laboratory culture pending.' }
+                    {
+                      label: "[01] Initial Observation",
+                      content: [
+                        getRecordText(initialSummary, ['microscopic', 'macroscopic']),
+                        getRecordText(initialSummary, ['symptoms', 'characteristics']),
+                        getRecordText(initial, [
+                          'initial_microscopic',
+                          'initial_macroscopic',
+                          'initial_symptoms',
+                          'initial_characteristics',
+                          'initial_macroscopic_symptoms',
+                          'initial_macroscopic_characteristics',
+                        ]),
+                      ].filter(Boolean).join(' // ') || 'Observation metadata incomplete.',
+                    },
+                    {
+                      label: "[02] In Vivo Analysis",
+                      content: [
+                        getRecordText(inVivoCharacteristics, ['symptoms', 'characteristics', 'lesion_color', 'lesion_size']),
+                        getRecordText(inVivoCharacteristics, ['additional_info']),
+                      ].filter(Boolean).join(' // ') || 'No active bio-logs.',
+                    },
+                    {
+                      label: "[03] In Vitro Results",
+                      content: [
+                        getRecordText(inVitroCharacteristics, ['characteristics', 'colony_color', 'colony_diameter']),
+                        getRecordText(inVitroCharacteristics, ['additional_info']),
+                      ].filter(Boolean).join(' // ') || 'Laboratory culture pending.',
+                    },
                   ];
 
                   return (

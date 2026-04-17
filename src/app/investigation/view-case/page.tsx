@@ -57,7 +57,15 @@ function ViewCaseContent() {
   const { data: mycologistRes } = useUser(mycologistId);
   const mycologistData = mycologistRes?.data;
   
-  const loading = reportLoading || moldCaseByIdLoading || moldCaseByReportLoading || (!!moldCaseId && logsLoading);
+  // Don't block on moldCaseByIdLoading once the report itself has loaded.
+  // When resourceId is a report ID (the common web navigation path) useMoldCase fires
+  // a redundant request that returns null; gating the page on it adds unnecessary latency.
+  // We only need to wait for it when we have no report data yet (resourceId is a case ID).
+  const loading =
+    reportLoading ||
+    (!reportRes?.data && moldCaseByIdLoading) ||
+    moldCaseByReportLoading ||
+    (!!moldCaseId && logsLoading);
   const error = !resourceId ? 'No case ID provided' : null;
 
   /* ── UI modal state ── */

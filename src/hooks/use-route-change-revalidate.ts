@@ -1,28 +1,12 @@
-import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
-import { mutate } from 'swr';
-
 /**
- * Hook that revalidates all SWR caches when the route changes.
+ * Retained as a no-op so import sites don't need to change.
  *
- * This ensures that when the user navigates (via router.push, router.back, links, etc.),
- * all active SWR keys are revalidated in the background, providing fresh data without
- * blocking navigation.
- *
- * Usage in a root layout or provider:
- * ```tsx
- * export default function RootLayout() {
- *   useRouteChangeRevalidate();
- *   return <>{children}</>;
- * }
- * ```
+ * The previous implementation called `mutate(() => true)` on every route change,
+ * which blasted ALL active SWR caches on every navigation. That caused a request
+ * storm proportional to the number of mounted SWR hooks whenever the user clicked
+ * any link. The global SWR provider already sets `revalidateIfStale: true`, so
+ * each hook revalidates naturally when its page mounts — no explicit broadcast needed.
  */
 export function useRouteChangeRevalidate() {
-  const pathname = usePathname();
-
-  useEffect(() => {
-    // Revalidate all SWR keys when pathname changes
-    // This broadcasts to all active SWR hooks and triggers background revalidation
-    mutate(() => true, undefined, { revalidate: true });
-  }, [pathname]);
+  // intentionally empty
 }

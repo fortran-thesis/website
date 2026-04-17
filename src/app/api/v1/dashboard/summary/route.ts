@@ -25,15 +25,21 @@ import { endpoints } from '@/services/endpoints';
 async function backendFetch(
   endpoint: string,
   cookie: string,
+  cacheStrategy: RequestCache | { next: { revalidate: number } } = 'no-store',
 ): Promise<Record<string, any> | null> {
   try {
+    const fetchOpts: RequestInit =
+      typeof cacheStrategy === 'string'
+        ? { cache: cacheStrategy }
+        : (cacheStrategy as RequestInit);
+
     const res = await fetch(`${envOptions.apiUrl}${endpoint}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         Cookie: cookie,
       },
-      cache: 'no-store',
+      ...fetchOpts,
     });
     if (!res.ok) return null;
     return await res.json();
@@ -56,7 +62,12 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Fire all 6 backend requests in parallel
+  // Fire all 6 backend requests in parallel.
+  // The two limit=1000 list fetches (flag reports, moldipedia) are used only for
+  // aggregate counts and are revalidated on a 30-second server-side window to
+  // avoid large payload fetches on every dashboard load.
+  const countCache = { next: { revalidate: 30 } };
+
   const [
     roleCountsRes,
     caseMetadataRes,
@@ -67,10 +78,10 @@ export async function GET(req: NextRequest) {
   ] = await Promise.all([
     backendFetch(endpoints.user.countsRoles, cookie),
     backendFetch(endpoints.moldCase.countMetadata, cookie),
-    backendFetch(`${endpoints.flagReports.list}?limit=1000`, cookie),
+    backendFetch(`${endpoints.flagReports.list}?limit=1000`, cookie, countCache),
     backendFetch(endpoints.moldReport.countMonthly, cookie),
     backendFetch(endpoints.moldReport.countPriorities, cookie),
-    backendFetch(`${endpoints.moldipedia.list}?limit=1000`, cookie),
+    backendFetch(`${endpoints.moldipedia.list}?limit=1000`, cookie, countCache),
   ]);
 
   // Extract and normalize the data
