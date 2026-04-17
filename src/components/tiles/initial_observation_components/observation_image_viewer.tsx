@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faImage, faCircleNotch } from "@fortawesome/free-solid-svg-icons";
+import { faImage, faCircleNotch, faSearchPlus } from "@fortawesome/free-solid-svg-icons";
+import ImageViewerModal from "./image_viewer_modal";
 
 /**
  * ObservationImageViewer
@@ -67,6 +68,7 @@ export default function ObservationImageViewer({
 }: ObservationImageViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   /**
    * Normalize image path: trim whitespace
@@ -106,34 +108,59 @@ export default function ObservationImageViewer({
   }
 
   return (
-    <div className="relative w-full h-full group overflow-hidden bg-[var(--primary-color)]/[0.02] rounded-[2.5rem] border border-[var(--primary-color)]/5 transition-all duration-700 hover:border-[var(--primary-color)]/20">
-      {/* Editorial Vignette Layer */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-black/5 via-transparent to-transparent opacity-60 z-10 pointer-events-none group-hover:opacity-0 transition-opacity duration-700" />
-      
-      <Image
-        src={normalized}
-        alt="Observation image"
-        fill
-        className={`${objectFitClass} transition-all duration-1000 ease-out group-hover:scale-105 group-hover:rotate-1`}
-        onLoadingComplete={handleLoadComplete}
-        onError={handleLoadError}
+    <>
+      <ImageViewerModal
+        isOpen={isViewerOpen}
+        imagePaths={[normalized]}
+        onClose={() => setIsViewerOpen(false)}
+        title="Image Viewer"
       />
 
-      {/* Modern High-End Loader Overlay */}
-      {isLoading && showLoader && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 backdrop-blur-2xl transition-all duration-500">
-          <ImageFallback isLoading={true} />
-        </div>
-      )}
+      <div className="relative w-full h-full group overflow-hidden bg-[var(--primary-color)]/[0.02] rounded-[2.5rem] border border-[var(--primary-color)]/5 transition-all duration-700 hover:border-[var(--primary-color)]/20 cursor-pointer"
+        onClick={() => !hasError && normalized && setIsViewerOpen(true)}
+      >
+        {/* Editorial Vignette Layer */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-black/5 via-transparent to-transparent opacity-60 z-10 pointer-events-none group-hover:opacity-0 transition-opacity duration-700" />
+        
+        <Image
+          src={normalized}
+          alt="Observation image"
+          fill
+          className={`${objectFitClass} transition-all duration-1000 ease-out group-hover:scale-105 group-hover:rotate-1`}
+          onLoadingComplete={handleLoadComplete}
+          onError={handleLoadError}
+        />
 
-      {/* Decorative Label (Editorial Touch) */}
-      <div className="absolute top-6 right-6 z-10 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
-        <div className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full">
-          <p className="text-[8px] font-black text-[var(--primary-color)] uppercase tracking-widest font-[family-name:var(--font-bricolage-grotesque)]">
-            Full Resolution
-          </p>
+        {/* Modern High-End Loader Overlay */}
+        {isLoading && showLoader && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 backdrop-blur-2xl transition-all duration-500">
+            <ImageFallback isLoading={true} />
+          </div>
+        )}
+
+        {/* View Button Overlay */}
+        {!isLoading && !hasError && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-all duration-300 pointer-events-none">
+            <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform scale-50 group-hover:scale-100">
+              <div className="p-3 bg-white/20 backdrop-blur-md border border-white/40 rounded-full">
+                <FontAwesomeIcon 
+                  icon={faSearchPlus} 
+                  className="w-6 h-6 text-white"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Decorative Label (Editorial Touch) */}
+        <div className="absolute top-6 right-6 z-10 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
+          <div className="px-3 py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full">
+            <p className="text-[8px] font-black text-white uppercase tracking-widest font-[family-name:var(--font-bricolage-grotesque)]">
+              Click to View
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
