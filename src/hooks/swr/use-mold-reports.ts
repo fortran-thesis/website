@@ -89,16 +89,23 @@ export interface MoldReportPrintPayload {
   };
   follow_ups?: Array<{
     detail_id: string;
-    timestamp: string;
+    observed_at?: string;
+    timestamp?: string;
     description: string;
-    cover_photo_urls: string[];
+    cover_photo?: string[];
+    cover_photo_urls?: string[];
   }>;
   investigation?: {
     initial_observation?: {
       microscopic_identification: string;
-      confidence: string;
-      summary: string;
-      observed_at: string;
+      microscopic_confidence?: string;
+      confidence?: string;
+      macroscopic_summary?: string;
+      summary?: string;
+      observed_at?: string;
+      symptoms?: string[];
+      signs?: string[];
+      characteristics?: string[];
     };
     in_vivo_latest?: {
       identified_mold: string;
@@ -119,7 +126,8 @@ export interface MoldReportPrintPayload {
     cultivation_logs?: Array<{
       log_id: string;
       type: string;
-      created_at: string;
+      observed_at?: string;
+      created_at?: string;
       summary: string;
       identified_mold: string;
       confidence: string;

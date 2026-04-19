@@ -235,6 +235,41 @@ export default function ViewWikiMold() {
     return '';
   };
 
+  const isMissingCropLabel = (value: string): boolean => {
+    const normalized = value
+      .trim()
+      .toLowerCase()
+      .replace(/[._-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/[.:]+$/g, '');
+
+    return [
+      '',
+      'unknown',
+      'unknown crop',
+      'n/a',
+      'na',
+      'none',
+      'null',
+      'undefined',
+      'not available',
+      'not specified',
+      'pending',
+      'tbd',
+    ].includes(normalized);
+  };
+
+  const asCanonicalCrop = (...values: unknown[]): string => {
+    for (const value of values) {
+      const text = asText(value);
+      if (!text) continue;
+      if (isMissingCropLabel(text)) continue;
+      return text;
+    }
+
+    return '';
+  };
+
   const asRecord = (value: unknown): Record<string, unknown> => {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       return value as Record<string, unknown>;
@@ -877,17 +912,23 @@ const ProseContent = ({
                   );
                   
                   const cropRecord = entry as Record<string, unknown>;
+                  const reportRecord = asRecord(cropRecord.report);
+                  const moldReportRecord = asRecord(cropRecord.mold_report);
                   const cropName =
-                    asText(entry.crop_label) ||
-                    asText(cropRecord.common_name) ||
-                    asText(cropRecord.crop_name) ||
-                    asText(cropRecord.host_plant_affected) ||
-                    asText(cropRecord.host) ||
-                    asText(cropRecord.report_host) ||
-                    asText(entry.case_name) ||
-                    asText(entry.name) ||
-                    asText(cropRecord.crop) ||
-                    `Case#${(idx + 1).toString().padStart(2, '0')}`;
+                    asCanonicalCrop(
+                      entry.crop_label,
+                      cropRecord.common_name,
+                      cropRecord.crop_name,
+                      cropRecord.host_plant_affected,
+                      cropRecord.host,
+                      cropRecord.report_host,
+                      reportRecord.host,
+                      reportRecord.host_plant_affected,
+                      moldReportRecord.host,
+                      moldReportRecord.host_plant_affected,
+                      cropRecord.crop,
+                    ) ||
+                    'Crop Not Specified';
                   
                   const sections = [
                     {

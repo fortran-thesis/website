@@ -67,6 +67,11 @@ function PrintableCaseReportContent() {
   const cultivationLogs = Array.isArray(payload?.investigation?.cultivation_logs)
     ? payload.investigation.cultivation_logs
     : [];
+  const getFollowUpPhotos = (entry: Record<string, unknown>): string[] => {
+    const fromCoverPhoto = textList(entry.cover_photo);
+    if (fromCoverPhoto.length > 0) return fromCoverPhoto;
+    return textList(entry.cover_photo_urls);
+  };
 
   if (!reportId) {
     return (
@@ -324,10 +329,16 @@ function PrintableCaseReportContent() {
                 {textValue(payload.investigation?.initial_observation?.microscopic_identification)}
               </p>
               <p className="mt-1 text-xs text-[var(--moldify-grey)]">
-                Confidence: {textValue(payload.investigation?.initial_observation?.confidence)}
+                Confidence: {textValue(
+                  payload.investigation?.initial_observation?.microscopic_confidence,
+                  textValue(payload.investigation?.initial_observation?.confidence),
+                )}
               </p>
               <p className="mt-2 text-sm text-[var(--moldify-grey)]">
-                {textValue(payload.investigation?.initial_observation?.summary)}
+                {textValue(
+                  payload.investigation?.initial_observation?.macroscopic_summary,
+                  textValue(payload.investigation?.initial_observation?.summary),
+                )}
               </p>
             </article>
 
@@ -367,7 +378,7 @@ function PrintableCaseReportContent() {
                 {cultivationLogs.map((log) => (
                   <li key={log.log_id} className="rounded-xl bg-[var(--background-color)] p-3">
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--primary-color)]">
-                      {textValue(log.type)} • {timestampValue(log.created_at)}
+                      {textValue(log.type)} • {timestampValue(log.observed_at ?? log.created_at)}
                     </p>
                     <p className="mt-1 text-sm font-bold text-[var(--moldify-grey)]">
                       {textValue(log.identified_mold, "Pending identification")}
@@ -388,16 +399,46 @@ function PrintableCaseReportContent() {
             <p className="text-sm text-[var(--moldify-grey)]">No follow-up records.</p>
           ) : (
             <ol className="space-y-3">
-              {followUps.map((entry) => (
-                <li key={entry.detail_id} className="rounded-xl border border-[var(--primary-color)]/10 p-4">
+              {followUps.map((entry, index) => {
+                const photos = getFollowUpPhotos(entry as Record<string, unknown>);
+                const detailId = textValue((entry as Record<string, unknown>).detail_id, `follow-up-${index + 1}`);
+
+                return (
+                <li key={detailId} className="rounded-xl border border-[var(--primary-color)]/10 p-4">
                   <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--primary-color)]">
-                    {timestampValue(entry.timestamp)}
+                    {timestampValue(
+                      (entry as Record<string, unknown>).observed_at ??
+                      (entry as Record<string, unknown>).timestamp,
+                    )}
                   </p>
                   <p className="mt-2 text-sm text-[var(--moldify-grey)]">
-                    {textValue(entry.description)}
+                    {textValue((entry as Record<string, unknown>).description)}
                   </p>
+                  {photos.length > 0 ? (
+                    <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                      {photos.map((url, photoIndex) => (
+                        <a
+                          key={`${detailId}-photo-${photoIndex}`}
+                          href={url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block overflow-hidden rounded-lg border border-[var(--primary-color)]/10"
+                        >
+                          <Image
+                            src={url}
+                            alt={`Follow-up photo ${photoIndex + 1}`}
+                            width={240}
+                            height={160}
+                            className="h-24 w-full object-cover"
+                            loading="lazy"
+                            unoptimized
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
                 </li>
-              ))}
+              );})}
             </ol>
           )}
         </section>
