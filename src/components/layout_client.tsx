@@ -30,7 +30,7 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
   const [isNavigating, setIsNavigating] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const hasRequestedFcmRef = useRef(false);
-  const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support") || pathname.startsWith("/wikimold") || pathname.startsWith("/faq") || pathname.startsWith("/terms-of-agreement") || pathname.startsWith("/privacy-policy") || pathname.startsWith("/about") || pathname == "/";
+  const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support") || pathname.startsWith("/wikimold") || pathname.startsWith("/faq") || pathname.startsWith("/terms-of-agreement") || pathname.startsWith("/privacy-policy") || pathname.startsWith("/about") || pathname.startsWith("/investigation/view-case/print") || pathname == "/";
 
   // Determine user role - backend returns lowercase 'admin' or 'mycologist'
   const userRole = authUser?.user?.role ? authUser.user.role.charAt(0).toUpperCase() + authUser.user.role.slice(1).toLowerCase() : "Mycologist";
