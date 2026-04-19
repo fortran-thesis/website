@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { Suspense, useMemo } from "react";
+
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMoldReportExport } from "@/hooks/swr";
 import PageLoading from "@/components/loading/page_loading";
@@ -46,6 +47,13 @@ const paragraphLines = (value: unknown): string[] => {
     .filter((line) => line.length > 0);
 };
 
+const timestampValue = (value: unknown): string => {
+  if (typeof value !== "string") return "N/A";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+};
+
 function PrintableCaseReportContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,6 +67,15 @@ function PrintableCaseReportContent() {
     () => textList(payload?.sections?.affected_hosts),
     [payload?.sections?.affected_hosts],
   );
+  const followUps = Array.isArray(payload?.follow_ups) ? payload.follow_ups : [];
+  const cultivationLogs = Array.isArray(payload?.investigation?.cultivation_logs)
+    ? payload.investigation.cultivation_logs
+    : [];
+  const getFollowUpPhotos = (entry: Record<string, unknown>): string[] => {
+    const fromCoverPhoto = textList(entry.cover_photo);
+    if (fromCoverPhoto.length > 0) return fromCoverPhoto;
+    return textList(entry.cover_photo_urls);
+  };
 
   const handleBack = () => {
     if (reportId) {
@@ -305,6 +322,131 @@ function PrintableCaseReportContent() {
           </div>
         ))}
       </div>
+    </section>
+
+    <section className="page-break space-y-4 border-t border-[var(--primary-color)]/10 pt-10">
+      <h2 className="font-[family-name:var(--font-montserrat)] text-xl font-black uppercase text-[var(--primary-color)] tracking-tight">
+        Investigation Snapshot
+      </h2>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <article className="rounded-2xl border border-[var(--primary-color)]/15 p-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">Initial Observation</p>
+          <p className="mt-2 text-sm font-bold text-[var(--primary-color)]">
+            {textValue(payload.investigation?.initial_observation?.microscopic_identification)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--moldify-grey)]">
+            Confidence: {textValue(
+              payload.investigation?.initial_observation?.microscopic_confidence,
+              textValue(payload.investigation?.initial_observation?.confidence),
+            )}
+          </p>
+          <p className="mt-2 text-sm text-[var(--moldify-grey)]">
+            {textValue(
+              payload.investigation?.initial_observation?.macroscopic_summary,
+              textValue(payload.investigation?.initial_observation?.summary),
+            )}
+          </p>
+        </article>
+
+        <article className="rounded-2xl border border-[var(--primary-color)]/15 p-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">Latest In Vivo</p>
+          <p className="mt-2 text-sm font-bold text-[var(--primary-color)]">
+            {textValue(payload.investigation?.in_vivo_latest?.identified_mold)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--moldify-grey)]">
+            Confidence: {textValue(payload.investigation?.in_vivo_latest?.confidence)}
+          </p>
+          <p className="mt-2 text-sm text-[var(--moldify-grey)]">
+            {textValue(payload.investigation?.in_vivo_latest?.summary)}
+          </p>
+        </article>
+
+        <article className="rounded-2xl border border-[var(--primary-color)]/15 p-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">Latest In Vitro</p>
+          <p className="mt-2 text-sm font-bold text-[var(--primary-color)]">
+            {textValue(payload.investigation?.in_vitro_latest?.identified_mold)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--moldify-grey)]">
+            Confidence: {textValue(payload.investigation?.in_vitro_latest?.confidence)}
+          </p>
+          <p className="mt-2 text-sm text-[var(--moldify-grey)]">
+            {textValue(payload.investigation?.in_vitro_latest?.summary)}
+          </p>
+        </article>
+      </div>
+
+      <article className="space-y-3 rounded-2xl border border-[var(--primary-color)]/15 p-5">
+        <h3 className="text-base font-black uppercase text-[var(--primary-color)]">Cultivation Logs</h3>
+        {cultivationLogs.length === 0 ? (
+          <p className="text-sm text-[var(--moldify-grey)]">No cultivation logs captured yet.</p>
+        ) : (
+          <ul className="space-y-3">
+            {cultivationLogs.map((log) => (
+              <li key={String(log.log_id ?? `${log.type}-${log.created_at ?? "unknown"}`)} className="rounded-xl bg-[var(--background-color)] p-3">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--primary-color)]">
+                  {textValue(log.type)} • {timestampValue(log.observed_at ?? log.created_at)}
+                </p>
+                <p className="mt-1 text-sm font-bold text-[var(--moldify-grey)]">
+                  {textValue(log.identified_mold, "Pending identification")}
+                </p>
+                <p className="mt-1 text-sm text-[var(--moldify-grey)]">{textValue(log.summary)}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </article>
+    </section>
+
+    <section className="space-y-3 border-t border-[var(--primary-color)]/10 pt-10">
+      <h2 className="font-[family-name:var(--font-montserrat)] text-xl font-black uppercase text-[var(--primary-color)] tracking-tight">
+        Follow-up Timeline
+      </h2>
+      {followUps.length === 0 ? (
+        <p className="text-sm text-[var(--moldify-grey)]">No follow-up records.</p>
+      ) : (
+        <ol className="space-y-3">
+          {followUps.map((entry, index) => {
+            const record = entry as Record<string, unknown>;
+            const photos = getFollowUpPhotos(record);
+            const detailId = textValue(record.detail_id, `follow-up-${index + 1}`);
+
+            return (
+              <li key={detailId} className="rounded-xl border border-[var(--primary-color)]/10 p-4">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--primary-color)]">
+                  {timestampValue(record.observed_at ?? record.timestamp)}
+                </p>
+                <p className="mt-2 text-sm text-[var(--moldify-grey)]">
+                  {textValue(record.description)}
+                </p>
+                {photos.length > 0 ? (
+                  <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
+                    {photos.map((url, photoIndex) => (
+                      <a
+                        key={`${detailId}-photo-${photoIndex}`}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block overflow-hidden rounded-lg border border-[var(--primary-color)]/10"
+                      >
+                        <Image
+                          src={url}
+                          alt={`Follow-up photo ${photoIndex + 1}`}
+                          width={240}
+                          height={160}
+                          className="h-24 w-full object-cover"
+                          loading="lazy"
+                          unoptimized
+                        />
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ol>
+      )}
     </section>
 
     {/* Footer Source Info */}

@@ -13,6 +13,7 @@ export interface MoldGenus {
   status: string;
   reviewedBy: string;
   dateReviewed: string;
+  dateReviewedTs?: number;
 }
 
 interface MoldGenusCTableProps {

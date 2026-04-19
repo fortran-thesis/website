@@ -30,8 +30,12 @@ export default function ImageViewerModal({
   onClose,
   title,
 }: ImageViewerModalProps) {
+  const ZOOM_STEP = 0.2;
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 5;
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [zoom, setZoom] = useState(1);
+  const [clickZoomDirection, setClickZoomDirection] = useState<"in" | "out">("in");
   const [rotation, setRotation] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -46,7 +50,8 @@ export default function ImageViewerModal({
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setZoom(1);
+      setZoom(MIN_ZOOM);
+      setClickZoomDirection("in");
       setRotation(0);
       setPan({ x: 0, y: 0 });
       setCurrentIndex(initialIndex);
@@ -89,11 +94,19 @@ export default function ImageViewerModal({
   const currentImage = imagePaths[currentIndex];
 
   const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 0.2, 5));
+    setZoom((prev) => {
+      const next = Math.min(prev + ZOOM_STEP, MAX_ZOOM);
+      if (next >= MAX_ZOOM) setClickZoomDirection("out");
+      return next;
+    });
   };
 
   const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 0.2, 1));
+    setZoom((prev) => {
+      const next = Math.max(prev - ZOOM_STEP, MIN_ZOOM);
+      if (next <= MIN_ZOOM) setClickZoomDirection("in");
+      return next;
+    });
   };
 
   const handleNextImage = () => {
@@ -107,7 +120,8 @@ export default function ImageViewerModal({
   };
 
   const resetImageState = () => {
-    setZoom(1);
+    setZoom(MIN_ZOOM);
+    setClickZoomDirection("in");
     setRotation(0);
     setPan({ x: 0, y: 0 });
   };
@@ -137,21 +151,37 @@ export default function ImageViewerModal({
     setIsDragging(false);
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
+    const raw = (currentImage ?? "").trim();
+    if (!raw) return;
+
+    let resolved = raw;
     try {
-      const response = await fetch(currentImage);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `mold-image-${currentIndex + 1}.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download failed:", error);
+      resolved = new URL(raw, window.location.origin).toString();
+    } catch {
+      // Keep original path if URL normalization fails.
     }
+
+    let filename = `mold-image-${currentIndex + 1}.jpg`;
+    try {
+      const parsed = new URL(resolved, window.location.origin);
+      const last = parsed.pathname.split("/").filter(Boolean).pop();
+      if (last && last.includes(".")) {
+        filename = decodeURIComponent(last);
+      }
+    } catch {
+      // Keep fallback filename.
+    }
+
+    const link = document.createElement("a");
+    link.href = resolved;
+    link.download = filename;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleFullscreen = async () => {
@@ -172,187 +202,180 @@ export default function ImageViewerModal({
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9998]"
-        onClick={onClose}
-      />
+  {/* Backdrop: Soft Sage-Charcoal for better eye comfort */}
+  <div
+    className="fixed inset-0 bg-[#2D3027]/95 backdrop-blur-xl z-[9998]"
+    onClick={onClose}
+  />
 
-      {/* Modal Container */}
-      <div
-        ref={imageContainerRef}
-        className="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-4 focus:outline-none"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onClick={(e) => {
-          // Close modal only if clicking the backdrop, not the modal content
-          if (e.target === e.currentTarget) {
-            onClose();
-          }
-        }}
-      >
-        {/* Header */}
-        <div className="absolute top-0 left-0 right-0 flex justify-between items-center p-6 bg-gradient-to-b from-black via-black/50 to-transparent z-50">
-          <div className="flex-1">
-            {title && (
-              <h2 className="text-white font-black text-lg font-[family-name:var(--font-montserrat)] uppercase tracking-tight">
-                {title}
-              </h2>
-            )}
-            <p className="text-white/60 text-sm font-[family-name:var(--font-bricolage-grotesque)]">
-              Image {currentIndex + 1} of {imagePaths.length}
-            </p>
-          </div>
-
-          {/* Keyboard shortcuts hint */}
-          <div className="text-white/40 text-xs text-right mr-4 font-[family-name:var(--font-bricolage-grotesque)]">
-            <p>ESC to close</p>
-            <p>←/→ to navigate</p>
-            <p>+/- to zoom</p>
-            <p>R to rotate</p>
-          </div>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
-            aria-label="Close"
-          >
-            <FontAwesomeIcon icon={faXmark} className="w-6 h-6 text-white" />
-          </button>
-        </div>
-
-        {/* Image Container */}
-        <div className="flex-1 flex items-center justify-center w-full cursor-grab active:cursor-grabbing overflow-hidden">
-          <div
-            ref={imgRef}
-            className="relative w-full h-full flex items-center justify-center"
-            style={{
-              transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px) rotate(${rotation}deg)`,
-              transition: isDragging ? "none" : "transform 0.3s ease-out",
-            }}
-          >
-            <Image
-              src={currentImage}
-              alt={`Image ${currentIndex + 1}`}
-              fill
-              className="object-contain select-none"
-              quality={95}
-              unoptimized
-            />
-          </div>
-        </div>
-
-        {/* Footer Controls */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/50 to-transparent p-6">
-          <div className="flex items-center justify-center gap-4 mb-4 flex-wrap">
-            {/* Navigation */}
-            {imagePaths.length > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handlePrevImage}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                  aria-label="Previous image"
-                >
-                  <FontAwesomeIcon icon={faArrowLeft} className="w-5 h-5 text-white" />
-                </button>
-                <div className="flex gap-1">
-                  {imagePaths.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => {
-                        setCurrentIndex(idx);
-                        resetImageState();
-                      }}
-                      className={`w-2 h-2 rounded-full transition-all ${
-                        idx === currentIndex
-                          ? "bg-[var(--accent-color)] w-6"
-                          : "bg-white/40"
-                      }`}
-                      aria-label={`Image ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-                <button
-                  onClick={handleNextImage}
-                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                  aria-label="Next image"
-                >
-                  <FontAwesomeIcon icon={faArrowRight} className="w-5 h-5 text-white" />
-                </button>
-              </div>
-            )}
-
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-2 bg-white/10 backdrop-blur rounded-lg p-2 border border-white/20">
-              <button
-                onClick={handleZoomOut}
-                disabled={zoom <= 1}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label="Zoom out"
-              >
-                <FontAwesomeIcon icon={faMinus} className="w-4 h-4 text-white" />
-              </button>
-              <div className="text-white/80 text-sm min-w-[3rem] text-center font-[family-name:var(--font-bricolage-grotesque)]">
-                {Math.round(zoom * 100)}%
-              </div>
-              <button
-                onClick={handleZoomIn}
-                disabled={zoom >= 5}
-                className="p-2 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label="Zoom in"
-              >
-                <FontAwesomeIcon icon={faPlus} className="w-4 h-4 text-white" />
-              </button>
+  {/* Modal Container */}
+  <div
+    className="fixed inset-0 z-[9999] flex flex-col items-center justify-center focus:outline-none overflow-hidden"
+    onKeyDown={(e) => {
+      if (e.key === 'Escape') onClose();
+    }}
+  >
+    {/* Header with Guidelines */}
+    <div className="absolute top-0 left-0 right-0 min-h-24 flex items-start justify-between px-3 sm:px-6 md:px-10 pt-3 sm:pt-4 z-[10000] bg-gradient-to-b from-[#1D1F1A]/80 via-[#1D1F1A]/35 to-transparent">
+      <div className="flex flex-col max-w-[calc(100%-5rem)] sm:max-w-[calc(100%-6rem)]">
+        {title && (
+          <h2 className="text-white font-[family-name:var(--font-montserrat)] text-[11px] sm:text-xs font-black uppercase tracking-[0.2em]">
+            {title}
+          </h2>
+        )}
+        <div className="flex flex-col items-start gap-1.5 mt-2">
+          {/* Visual Guideline Chips */}
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 rounded-lg">
+              <span className="text-white/40 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">ESC</span>
+              <span className="text-white/20 text-[8px] sm:text-[9px] font-medium uppercase tracking-widest">Close</span>
             </div>
-
-            {/* Rotate Button */}
-            <button
-              onClick={() => setRotation((prev) => (prev + 90) % 360)}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              aria-label="Rotate 90 degrees"
-            >
-              <FontAwesomeIcon icon={faRotateRight} className="w-4 h-4 text-white" />
-              <span className="text-xs text-white/60 ml-1 inline-block font-[family-name:var(--font-bricolage-grotesque)]">{rotation}°</span>
-            </button>
-
-            {/* Download Button */}
-            <button
-              onClick={handleDownload}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              aria-label="Download image"
-            >
-              <FontAwesomeIcon icon={faDownload} className="w-4 h-4 text-white" />
-            </button>
-
-            {/* Fullscreen Button */}
-            <button
-              onClick={handleFullscreen}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-              aria-label="Toggle fullscreen"
-            >
-              <FontAwesomeIcon icon={faExpand} className="w-4 h-4 text-white" />
-            </button>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 rounded-lg">
+              <span className="text-white/40 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Arrows</span>
+              <span className="text-white/20 text-[8px] sm:text-[9px] font-medium uppercase tracking-widest">Nav</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 rounded-lg">
+              <span className="text-white/40 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">+ / -</span>
+              <span className="text-white/20 text-[8px] sm:text-[9px] font-medium uppercase tracking-widest">Zoom</span>
+            </div>
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 rounded-lg">
+              <span className="text-white/40 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">R</span>
+              <span className="text-white/20 text-[8px] sm:text-[9px] font-medium uppercase tracking-widest">Rotate</span>
+            </div>
           </div>
-
-          {/* Progress Bar */}
-          <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[var(--accent-color)] transition-all duration-300"
-              style={{
-                width: `${((currentIndex + 1) / imagePaths.length) * 100}%`,
-              }}
-            />
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-white/5 border border-white/10 rounded-lg">
+            <span className="text-white/40 text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Click</span>
+            <span className="text-white/20 text-[8px] sm:text-[9px] font-medium uppercase tracking-widest">Zoom Point</span>
           </div>
         </div>
       </div>
-    </>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); onClose(); }}
+        className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-2xl bg-white/10 border border-white/10 hover:bg-white/20 transition-all group active:scale-95 pointer-events-auto"
+      >
+        <FontAwesomeIcon icon={faXmark} className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+      </button>
+    </div>
+
+    {/* Click-to-Zoom Viewport */}
+    <div 
+      className={`relative w-full h-full flex items-center justify-center overflow-hidden ${clickZoomDirection === "in" ? "cursor-zoom-in" : "cursor-zoom-out"}`}
+      style={{ paddingTop: "8.5rem", paddingBottom: "7rem" }}
+      onClick={(e) => {
+        const nextZoom =
+          clickZoomDirection === "in"
+            ? Math.min(zoom + ZOOM_STEP, MAX_ZOOM)
+            : Math.max(zoom - ZOOM_STEP, MIN_ZOOM);
+        if (nextZoom === zoom) return;
+
+        setZoom(nextZoom);
+
+        if (clickZoomDirection === "in") {
+          // Recalculate pan so the clicked region moves toward center as we zoom in.
+          const rect = e.currentTarget.getBoundingClientRect();
+          const nx = (e.clientX - rect.left) / rect.width - 0.5;
+          const ny = (e.clientY - rect.top) / rect.height - 0.5;
+          const panScale = (nextZoom - 1) * 220;
+
+          setPan({
+            x: -nx * panScale,
+            y: -ny * panScale,
+          });
+        } else {
+          const ratio = nextZoom / zoom;
+          setPan((prev) => ({ x: prev.x * ratio, y: prev.y * ratio }));
+        }
+
+        if (nextZoom >= MAX_ZOOM) {
+          setClickZoomDirection("out");
+        } else if (nextZoom <= MIN_ZOOM) {
+          setClickZoomDirection("in");
+        }
+      }}
+    >
+      <div
+        ref={imgRef}
+        className="relative w-full h-full max-w-[96vw] max-h-[54vh] sm:max-w-[92vw] sm:max-h-[60vh] md:max-h-[68vh] lg:max-h-[74vh] flex items-center justify-center p-2 sm:p-6 md:p-10 pointer-events-none"
+        style={{
+          transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px) rotate(${rotation}deg)`,
+          transition: "transform 0.5s cubic-bezier(0.2, 1, 0.2, 1)",
+        }}
+      >
+        <Image
+          src={currentImage}
+          alt={`Specimen ${currentIndex + 1}`}
+          fill
+          className="object-contain select-none drop-shadow-2xl"
+          quality={100}
+          unoptimized
+        />
+      </div>
+    </div>
+
+    {/* Footer Dock */}
+    <div className="absolute bottom-4 sm:bottom-10 flex flex-col items-center gap-4 sm:gap-6 z-[10000] px-2">
+      {/* Pagination indicators */}
+      {imagePaths.length > 1 && (
+        <div className="flex gap-2 mb-2">
+          {imagePaths.map((_, idx) => (
+            <div 
+              key={idx}
+              className={`h-1 rounded-full transition-all duration-500 ${
+                idx === currentIndex ? "bg-[var(--accent-color)] w-8" : "bg-white/20 w-2"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 bg-[#1A1C16]/90 backdrop-blur-2xl border border-white/10 p-2 rounded-[24px] shadow-2xl">
+        <div className="flex items-center gap-1 pr-2 border-r border-white/5">
+          <button onClick={handlePrevImage} className="w-10 h-10 flex items-center justify-center text-white/40 hover:text-white rounded-xl">
+            <FontAwesomeIcon icon={faArrowLeft} className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={handleNextImage} className="w-10 h-10 flex items-center justify-center text-white/40 hover:text-white rounded-xl">
+            <FontAwesomeIcon icon={faArrowRight} className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1 px-1">
+          <button
+            onClick={handleZoomOut}
+            disabled={zoom <= MIN_ZOOM}
+            className="w-10 h-10 flex items-center justify-center text-white/40 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed rounded-xl"
+          >
+            <FontAwesomeIcon icon={faMinus} className="w-3 h-3" />
+          </button>
+          <div className="w-14 text-center text-white/80 font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-widest">
+            {Math.round(zoom * 100)}%
+          </div>
+          <button
+            onClick={handleZoomIn}
+            disabled={zoom >= MAX_ZOOM}
+            className="w-10 h-10 flex items-center justify-center text-white/40 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed rounded-xl"
+          >
+            <FontAwesomeIcon icon={faPlus} className="w-3 h-3" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1 pl-2 border-l border-white/5">
+          <button onClick={() => setRotation(r => (r + 90) % 360)} className="w-10 h-10 flex items-center justify-center text-white/40 hover:text-[var(--accent-color)] rounded-xl">
+            <FontAwesomeIcon icon={faRotateRight} className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={handleDownload} className="w-10 h-10 flex items-center justify-center text-white/40 hover:text-white rounded-xl">
+            <FontAwesomeIcon icon={faDownload} className="w-3.5 h-3.5" />
+          </button>
+          <button 
+            onClick={resetImageState}
+            className="ml-1 w-10 h-10 flex items-center justify-center bg-[var(--primary-color)] text-[var(--background-color)] rounded-xl hover:bg-[var(--accent-color)] transition-all"
+          >
+            <FontAwesomeIcon icon={faExpand} className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</>
   );
 }

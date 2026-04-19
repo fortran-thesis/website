@@ -152,7 +152,7 @@ export default function WikiMold() {
       <Navbar />
 
       <header className="relative h-[60vh] min-h-[500px] w-full flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: "url('/assets/mold2.jpg')" }}>
+        <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: "url('/assets/mold2.JPG')" }}>
           <div className="absolute inset-0 bg-black/45 shadow-[inset_0_0_150px_rgba(0,0,0,0.6)]" />
         </div>
 

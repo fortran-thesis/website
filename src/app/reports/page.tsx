@@ -19,6 +19,8 @@ export default function Reports() {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
+    const [dateOrder, setDateOrder] = useState<'newest' | 'oldest'>('newest');
+    const [dateSortSelection, setDateSortSelection] = useState('');
 
     const normalizeStatus = (rawStatus?: string) => {
       const status = (rawStatus || '').toString().trim().toLowerCase();
@@ -58,6 +60,21 @@ export default function Reports() {
                       }
                       return 'N/A';
                     })(),
+              dateReportedTs: (() => {
+                const created = r.created_at;
+                if (typeof created === 'string') {
+                  const parsed = new Date(created).getTime();
+                  if (!Number.isNaN(parsed)) return parsed;
+                }
+
+                const metaDate = r.metadata?.created_at as any;
+                if (metaDate && (metaDate._seconds || metaDate.seconds)) {
+                  const secs = Number(metaDate._seconds ?? metaDate.seconds);
+                  if (!Number.isNaN(secs)) return secs * 1000;
+                }
+
+                return 0;
+              })(),
               status: normalizeStatus(rawStatus),
             };
           }),
@@ -105,7 +122,7 @@ export default function Reports() {
       const query = searchQuery.trim().toLowerCase();
       const status = statusFilter.trim().toLowerCase();
 
-      return reports.filter((report) => {
+      const filtered = reports.filter((report) => {
         const reportStatus = (report.status || '').toLowerCase();
         const matchesStatus =
           !status || status === 'all' || reportStatus === status;
@@ -124,7 +141,13 @@ export default function Reports() {
           .filter(Boolean)
           .some((value) => String(value).toLowerCase().includes(query));
       });
-    }, [reports, searchQuery, statusFilter]);
+
+      return filtered.sort((a, b) => {
+        const aTs = a.dateReportedTs ?? 0;
+        const bTs = b.dateReportedTs ?? 0;
+        return dateOrder === 'newest' ? bTs - aTs : aTs - bTs;
+      });
+    }, [reports, searchQuery, statusFilter, dateOrder]);
     
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
@@ -186,6 +209,21 @@ export default function Reports() {
                           ]}
                           onSelect={(value) => setStatusFilter(value)}
                         />
+
+                        <StatusDropdown
+                          placeholder="Sort By Date"
+                          backgroundColor="var(--primary-color)"
+                          textColor="var(--background-color)"
+                          options={[
+                            { label: 'Newest First', value: 'newest' },
+                            { label: 'Oldest First', value: 'oldest' },
+                          ]}
+                          selectedValue={dateSortSelection}
+                          onSelect={(value) => {
+                            setDateSortSelection(value);
+                            setDateOrder(value === 'oldest' ? 'oldest' : 'newest');
+                          }}
+                        />  
                     </div>
                 </div>
             </div>

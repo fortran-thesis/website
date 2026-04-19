@@ -33,6 +33,19 @@ export function Navbar() {
     setNavigatingTo(null);
   }, [pathname]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // --- Logic Helpers ---
   const isActive = (href: string) => pathname === href;
   const isNavigating = (href: string) => navigatingTo === href;
@@ -48,7 +61,7 @@ export function Navbar() {
 
   const baseClasses = `
     fixed top-0 left-0 w-full z-50 transition-all duration-500
-    ${isScrolled ? 'bg-[var(--primary-color)] shadow-md' : 'bg-transparent'}
+    ${isScrolled || isMenuOpen ? 'bg-[var(--primary-color)] shadow-md' : 'bg-transparent'}
   `;
 
   const navItemClasses = (href: string) => `
@@ -126,30 +139,63 @@ export function Navbar() {
         </div>
 
         {/* Mobile Toggle */}
-        <div className="md:hidden">
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2" aria-label="Toggle menu">
-            <div className="space-y-1.5">
-              <span className={`block w-8 h-0.5 transition-all ${hamburgerColorClass} ${isMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
-              <span className={`block w-8 h-0.5 transition-opacity ${hamburgerColorClass} ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
-              <span className={`block w-8 h-0.5 transition-all ${hamburgerColorClass} ${isMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
-            </div>
-          </button>
-        </div>
+       <div className="md:hidden flex items-center">
+        <button 
+          onClick={() => setIsMenuOpen(!isMenuOpen)} 
+          className="p-2 relative z-[70] cursor-pointer outline-none" 
+          aria-label="Toggle menu"
+        >
+          <div className="space-y-1.5">
+            <span className={`block w-8 h-0.5 transition-all duration-300 ${hamburgerColorClass} ${isMenuOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+            <span className={`block w-8 h-0.5 transition-all duration-300 ${hamburgerColorClass} ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
+            <span className={`block w-8 h-0.5 transition-all duration-300 ${hamburgerColorClass} ${isMenuOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+          </div>
+        </button>
       </div>
 
-      {/* Mobile Drawer */}
-      <div className={`md:hidden overflow-hidden transition-all duration-500 ${isMenuOpen ? 'max-h-screen opacity-100 py-4' : 'max-h-0 opacity-0'} bg-[var(--background-color)]`}>
-        <div className="flex flex-col space-y-4 px-4">
-          {navItems.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={(e) => handleNavClick(e, item.href)}
-              className={`text-lg font-semibold font-[family-name:var(--font-bricolage-grotesque)] block py-2 px-3 rounded-md transition-all text-[var(--primary-color)] ${isActive(item.href) ? 'font-bold bg-[var(--primary-color)]/5' : ''} ${isNavigating(item.href) ? 'opacity-60' : ''}`}
-            >
-              {item.name}
-            </Link>
-          ))}
+      {/* Standard Mobile Dropdown with Consistent Background */}
+        <div 
+          className={`md:hidden absolute top-full left-0 w-full z-[60] overflow-hidden transition-all duration-500 ease-in-out bg-[var(--background-color)] border-t border-[var(--primary-color)]/5 shadow-2xl ${
+            isMenuOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <nav className="flex flex-col px-8 pt-8 pb-10 space-y-2">
+            {navItems.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                onClick={(e) => {
+                  handleNavClick(e, item.href);
+                  setIsMenuOpen(false);
+                }}
+                className={`relative py-4 transition-all duration-300 font-[family-name:var(--font-montserrat)] text-sm font-black uppercase tracking-[0.2em] ${
+                  isActive(item.href) 
+                    ? 'text-[var(--primary-color)]' 
+                    : 'text-[var(--primary-color)]/40 hover:text-[var(--primary-color)]'
+                } ${isNavigating(item.href) ? 'opacity-50' : ''}`}
+              >
+                <span className="relative z-10">{item.name}</span>
+                
+                {/* Minimalist Underline Indicator */}
+                {isActive(item.href) && (
+                  <span className="absolute bottom-3 left-0 w-6 h-1 bg-[var(--accent-color)] rounded-full" />
+                )}
+              </Link>
+            ))}
+
+            <div className="pt-8 mt-4 border-t border-[var(--primary-color)]/5">
+              <Link
+                href="/auth/log-in"
+                onClick={(e) => {
+                  handleNavClick(e, '/auth/log-in');
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center justify-center w-full py-5 px-6 rounded-2xl text-xs font-black uppercase tracking-[0.25em] font-[family-name:var(--font-montserrat)] bg-[var(--primary-color)] text-[var(--background-color)] shadow-xl shadow-[var(--primary-color)]/20 transition-all hover:brightness-110 active:scale-[0.98]"
+              >
+                Log In
+              </Link>
+            </div>
+          </nav>
         </div>
       </div>
     </nav>

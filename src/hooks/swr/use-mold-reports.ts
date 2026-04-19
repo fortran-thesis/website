@@ -87,6 +87,55 @@ export interface MoldReportPrintPayload {
     mold_catalog_id?: string;
     wikimold_id?: string;
   };
+  follow_ups?: Array<{
+    detail_id: string;
+    observed_at?: string;
+    timestamp?: string;
+    description: string;
+    cover_photo?: string[];
+    cover_photo_urls?: string[];
+  }>;
+  investigation?: {
+    initial_observation?: {
+      microscopic_identification: string;
+      microscopic_confidence?: string;
+      confidence?: string;
+      macroscopic_summary?: string;
+      summary?: string;
+      observed_at?: string;
+      symptoms?: string[];
+      signs?: string[];
+      characteristics?: string[];
+    };
+    in_vivo_latest?: {
+      identified_mold: string;
+      confidence: string;
+      summary: string;
+      observed_at: string;
+      additional_info: string;
+      culture_name: string;
+    };
+    in_vitro_latest?: {
+      identified_mold: string;
+      confidence: string;
+      summary: string;
+      observed_at: string;
+      additional_info: string;
+      culture_name: string;
+    };
+    cultivation_logs?: Array<{
+      log_id: string;
+      type: string;
+      observed_at?: string;
+      created_at?: string;
+      summary: string;
+      identified_mold: string;
+      confidence: string;
+      additional_info: string;
+      culture_name: string;
+      image_url: string;
+    }>;
+  };
 }
 
 export interface StatusCounts {

@@ -29,6 +29,7 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
   const { user: authUser } = useAuth();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const routeStartRef = useRef<number | null>(null);
   const hasRequestedFcmRef = useRef(false);
   const hideLayout = pathname.startsWith("/auth") || pathname.startsWith("/support") || pathname.startsWith("/wikimold") || pathname.startsWith("/faq") || pathname.startsWith("/terms-of-agreement") || pathname.startsWith("/privacy-policy") || pathname.startsWith("/about") || pathname.startsWith("/investigation/view-case/print") || pathname == "/";
 
@@ -44,6 +45,34 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
       requestPermission();
     }
   }, [authUser, requestPermission]);
+
+  useEffect(() => {
+    if (hideLayout || typeof window === 'undefined' || typeof window.performance === 'undefined') return;
+
+    const startAt = routeStartRef.current ?? window.performance.now();
+    routeStartRef.current = null;
+    const measureName = `route:${pathname}:paint`;
+
+    const raf = window.requestAnimationFrame(() => {
+      const endAt = window.performance.now();
+
+      try {
+        window.performance.measure(measureName, { start: startAt, end: endAt });
+      } catch {
+        // Older browsers may only accept mark names; the baseline still exists via the timestamp.
+      }
+
+      if (process.env.NODE_ENV !== 'production') {
+        const entries = window.performance.getEntriesByName(measureName);
+        const entry = entries[entries.length - 1];
+        if (entry) {
+          console.info(`[perf] ${measureName}=${entry.duration.toFixed(1)}ms`);
+        }
+      }
+    });
+
+    return () => window.cancelAnimationFrame(raf);
+  }, [hideLayout, pathname]);
 
   // Hide the loading bar once the pathname settles (covers all navigation types
   // including router.back(), router.push(), and <Link> clicks).
@@ -62,6 +91,7 @@ function LayoutInner({ children, pathname }: { children: React.ReactNode; pathna
       if (linkElement && !hideLayout) {
         const href = linkElement.getAttribute('href');
         if (href && href !== pathname && !href.startsWith('http')) {
+          routeStartRef.current = window.performance.now();
           setIsNavigating(true);
         }
       }

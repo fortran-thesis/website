@@ -270,7 +270,7 @@ export default function Investigation() {
                         {/* Filter by Date Order (client-side) */}
                         <div className="w-full lg:w-auto">
                             <StatusDropdown
-                                placeholder="Filter By Date"
+                                placeholder="Sort By Date"
                                 backgroundColor="var(--primary-color)"
                                 textColor="var(--background-color)"
                                 options={[
@@ -297,7 +297,7 @@ export default function Investigation() {
                             sortDirection={sortDirection}
                             onSort={handleSort}
                             onEdit={(c: any) => {
-                                const params = new URLSearchParams({ id: c.id });
+                                const params = new URLSearchParams({ id: c.id, entityType: 'mold_report' });
                                 router.push(`/investigation/view-case?${params.toString()}`);
                             }}
                         />

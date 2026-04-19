@@ -12,6 +12,7 @@ export interface Report {
   reportedUser: string;
   reportedBy: string;
   dateReported: string;
+  dateReportedTs?: number;
   status: "Resolved" | "Unresolved";
 }
 

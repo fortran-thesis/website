@@ -2,9 +2,9 @@
 
 import { Navbar } from '@/components/navbar';
 import { TypeAnimation } from 'react-type-animation';
-import { motion, useMotionValue, useTransform, animate, AnimatePresence } from 'framer-motion';
+import { motion, useMotionValue, useTransform, animate, AnimatePresence, useReducedMotion } from 'framer-motion';
 import Footer from '@/components/footer';
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, memo, type ComponentProps } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDownLong } from '@fortawesome/free-solid-svg-icons';
 
@@ -17,6 +17,115 @@ const knowledge = '/assets/knowledge.jpg';
 const myco = '/assets/myco.jpg';
 const leaf = '/assets/leaf.svg';
 const downloadApp = '/assets/download_app.png';
+
+type MotionImgProps = ComponentProps<typeof motion.img>;
+
+interface FloatingLeafProps {
+  className: string;
+  animate: MotionImgProps['animate'];
+  transition: MotionImgProps['transition'];
+}
+
+interface FloatingLeafConfig extends FloatingLeafProps {
+  key: string;
+}
+
+const FloatingLeaf = memo(function FloatingLeaf({ className, animate, transition }: FloatingLeafProps) {
+  return (
+    <motion.img
+      src={leaf}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      loading="lazy"
+      decoding="async"
+      animate={animate}
+      transition={transition}
+      className={`${className} transform-gpu will-change-transform`}
+    />
+  );
+});
+
+const aboutLeafConfigs: FloatingLeafConfig[] = [
+  {
+    key: 'about-1',
+    animate: { y: [0, -15, 0], rotate: [-15, -10, -15] },
+    transition: { duration: 5, repeat: Infinity, ease: 'easeInOut' },
+    className: 'absolute top-[15%] left-[38%] w-14 opacity-100 brightness-100',
+  },
+  {
+    key: 'about-2',
+    animate: { y: [0, 20, 0], rotate: [10, 20, 10] },
+    transition: { duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1 },
+    className: 'absolute bottom-[5%] left-[18%] w-16 opacity-100 brightness-100',
+  },
+  {
+    key: 'about-3',
+    animate: { x: [0, 10, 0], y: [0, -10, 0] },
+    transition: { duration: 4, repeat: Infinity, ease: 'easeInOut' },
+    className: 'absolute bottom-[18%] left-[58%] w-14 rotate-[-5deg] opacity-100 brightness-100',
+  },
+  {
+    key: 'about-4',
+    animate: { y: [0, -25, 0], rotate: [45, 35, 45] },
+    transition: { duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
+    className: 'absolute top-[38%] right-[7%] w-16 opacity-100 brightness-100',
+  },
+  {
+    key: 'about-5',
+    animate: { scale: [1, 1.1, 1], rotate: [20, 30, 20] },
+    transition: { duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 2 },
+    className: 'absolute bottom-[22%] right-[10%] w-14 opacity-100 brightness-100',
+  },
+];
+
+const capabilityLeafConfigs: FloatingLeafConfig[] = [
+  {
+    key: 'capability-1',
+    animate: { y: [0, -15, 0], rotate: [-15, -10, -15] },
+    transition: { duration: 5, repeat: Infinity, ease: 'easeInOut' },
+    className: 'absolute top-[15%] left-[38%] w-14 opacity-100 brightness-100',
+  },
+  {
+    key: 'capability-2',
+    animate: { y: [0, 20, 0], rotate: [10, 20, 10] },
+    transition: { duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1 },
+    className: 'absolute bottom-[5%] left-[18%] w-16 opacity-100 brightness-100',
+  },
+  {
+    key: 'capability-3',
+    animate: { x: [0, 10, 0], y: [0, -10, 0], rotate: [-60, -70, -60] },
+    transition: { duration: 4, repeat: Infinity, ease: 'easeInOut' },
+    className: 'absolute bottom-[18%] left-[55%] w-14 rotate-[-5deg] opacity-100 brightness-100',
+  },
+];
+
+const ctaLeafConfigs: FloatingLeafConfig[] = [
+  {
+    key: 'cta-1',
+    animate: { y: [0, -20, 0], rotate: [-10, 10, -10] },
+    transition: { duration: 5, repeat: Infinity, ease: 'easeInOut' },
+    className: 'absolute top-[15%] left-[5%] w-16 opacity-100 brightness-100',
+  },
+  {
+    key: 'cta-2',
+    animate: { y: [0, 15, 0], rotate: [5, -5, 5] },
+    transition: { duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 1 },
+    className: 'absolute top-[10%] left-[28%] w-14 opacity-100 brightness-100',
+  },
+  {
+    key: 'cta-3',
+    animate: { y: [0, -25, 0], rotate: [20, 40, 20] },
+    transition: { duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 0.5 },
+    className: 'absolute top-[35%] right-[45%] w-14 opacity-100 brightness-100',
+  },
+  {
+    key: 'cta-4',
+    animate: { x: [0, 10, 0], y: [0, -10, 0] },
+    transition: { duration: 5, repeat: Infinity, ease: 'easeInOut' },
+    className: 'absolute bottom-[20%] right-[60%] w-16 opacity-100 brightness-100',
+  },
+];
 
 const capabilities = [
   {
@@ -70,6 +179,10 @@ interface LandingClientProps {
 
 export default function LandingClient({ resolvedCount }: LandingClientProps) {
   const [index, setIndex] = useState(0);
+  const [showFloatingLeaves, setShowFloatingLeaves] = useState(false);
+  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
+  const videoSectionRef = useRef<HTMLElement | null>(null);
 
   const totalCasesResolved = resolvedCount;
 
@@ -80,6 +193,46 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
     }, 5000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      setShowFloatingLeaves(false);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    const updateLeafVisibility = () => setShowFloatingLeaves(mediaQuery.matches);
+
+    updateLeafVisibility();
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', updateLeafVisibility);
+      return () => mediaQuery.removeEventListener('change', updateLeafVisibility);
+    }
+
+    mediaQuery.addListener(updateLeafVisibility);
+    return () => mediaQuery.removeListener(updateLeafVisibility);
+  }, [shouldReduceMotion]);
+
+  useEffect(() => {
+    if (shouldLoadVideo) return;
+
+    const target = videoSectionRef.current;
+    if (!target) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setShouldLoadVideo(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '300px 0px' }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [shouldLoadVideo]);
 
   return (
     <div className="relative w-full bg-[var(--background-color)]">
@@ -126,52 +279,18 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
 
       {/* --- ABOUT SECTION --- */}
       <section className="relative min-h-screen w-full flex items-center justify-center px-6 md:px-12 lg:px-24 py-20 lg:py-0 overflow-hidden">
+        {showFloatingLeaves && (
         <div className="absolute inset-0 pointer-events-none z-10">
-          {/* 1. Top Leftish */}
-          <motion.img 
-            animate={{ y: [0, -15, 0], rotate: [-15, -10, -15] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            src={leaf} 
-            className="absolute top-[15%] left-[38%] w-0 lg:w-14 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
-          
-          {/* 2. Bottom Left */}
-          <motion.img 
-            animate={{ y: [0, 20, 0], rotate: [10, 20, 10] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            src={leaf} 
-            className="absolute bottom-[5%] left-[18%] w-0 lg:w-16 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
-
-          {/* 3. Center Bottom */}
-          <motion.img 
-            animate={{ x: [0, 10, 0], y: [0, -10, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            src={leaf} 
-            className="absolute bottom-[18%] left-[58%] w-0 lg:w-14 rotate-[-5deg] opacity-100 brightness-100" 
-            alt="leaf" 
-          />
-
-          {/* 4. Middle Right */}
-          <motion.img 
-            animate={{ y: [0, -25, 0], rotate: [45, 35, 45] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-            src={leaf} 
-            className="absolute top-[38%] right-[7%] w-0 lg:w-16 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
-
-          {/* 5. Bottom Right */}
-          <motion.img 
-            animate={{ scale: [1, 1.1, 1], rotate: [20, 30, 20] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-            src={leaf} 
-            className="absolute bottom-[22%] right-[10%] w-0 lg:w-14 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
+          {aboutLeafConfigs.map((leafConfig) => (
+            <FloatingLeaf
+              key={leafConfig.key}
+              className={leafConfig.className}
+              animate={leafConfig.animate}
+              transition={leafConfig.transition}
+            />
+          ))}
         </div>
+        )}
 
         <div className="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center relative z-20">
           
@@ -239,32 +358,14 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
     
       {/* --- CAPABILITIES SECTION --- */}
       <section className="relative w-full min-h-screen lg:h-screen bg-[var(--background-color)] flex items-center justify-center overflow-hidden px-6 md:px-12 lg:px-24 py-12 lg:py-0">      
-          {/* 1. Top Leftish */}
-          <motion.img 
-            animate={{ y: [0, -15, 0], rotate: [-15, -10, -15] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            src={leaf} 
-            className="absolute top-[15%] left-[38%] w-0 lg:w-14 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
-          
-          {/* 2. Bottom Left */}
-          <motion.img 
-            animate={{ y: [0, 20, 0], rotate: [10, 20, 10] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            src={leaf} 
-            className="absolute bottom-[5%] left-[18%] w-0 lg:w-16 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
-
-          {/* 3. Center Bottom */}
-          <motion.img 
-            animate={{ x: [0, 10, 0], y: [0, -10, 0], rotate: [-60, -70, -60] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            src={leaf} 
-            className="absolute bottom-[18%] left-[55%] w-0 lg:w-14 rotate-[-5deg] opacity-100 brightness-100" 
-            alt="leaf" 
-          />
+          {showFloatingLeaves && capabilityLeafConfigs.map((leafConfig) => (
+            <FloatingLeaf
+              key={leafConfig.key}
+              className={leafConfig.className}
+              animate={leafConfig.animate}
+              transition={leafConfig.transition}
+            />
+          ))}
           {/* --- CIRCULAR MESH GRADIENTS (No hard lines) --- */}
           <div className="absolute inset-0 z-0 pointer-events-none">
             {/* Top Left Circle */}
@@ -371,7 +472,7 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
 
       {/* --- VIDEO SECTION --- */}
      
-      <section className="relative w-full min-h-screen lg:h-screen flex items-center justify-center bg-[var(--background-color)] overflow-hidden px-6 md:px-12 lg:px-24 py-0">
+      <section ref={videoSectionRef} className="relative w-full min-h-screen lg:h-screen flex items-center justify-center bg-[var(--background-color)] overflow-hidden px-6 md:px-12 lg:px-24 py-0">
         {/* Background Ambient Glow */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-[20%] left-[-5%] w-[40%] h-[40%] rounded-full bg-[var(--accent-color)] opacity-[0.05] blur-[120px]" />
@@ -390,12 +491,23 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
               className="relative w-full lg:w-[75%] z-10"
             >
               <div className="relative aspect-video w-full rounded-2xl overflow-hidden shadow-[0_30px_60px_-12px_rgba(0,0,0,0.3)] bg-black border border-white/5">
-                <iframe className="absolute inset-0 w-full h-full border-none" 
-                src="https://www.youtube.com/embed/85kTHwJ1Ju8?si=t8WYOQP8h5lZu0Gs" 
-                title="YouTube video player" 
-                allowFullScreen>
-
-                </iframe>
+                {shouldLoadVideo ? (
+                  <iframe
+                    className="absolute inset-0 w-full h-full border-none"
+                    src="https://www.youtube.com/embed/85kTHwJ1Ju8?si=t8WYOQP8h5lZu0Gs"
+                    title="YouTube video player"
+                    loading="lazy"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-black to-[var(--primary-color)]/40">
+                    <p className="text-sm md:text-base uppercase tracking-[0.2em] font-semibold text-white/85">
+                      Loading video...
+                    </p>
+                  </div>
+                )}
               </div>
             </motion.div>
 
@@ -440,36 +552,18 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
 
       <section className="relative w-full min-h-screen lg:h-screen flex items-center justify-center overflow-hidden px-6 md:px-12 lg:px-24 py-20 lg:py-100">
   
+        {showFloatingLeaves && (
         <div className="absolute inset-0 pointer-events-none z-30">
-          <motion.img 
-            animate={{ y: [0, -20, 0], rotate: [-10, 10, -10] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            src={leaf} 
-            className="absolute top-[15%] left-[5%] w-0 lg:w-16 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
-          <motion.img 
-            animate={{ y: [0, 15, 0], rotate: [5, -5, 5] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-            src={leaf} 
-            className="absolute top-[10%] left-[28%] w-0 lg:w-14 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
-          <motion.img 
-            animate={{ y: [0, -25, 0], rotate: [20, 40, 20] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-            src={leaf} 
-            className="absolute top-[35%] right-[45%] w-0 lg:w-14 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
-          <motion.img 
-            animate={{ x: [0, 10, 0], y: [0, -10, 0] }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            src={leaf} 
-            className="absolute bottom-[20%] right-[60%] w-0 lg:w-16 opacity-100 brightness-100" 
-            alt="leaf" 
-          />
+          {ctaLeafConfigs.map((leafConfig) => (
+            <FloatingLeaf
+              key={leafConfig.key}
+              className={leafConfig.className}
+              animate={leafConfig.animate}
+              transition={leafConfig.transition}
+            />
+          ))}
         </div>
+        )}
 
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-20 w-full">
           

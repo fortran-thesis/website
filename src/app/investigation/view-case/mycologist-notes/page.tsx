@@ -15,23 +15,37 @@ function MycologistNotesContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const resourceId = searchParams.get("id") ?? undefined;
+  const explicitEntityType = searchParams.get("entityType")?.toLowerCase().trim();
+  const inferredEntityType = explicitEntityType
+    ?? (resourceId?.toLowerCase().startsWith('case-')
+      ? 'mold_case'
+      : resourceId?.toLowerCase().startsWith('rep-') || resourceId?.toLowerCase().startsWith('report-')
+        ? 'mold_report'
+        : 'mold_report');
+  const isCaseResource = inferredEntityType === 'mold_case';
   const { user: authUser } = useAuth();
 
   const rawRole = (authUser?.user?.role || authUser?.role || "").toLowerCase();
   const userRole = rawRole === "mycologist" ? "Mycologist" : "Administrator";
 
-  const { data: moldCaseByIdRes, isLoading: moldCaseByIdLoading } = useMoldCase(resourceId);
-  const reportId = moldCaseByIdRes?.data?.mold_report_id || resourceId;
+  const { data: moldCaseByIdRes, isLoading: moldCaseByIdLoading } = useMoldCase(
+    isCaseResource ? resourceId : undefined,
+  );
+  const reportId = isCaseResource
+    ? moldCaseByIdRes?.data?.mold_report_id || resourceId
+    : resourceId;
 
   const { data: reportRes, isLoading: reportLoading } = useMoldReport(reportId);
-  const { data: moldCaseRes, isLoading: moldCaseByReportLoading } = useMoldCaseByReport(reportId);
+  const { data: moldCaseRes, isLoading: moldCaseByReportLoading } = useMoldCaseByReport(
+    isCaseResource ? undefined : reportId,
+  );
 
   const caseData = reportRes?.data ?? null;
   const moldCase = moldCaseRes?.data ?? moldCaseByIdRes?.data ?? null;
   const mycologistId = caseData?.assigned_mycologist_id;
   const { data: mycologistRes } = useUser(mycologistId);
 
-  const loading = reportLoading || moldCaseByIdLoading || moldCaseByReportLoading;
+  const loading = reportLoading || (isCaseResource ? moldCaseByIdLoading : moldCaseByReportLoading);
   const error = !resourceId ? "No case ID provided" : null;
   const [showBackToTop, setShowBackToTop] = useState(false);
   const pageContentRef = useRef<HTMLElement | null>(null);
@@ -338,7 +352,7 @@ function MycologistNotesContent() {
 
   const openCase = () => {
     if (!resourceId) return;
-    router.push(`/investigation/view-case?id=${encodeURIComponent(resourceId)}`);
+    router.push(`/investigation/view-case?id=${encodeURIComponent(resourceId)}&entityType=${encodeURIComponent(inferredEntityType)}`);
   };
 
   useEffect(() => {

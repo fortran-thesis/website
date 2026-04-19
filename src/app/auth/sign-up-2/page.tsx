@@ -6,7 +6,7 @@ import { faFilePdf, faPen, faPlus, faCircleMinus } from '@fortawesome/free-solid
 import Image from "next/image";
 import { useSignUp2Utils } from './signUp2Utils';
 
-const LogInImage = '/assets/LogIn_Image.svg';
+const LogInImage = '/assets/logIn_header.svg';
 
 /// This is the second step for signing up as a Mold Curator in Moldify
 /// It asks the user to enter their personal information

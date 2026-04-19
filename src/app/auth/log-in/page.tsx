@@ -10,8 +10,8 @@ import TopLoadingBar from '@/components/loading/top_loading_bar';
 import MessageBanner from '@/components/feedback/message_banner';
 
 {/* IMAGES */}
-const LogInImage = '/assets/LogIn_Image.svg';
-const LogInHeader = '/assets/login_header.svg';
+const LogInImage = '/assets/logIn_header.svg';
+const LogInHeader = '/assets/logIn_header.svg';
 const MoldifyLogov2 = '/assets/moldify-logo-v3.svg';
 
 {/* This is the log in page of the Moldify Website

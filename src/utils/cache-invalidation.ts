@@ -106,7 +106,7 @@ export function useInvalidationFunctions() {
     },
 
     /**
-     * Invalidate all caches across all domains
+     * @deprecated Use a targeted invalidator instead.
      */
     invalidateAll: async () => {
       await mutate(() => true, undefined, { revalidate: true });

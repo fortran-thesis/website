@@ -117,7 +117,7 @@ export default function CaseHistory() {
   const handleViewCase = (caseItem: CaseData) => {
     console.log("Viewing rejected case:", caseItem.caseName);
     // Use client-side navigation so returning preserves consistent UI state.
-    const params = new URLSearchParams({ id: caseItem.caseName });
+    const params = new URLSearchParams({ id: caseItem.caseName, entityType: 'mold_report' });
     router.push(`/investigation/view-case?${params.toString()}`);
   };
 
@@ -143,7 +143,7 @@ export default function CaseHistory() {
       <div className="flex flex-col lg:flex-row lg:items-center mt-10 gap-4 w-full">
         {/* Left Label */}
         <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold">
-          Rejected Cases
+          Case History
         </p>
 
         {/* Right Section */}
@@ -156,7 +156,7 @@ export default function CaseHistory() {
 
             <input
               id="search"
-              placeholder="Search Rejected Case"
+              placeholder="Search Case History"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="font-[family-name:var(--font-bricolage-grotesque)]
