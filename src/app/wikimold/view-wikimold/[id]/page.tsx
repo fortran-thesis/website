@@ -837,6 +837,15 @@ const ProseContent = ({
                   <div className="w-12 h-[2px] bg-[var(--accent-color)] animate-pulse" />
                   <p className="font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-[0.5em] text-[var(--primary-color)]/40">Synchronizing Archives</p>
                 </div>
+              ) : linkedCases.length === 0 ? (
+                <div className="py-16 rounded-2xl border border-dashed border-[var(--primary-color)]/20 px-6">
+                  <p className="font-[family-name:var(--font-montserrat)] text-[11px] font-black uppercase tracking-[0.25em] text-[var(--primary-color)]/40">
+                    No Linked Investigations Yet
+                  </p>
+                  <p className="mt-3 font-[family-name:var(--font-bricolage-grotesque)] text-base text-[var(--moldify-black)]/70">
+                    Field evidence will appear here once reports are linked to this WikiMold entry.
+                  </p>
+                </div>
               ) : (
                 linkedCases.map((entry, idx) => {
                   const caseKey = getCaseKey(entry, idx);
@@ -850,18 +859,35 @@ const ProseContent = ({
                   const initial = asRecord(entry.cultivation_details);
                   const evidenceSummary = asRecord(entry.evidence_summary);
                   const initialSummary = asRecord(evidenceSummary.initial);
+                  const inVivoSummary = asRecord(evidenceSummary.in_vivo);
+                  const inVitroSummary = asRecord(evidenceSummary.in_vitro);
                   const inVivo = getLatestLogByType(entry, 'vivo') ?? {};
                   const inVitro = getLatestLogByType(entry, 'vitro') ?? {};
                   const inVivoCharacteristics = asRecord(inVivo.characteristics);
                   const inVitroCharacteristics = asRecord(inVitro.characteristics);
+                  const inVivoSummaryCharacteristics = asRecord(inVivoSummary.characteristics);
+                  const inVitroSummaryCharacteristics = asRecord(inVitroSummary.characteristics);
+                  const inVivoAdditional = asText(
+                    inVivo.additional_info,
+                    inVivo.characteristics && asRecord(inVivo.characteristics).additional_info,
+                  );
+                  const inVitroAdditional = asText(
+                    inVitro.additional_info,
+                    inVitro.characteristics && asRecord(inVitro.characteristics).additional_info,
+                  );
                   
                   const cropRecord = entry as Record<string, unknown>;
                   const cropName =
+                    asText(entry.crop_label) ||
                     asText(cropRecord.common_name) ||
                     asText(cropRecord.crop_name) ||
+                    asText(cropRecord.host_plant_affected) ||
+                    asText(cropRecord.host) ||
+                    asText(cropRecord.report_host) ||
+                    asText(entry.case_name) ||
                     asText(entry.name) ||
                     asText(cropRecord.crop) ||
-                    `Log#${(idx + 1).toString().padStart(2, '0')}`;
+                    `Case#${(idx + 1).toString().padStart(2, '0')}`;
                   
                   const sections = [
                     {
@@ -883,14 +909,16 @@ const ProseContent = ({
                       label: "[02] In Vivo Analysis",
                       content: [
                         getRecordText(inVivoCharacteristics, ['symptoms', 'characteristics', 'lesion_color', 'lesion_size']),
-                        getRecordText(inVivoCharacteristics, ['additional_info']),
+                        getRecordText(inVivoSummaryCharacteristics, ['symptoms', 'characteristics', 'lesion_color', 'lesion_size']),
+                        inVivoAdditional,
                       ].filter(Boolean).join(' // ') || 'No active bio-logs.',
                     },
                     {
                       label: "[03] In Vitro Results",
                       content: [
                         getRecordText(inVitroCharacteristics, ['characteristics', 'colony_color', 'colony_diameter']),
-                        getRecordText(inVitroCharacteristics, ['additional_info']),
+                        getRecordText(inVitroSummaryCharacteristics, ['characteristics', 'colony_color', 'colony_diameter']),
+                        inVitroAdditional,
                       ].filter(Boolean).join(' // ') || 'Laboratory culture pending.',
                     },
                   ];

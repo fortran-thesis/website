@@ -8,10 +8,21 @@ export default function CaseStatusCard({
   setAssignModalOpen, setRejectModalOpen
 }: any) {
   const isAdmin = userRole === "Administrator" || userRole === "admin";
+  const normalizedStatus = (caseData?.status ?? status ?? '').toString().toLowerCase();
+  const isClosed = normalizedStatus === 'closed';
+  const isResolved = normalizedStatus === 'resolved';
+  const canReassign = normalizedStatus === 'pending' || normalizedStatus === 'in progress';
 
   if (!isAdmin) return null;
 
   const getTheme = () => {
+    if (isClosed) return {
+      border: "border-[var(--moldify-grey)]/20",
+      badge: "bg-[var(--moldify-grey)] text-white",
+      text: "text-[var(--moldify-grey)]",
+      label: "CLOSED",
+      sublabel: "Filing Status"
+    };
     if (isRejected) return {
       border: "border-[var(--moldify-red)]/20",
       badge: "bg-[var(--moldify-red)] text-white",
@@ -19,11 +30,11 @@ export default function CaseStatusCard({
       label: "REJECTED",
       sublabel: "Filing Status"
     };
-    if (isApproved) return {
+    if (isResolved || isApproved) return {
       border: "border-[var(--primary-color)]/20",
       badge: "bg-[var(--primary-color)] text-white",
       text: "text-[var(--primary-color)]",
-      label: "APPROVED",
+      label: "RESOLVED",
       sublabel: "Filing Status"
     };
     if (isAssigned) return {
@@ -55,13 +66,17 @@ export default function CaseStatusCard({
               {theme.sublabel}
             </p>
             <h2 className={`font-[family-name:var(--font-montserrat)] text-2xl font-black uppercase tracking-tight leading-none ${theme.text}`}>
-              {isRejected
+              {isClosed
+                ? "Closed Case"
+                : isRejected
                 ? "Rejected"
+                : isResolved
+                  ? "Resolved Case"
                 : isAssigned
                   ? (assignedMycologistName || "Specialist Assigned")
                   : "Pending Review"}
             </h2>
-            {isAssigned && assignedMycologistOccupation && (
+            {isAssigned && !isClosed && !isResolved && assignedMycologistOccupation && (
               <p className="text-sm font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)] opacity-70">
                 {assignedMycologistOccupation}
               </p>
@@ -95,7 +110,7 @@ export default function CaseStatusCard({
         )}
 
         {/* Reassignment Section: Shows if Already Assigned */}
-        {isAdmin && isAssigned && !isRejected && (
+        {isAdmin && isAssigned && !isRejected && !isClosed && canReassign && (
           <div className="pt-10 border-t-2 border-[var(--primary-color)]/5">
             
             <div className="flex flex-col items-start gap-6">

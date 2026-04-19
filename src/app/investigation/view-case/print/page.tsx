@@ -44,6 +44,13 @@ const paragraphLines = (value: unknown): string[] => {
     .filter((line) => line.length > 0);
 };
 
+const timestampValue = (value: unknown): string => {
+  if (typeof value !== "string") return "N/A";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
+};
+
 function PrintableCaseReportContent() {
   const searchParams = useSearchParams();
   const reportId = searchParams.get("id") ?? undefined;
@@ -56,6 +63,10 @@ function PrintableCaseReportContent() {
     () => textList(payload?.sections?.affected_hosts),
     [payload?.sections?.affected_hosts],
   );
+  const followUps = Array.isArray(payload?.follow_ups) ? payload.follow_ups : [];
+  const cultivationLogs = Array.isArray(payload?.investigation?.cultivation_logs)
+    ? payload.investigation.cultivation_logs
+    : [];
 
   if (!reportId) {
     return (
@@ -299,6 +310,96 @@ function PrintableCaseReportContent() {
             <h3 className="text-lg font-black uppercase text-[var(--primary-color)]">Chemical Control</h3>
             <p className="mt-2 text-[15px] leading-7 text-[var(--moldify-grey)]">{textValue(payload.sections.chemical_control)}</p>
           </article>
+        </section>
+
+        <section className="page-break space-y-4">
+          <h2 className="font-[family-name:var(--font-montserrat)] text-xl font-black uppercase text-[var(--primary-color)]">
+            Investigation Snapshot
+          </h2>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <article className="rounded-2xl border border-[var(--primary-color)]/15 p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">Initial Observation</p>
+              <p className="mt-2 text-sm font-bold text-[var(--primary-color)]">
+                {textValue(payload.investigation?.initial_observation?.microscopic_identification)}
+              </p>
+              <p className="mt-1 text-xs text-[var(--moldify-grey)]">
+                Confidence: {textValue(payload.investigation?.initial_observation?.confidence)}
+              </p>
+              <p className="mt-2 text-sm text-[var(--moldify-grey)]">
+                {textValue(payload.investigation?.initial_observation?.summary)}
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-[var(--primary-color)]/15 p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">Latest In Vivo</p>
+              <p className="mt-2 text-sm font-bold text-[var(--primary-color)]">
+                {textValue(payload.investigation?.in_vivo_latest?.identified_mold)}
+              </p>
+              <p className="mt-1 text-xs text-[var(--moldify-grey)]">
+                Confidence: {textValue(payload.investigation?.in_vivo_latest?.confidence)}
+              </p>
+              <p className="mt-2 text-sm text-[var(--moldify-grey)]">
+                {textValue(payload.investigation?.in_vivo_latest?.summary)}
+              </p>
+            </article>
+
+            <article className="rounded-2xl border border-[var(--primary-color)]/15 p-5">
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">Latest In Vitro</p>
+              <p className="mt-2 text-sm font-bold text-[var(--primary-color)]">
+                {textValue(payload.investigation?.in_vitro_latest?.identified_mold)}
+              </p>
+              <p className="mt-1 text-xs text-[var(--moldify-grey)]">
+                Confidence: {textValue(payload.investigation?.in_vitro_latest?.confidence)}
+              </p>
+              <p className="mt-2 text-sm text-[var(--moldify-grey)]">
+                {textValue(payload.investigation?.in_vitro_latest?.summary)}
+              </p>
+            </article>
+          </div>
+
+          <article className="space-y-3 rounded-2xl border border-[var(--primary-color)]/15 p-5">
+            <h3 className="text-base font-black uppercase text-[var(--primary-color)]">Cultivation Logs</h3>
+            {cultivationLogs.length === 0 ? (
+              <p className="text-sm text-[var(--moldify-grey)]">No cultivation logs captured yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {cultivationLogs.map((log) => (
+                  <li key={log.log_id} className="rounded-xl bg-[var(--background-color)] p-3">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--primary-color)]">
+                      {textValue(log.type)} • {timestampValue(log.created_at)}
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-[var(--moldify-grey)]">
+                      {textValue(log.identified_mold, "Pending identification")}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--moldify-grey)]">{textValue(log.summary)}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </article>
+        </section>
+
+        <section className="space-y-3">
+          <h2 className="font-[family-name:var(--font-montserrat)] text-xl font-black uppercase text-[var(--primary-color)]">
+            Follow-up Timeline
+          </h2>
+          {followUps.length === 0 ? (
+            <p className="text-sm text-[var(--moldify-grey)]">No follow-up records.</p>
+          ) : (
+            <ol className="space-y-3">
+              {followUps.map((entry) => (
+                <li key={entry.detail_id} className="rounded-xl border border-[var(--primary-color)]/10 p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--primary-color)]">
+                    {timestampValue(entry.timestamp)}
+                  </p>
+                  <p className="mt-2 text-sm text-[var(--moldify-grey)]">
+                    {textValue(entry.description)}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          )}
         </section>
 
         <section className="no-print rounded-2xl bg-[var(--background-color)] p-4 text-xs uppercase tracking-[0.16em] text-[var(--moldify-grey)]">
