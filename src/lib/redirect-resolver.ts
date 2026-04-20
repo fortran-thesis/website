@@ -6,6 +6,11 @@ type NotificationReferenceType =
   | null
   | undefined;
 
+function buildViewCaseRedirect(referenceId: string, entityType: 'mold_report' | 'mold_case') {
+  const params = new URLSearchParams({ id: referenceId, entityType });
+  return `/investigation/view-case?${params.toString()}`;
+}
+
 /**
  * Resolve destination URLs for in-app notifications.
  * Returns null when the notification should not navigate.
@@ -20,8 +25,9 @@ export function resolveNotificationRedirect(
 
   switch (referenceType) {
     case 'mold_report':
+      return buildViewCaseRedirect(referenceId, 'mold_report');
     case 'mold_case':
-      return `/investigation/view-case?id=${encodedId}`;
+      return buildViewCaseRedirect(referenceId, 'mold_case');
     case 'flag_report':
       return `/flag-report/${encodedId}`;
     case 'user':
@@ -45,11 +51,11 @@ export function resolveAuditLogRedirect(
   const encodedId = encodeURIComponent(targetId);
 
   if (normalizedAction.includes('mold_report') || normalizedAction === 'resolve_report') {
-    return `/investigation/view-case?id=${encodedId}`;
+    return buildViewCaseRedirect(targetId, 'mold_report');
   }
 
   if (normalizedAction.includes('mold_case') || normalizedAction === 'add_cultivation_log' || normalizedAction === 'analyze_cultivation') {
-    return `/investigation/view-case?id=${encodedId}`;
+    return buildViewCaseRedirect(targetId, 'mold_case');
   }
 
   if (normalizedAction.includes('flag_report')) {

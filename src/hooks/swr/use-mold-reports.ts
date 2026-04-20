@@ -48,6 +48,96 @@ export interface MoldReportSnapshot {
   metadata?: { created_at?: { _seconds: number } };
 }
 
+export interface MoldReportPrintSectionPayload {
+  fungus_name: string;
+  overview: string;
+  description: string;
+  health_risks: string;
+  affected_hosts: string[];
+  symptoms_and_signs: string;
+  disease_cycle: string;
+  impact: string;
+  prevention_summary: string;
+  physical_control: string;
+  cultural_control: string;
+  biological_control: string;
+  mechanical_control: string;
+  chemical_control: string;
+}
+
+export interface MoldReportPrintPayload {
+  report: {
+    report_id: string;
+    report_date: string;
+    case_name: string;
+    host_plant_affected: string;
+    case_status: string;
+    confidence_level: string;
+    location: string;
+    date_observed: string;
+  };
+  identities: {
+    reporter_name: string;
+    mycologist_name: string;
+  };
+  sections: MoldReportPrintSectionPayload;
+  source: {
+    mold_catalog_used: boolean;
+    wikimold_used: boolean;
+    mold_catalog_id?: string;
+    wikimold_id?: string;
+  };
+  follow_ups?: Array<{
+    detail_id: string;
+    observed_at?: string;
+    timestamp?: string;
+    description: string;
+    cover_photo?: string[];
+    cover_photo_urls?: string[];
+  }>;
+  investigation?: {
+    initial_observation?: {
+      microscopic_identification: string;
+      microscopic_confidence?: string;
+      confidence?: string;
+      macroscopic_summary?: string;
+      summary?: string;
+      observed_at?: string;
+      symptoms?: string[];
+      signs?: string[];
+      characteristics?: string[];
+    };
+    in_vivo_latest?: {
+      identified_mold: string;
+      confidence: string;
+      summary: string;
+      observed_at: string;
+      additional_info: string;
+      culture_name: string;
+    };
+    in_vitro_latest?: {
+      identified_mold: string;
+      confidence: string;
+      summary: string;
+      observed_at: string;
+      additional_info: string;
+      culture_name: string;
+    };
+    cultivation_logs?: Array<{
+      log_id: string;
+      type: string;
+      observed_at?: string;
+      created_at?: string;
+      summary: string;
+      identified_mold: string;
+      confidence: string;
+      additional_info: string;
+      culture_name: string;
+      image_url: string;
+    }>;
+  };
+}
+
 export interface StatusCounts {
   total: number;
   pending: number;
@@ -127,7 +217,7 @@ export function useMoldReportsInfinite(
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false, revalidateOnFocus: true },
+    { revalidateFirstPage: false, revalidateOnFocus: false },
   );
 }
 
@@ -149,7 +239,7 @@ export function useMoldReportExport(id: string | undefined) {
 export function useUnassignedReports(limit = 50, enabled = true) {
   return useSWR<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
     enabled ? apiUrl('/api/v1/mold-reports/unassigned', { limit }) : null,
-    { revalidateOnFocus: true },
+    { revalidateOnFocus: false },
   );
 }
 
@@ -165,7 +255,7 @@ export function useAssignedReports(
           pageToken: params?.pageToken,
         })
       : null,
-    { revalidateOnFocus: true },
+    { revalidateOnFocus: false },
   );
 }
 
@@ -181,7 +271,7 @@ export function useClosedReports(
           pageToken: params?.pageToken,
         })
       : null,
-    { revalidateOnFocus: true },
+    { revalidateOnFocus: false },
   );
 }
 
@@ -197,7 +287,7 @@ export function useClosedReportsInfinite(limit = 50, enabled = true) {
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false, revalidateOnFocus: true },
+    { revalidateFirstPage: false, revalidateOnFocus: false },
   );
 }
 
@@ -212,7 +302,7 @@ export function useAssignedReportsInfinite(limit = 100) {
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false, revalidateOnFocus: true },
+    { revalidateFirstPage: false, revalidateOnFocus: false },
   );
 }
 

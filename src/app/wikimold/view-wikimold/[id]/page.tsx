@@ -156,7 +156,7 @@ export default function ViewWikiMold() {
   const { scrollY } = useScroll();
   const yBanner = useTransform(scrollY, [0, 500], [0, 200]);
 
-  const [activeTreatment, setActiveTreatment] = useState(0);
+  const [activeTreatment, setActiveTreatment] = useState(-1);
   const [expandedPathogenItems, setExpandedPathogenItems] = useState<Record<number, boolean>>({});
   const [isPreventionExpanded, setIsPreventionExpanded] = useState(false);
 
@@ -235,11 +235,60 @@ export default function ViewWikiMold() {
     return '';
   };
 
+  const isMissingCropLabel = (value: string): boolean => {
+    const normalized = value
+      .trim()
+      .toLowerCase()
+      .replace(/[._-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/[.:]+$/g, '');
+
+    return [
+      '',
+      'unknown',
+      'unknown crop',
+      'n/a',
+      'na',
+      'none',
+      'null',
+      'undefined',
+      'not available',
+      'not specified',
+      'pending',
+      'tbd',
+    ].includes(normalized);
+  };
+
+  const asCanonicalCrop = (...values: unknown[]): string => {
+    for (const value of values) {
+      const text = asText(value);
+      if (!text) continue;
+      if (isMissingCropLabel(text)) continue;
+      return text;
+    }
+
+    return '';
+  };
+
   const asRecord = (value: unknown): Record<string, unknown> => {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       return value as Record<string, unknown>;
     }
     return {};
+  };
+
+  const getRecordText = (
+    record: Record<string, unknown> | null | undefined,
+    fields: string[],
+  ): string => {
+    if (!record) return '';
+
+    for (const field of fields) {
+      const text = asText(record[field]);
+      if (text) return text;
+    }
+
+    return '';
   };
 
   const parseDateValue = (value: unknown): number => {
@@ -273,7 +322,7 @@ export default function ViewWikiMold() {
       });
 
     if (matching.length === 0) return null;
-    return asRecord(matching[0].characteristics);
+    return asRecord(matching[0]);
   };
 
   const getCaseRouteId = (entry: MoldCaseSummary): string => {
@@ -823,30 +872,96 @@ const ProseContent = ({
                   <div className="w-12 h-[2px] bg-[var(--accent-color)] animate-pulse" />
                   <p className="font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-[0.5em] text-[var(--primary-color)]/40">Synchronizing Archives</p>
                 </div>
+              ) : linkedCases.length === 0 ? (
+                <div className="py-16 rounded-2xl border border-dashed border-[var(--primary-color)]/20 px-6">
+                  <p className="font-[family-name:var(--font-montserrat)] text-[11px] font-black uppercase tracking-[0.25em] text-[var(--primary-color)]/40">
+                    No Linked Investigations Yet
+                  </p>
+                  <p className="mt-3 font-[family-name:var(--font-bricolage-grotesque)] text-base text-[var(--moldify-black)]/70">
+                    Field evidence will appear here once reports are linked to this WikiMold entry.
+                  </p>
+                </div>
               ) : (
                 linkedCases.map((entry, idx) => {
                   const caseKey = getCaseKey(entry, idx);
                   const isExpanded = !!expandedCases[caseKey];
                   const caseRouteId = getCaseRouteId(entry);
-                  const caseHref = caseRouteId ? `/investigation/view-case?id=${encodeURIComponent(caseRouteId)}` : '';
+                  const caseHref = caseRouteId
+                    ? `/investigation/view-case?id=${encodeURIComponent(caseRouteId)}&entityType=mold_report`
+                    : '';
                   const caseThumb = getCaseThumbnail(entry);
                   
                   const initial = asRecord(entry.cultivation_details);
+                  const evidenceSummary = asRecord(entry.evidence_summary);
+                  const initialSummary = asRecord(evidenceSummary.initial);
+                  const inVivoSummary = asRecord(evidenceSummary.in_vivo);
+                  const inVitroSummary = asRecord(evidenceSummary.in_vitro);
                   const inVivo = getLatestLogByType(entry, 'vivo') ?? {};
                   const inVitro = getLatestLogByType(entry, 'vitro') ?? {};
+                  const inVivoCharacteristics = asRecord(inVivo.characteristics);
+                  const inVitroCharacteristics = asRecord(inVitro.characteristics);
+                  const inVivoSummaryCharacteristics = asRecord(inVivoSummary.characteristics);
+                  const inVitroSummaryCharacteristics = asRecord(inVitroSummary.characteristics);
+                  const inVivoAdditional = asText(
+                    inVivo.additional_info,
+                    inVivo.characteristics && asRecord(inVivo.characteristics).additional_info,
+                  );
+                  const inVitroAdditional = asText(
+                    inVitro.additional_info,
+                    inVitro.characteristics && asRecord(inVitro.characteristics).additional_info,
+                  );
                   
                   const cropRecord = entry as Record<string, unknown>;
+                  const reportRecord = asRecord(cropRecord.report);
+                  const moldReportRecord = asRecord(cropRecord.mold_report);
                   const cropName =
-                    asText(cropRecord.common_name) ||
-                    asText(cropRecord.crop_name) ||
-                    asText(entry.name) ||
-                    asText(cropRecord.crop) ||
-                    `Log#${(idx + 1).toString().padStart(2, '0')}`;
+                    asCanonicalCrop(
+                      entry.crop_label,
+                      cropRecord.common_name,
+                      cropRecord.crop_name,
+                      cropRecord.host_plant_affected,
+                      cropRecord.host,
+                      cropRecord.report_host,
+                      reportRecord.host,
+                      reportRecord.host_plant_affected,
+                      moldReportRecord.host,
+                      moldReportRecord.host_plant_affected,
+                      cropRecord.crop,
+                    ) ||
+                    'Crop Not Specified';
                   
                   const sections = [
-                    { label: "[01] Initial Observation", content: [asText(initial['initial_microscopic']), asText(initial['initial_macroscopic'])].filter(Boolean).join(' // ') || 'Observation metadata incomplete.' },
-                    { label: "[02] In Vivo Analysis", content: asText(inVivo['symptoms'] ?? inVivo['characteristics']) || 'No active bio-logs.' },
-                    { label: "[03] In Vitro Results", content: asText(inVitro['characteristics'] ?? inVitro['colony_color']) || 'Laboratory culture pending.' }
+                    {
+                      label: "[01] Initial Observation",
+                      content: [
+                        getRecordText(initialSummary, ['microscopic', 'macroscopic']),
+                        getRecordText(initialSummary, ['symptoms', 'characteristics']),
+                        getRecordText(initial, [
+                          'initial_microscopic',
+                          'initial_macroscopic',
+                          'initial_symptoms',
+                          'initial_characteristics',
+                          'initial_macroscopic_symptoms',
+                          'initial_macroscopic_characteristics',
+                        ]),
+                      ].filter(Boolean).join(' // ') || 'Observation metadata incomplete.',
+                    },
+                    {
+                      label: "[02] In Vivo Analysis",
+                      content: [
+                        getRecordText(inVivoCharacteristics, ['symptoms', 'characteristics', 'lesion_color', 'lesion_size']),
+                        getRecordText(inVivoSummaryCharacteristics, ['symptoms', 'characteristics', 'lesion_color', 'lesion_size']),
+                        inVivoAdditional,
+                      ].filter(Boolean).join(' // ') || 'No active bio-logs.',
+                    },
+                    {
+                      label: "[03] In Vitro Results",
+                      content: [
+                        getRecordText(inVitroCharacteristics, ['characteristics', 'colony_color', 'colony_diameter']),
+                        getRecordText(inVitroSummaryCharacteristics, ['characteristics', 'colony_color', 'colony_diameter']),
+                        inVitroAdditional,
+                      ].filter(Boolean).join(' // ') || 'Laboratory culture pending.',
+                    },
                   ];
 
                   return (

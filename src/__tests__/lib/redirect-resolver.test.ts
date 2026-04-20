@@ -1,12 +1,14 @@
+/// <reference types="jest" />
+
 import { resolveAuditLogRedirect, resolveNotificationRedirect } from '@/lib/redirect-resolver';
 
 describe('resolveNotificationRedirect', () => {
   it('routes mold_report to investigation detail', () => {
-    expect(resolveNotificationRedirect('mold_report', 'rep-123')).toBe('/investigation/view-case?id=rep-123');
+    expect(resolveNotificationRedirect('mold_report', 'rep-123')).toBe('/investigation/view-case?id=rep-123&entityType=mold_report');
   });
 
   it('routes mold_case to investigation detail', () => {
-    expect(resolveNotificationRedirect('mold_case', 'case-123')).toBe('/investigation/view-case?id=case-123');
+    expect(resolveNotificationRedirect('mold_case', 'case-123')).toBe('/investigation/view-case?id=case-123&entityType=mold_case');
   });
 
   it('routes user references to user view', () => {
@@ -22,11 +24,11 @@ describe('resolveNotificationRedirect', () => {
 
 describe('resolveAuditLogRedirect', () => {
   it('routes mold report actions to investigation detail', () => {
-    expect(resolveAuditLogRedirect('assign_mold_report', 'rep-123')).toBe('/investigation/view-case?id=rep-123');
+    expect(resolveAuditLogRedirect('assign_mold_report', 'rep-123')).toBe('/investigation/view-case?id=rep-123&entityType=mold_report');
   });
 
   it('routes mold case actions to investigation detail', () => {
-    expect(resolveAuditLogRedirect('update_mold_case', 'case-123')).toBe('/investigation/view-case?id=case-123');
+    expect(resolveAuditLogRedirect('update_mold_case', 'case-123')).toBe('/investigation/view-case?id=case-123&entityType=mold_case');
   });
 
   it('routes user actions to user view', () => {

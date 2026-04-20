@@ -88,6 +88,7 @@ export const endpoints = {
     countMonthly: `${API_PREFIX}/mold-report/counts/monthly`,
     countPriorities: `${API_PREFIX}/mold-report/counts/priorities`,
     countStatuses: `${API_PREFIX}/mold-report/counts/statuses`,
+    countTotals: `${API_PREFIX}/mold-report/counts/totals`,
     publicResolvedCount: `${API_PREFIX}/mold-report/public/resolved-count`,
   },
 
@@ -121,7 +122,6 @@ export const endpoints = {
     priorityBreakdown: `${API_PREFIX}/dashboard/priority-breakdown`,
     timeline: `${API_PREFIX}/dashboard/timeline`,
     statusOverview: `${API_PREFIX}/dashboard/status-overview`,
-    countsTotal: `${API_PREFIX}/dashboard/counts/totals`,
   },
 
   // Mold Information

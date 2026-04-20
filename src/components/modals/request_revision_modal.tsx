@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const MoldifyLogo = "/assets/moldify-logo-v3.svg";
 
@@ -21,6 +22,8 @@ export default function RequestRevisionModal({
   reasonDescription,
   isSubmitting = false,
 }: RequestRevisionModalProps) {
+  useBodyScrollLock(isOpen);
+
   const [details, setDetails] = useState("");
 
   if (!isOpen) return null;

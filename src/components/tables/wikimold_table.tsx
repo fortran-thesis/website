@@ -11,6 +11,7 @@ export interface WikiMold {
   title: string;
   coverImage: string;
   datePublished: string;
+  datePublishedTs?: number;
 }
 
 interface WikiMoldTableProps {

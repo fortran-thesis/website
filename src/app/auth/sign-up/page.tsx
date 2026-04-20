@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faEyeSlash } from '@fortawesome/free-solid-svg-icons';
 import { useSignUp1Utils } from './signUp1Utils';
 
-const LogInImage = '/assets/LogIn_Image.svg';
+const LogInImage = '/assets/logIn_header.svg';
 
 export default function SignUp() {
 

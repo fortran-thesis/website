@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPalette,
@@ -9,6 +10,7 @@ import {
   faFlask,
 } from "@fortawesome/free-solid-svg-icons";
 import ObservationImageViewer from "../../../components/tiles/initial_observation_components/observation_image_viewer";
+import ImageViewerModal from "../../../components/tiles/initial_observation_components/image_viewer_modal";
 import ObservationDataTile from "../../../components/tiles/initial_observation_components/observation_data_tile";
 import ObservationEmptyStateCard from "../../../components/tiles/initial_observation_components/observation_empty_state_card";
 
@@ -90,6 +92,9 @@ export default function InitialObservationTab({
   emptyMicroscopicMessage = "No microscopic analysis recorded",
   emptyMacroscopicMessage = "No macroscopic analysis recorded",
 }: InitialObservationTabProps) {
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+
   /**
    * Check if microscopic data is available
    */
@@ -100,121 +105,145 @@ export default function InitialObservationTab({
    */
   const hasMacroscopicImage = (macroscopicImagePath ?? "").trim().length > 0;
 
+  /**
+   * Collect all available images for gallery viewing
+   */
+  const allDiagnosticImages = [
+    ...(hasMicroscopicImage ? [microscopicImagePath] : []),
+    ...(hasMacroscopicImage ? [macroscopicImagePath] : []),
+  ].filter((path) => (path ?? "").trim().length > 0);
+
+  const openGallery = (imageIndex: number) => {
+    setGalleryStartIndex(imageIndex);
+    setGalleryOpen(true);
+  };
+
   return (
-    <div className="overflow-y-auto space-y-8">
-      {/* ─────────────────────────────────────────────────────────────── */}
-      {/* PAGE HEADER */}
-      {/* ─────────────────────────────────────────────────────────────── */}
-      <div>
-        <h2 className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
-          Initial Diagnosis
-        </h2>
-        <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Baseline microscopic and macroscopic data captured during setup
-        </p>
-      </div>
+    <>
+      {/* Gallery Viewer Modal for viewing all diagnostic images */}
+      <ImageViewerModal
+        isOpen={galleryOpen}
+        imagePaths={allDiagnosticImages}
+        initialIndex={galleryStartIndex}
+        onClose={() => setGalleryOpen(false)}
+        title="Initial Diagnosis Gallery"
+      />
 
-      {/* ─────────────────────────────────────────────────────────────── */}
-      {/* SECTION 1: INITIAL MICROSCOPIC */}
-      {/* Displays microscopic image with identified mold overlay */}
-      {/* ─────────────────────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold text-base text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Initial Microscopic
-        </h3>
+      <div className="overflow-y-auto space-y-8">
+        {/* ─────────────────────────────────────────────────────────────── */}
+        {/* PAGE HEADER */}
+        {/* ─────────────────────────────────────────────────────────────── */}
+        <div>
+          <h2 className="text-xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">
+            Initial Diagnosis
+          </h2>
+          <p className="text-sm text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
+            Baseline microscopic and macroscopic data captured during setup
+          </p>
+        </div>
 
-        {hasMicroscopicImage ? (
-          <div className="relative w-full aspect-video rounded-[2.5rem] overflow-hidden bg-[var(--primary-color)]/[0.03] border-2 border-[var(--primary-color)]/10">
-            {/* Image container */}
-            <ObservationImageViewer
-              imagePath={microscopicImagePath}
-              objectFit="cover"
-            />
+        {/* ─────────────────────────────────────────────────────────────── */}
+        {/* SECTION 1: INITIAL MICROSCOPIC */}
+        {/* Displays microscopic image with identified mold overlay */}
+        {/* ─────────────────────────────────────────────────────────────── */}
+        <section className="space-y-3">
+          <h3 className="font-semibold text-base text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
+            Initial Microscopic
+          </h3>
 
-            {/* Identified mold overlay at bottom */}
-            {(identifiedMold || confidence) && (
-              <div className="absolute bottom-0 left-0 right-0 backdrop-blur-sm bg-black/40 px-5 py-4 flex items-center justify-between gap-3">
-                <p className="text-xs sm:text-sm font-semibold text-white flex-1 pr-2 font-[family-name:var(--font-bricolage-grotesque)]">
-                  {(identifiedMold ?? "").trim().length > 0
-                    ? identifiedMold
-                    : "Pending Analysis"}
-                </p>
-                {(confidence ?? "").trim().length > 0 && (
-                  <p className="text-xs sm:text-sm font-black text-[var(--accent-color)] font-[family-name:var(--font-montserrat)] tracking-tight">
-                    {confidence}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <ObservationEmptyStateCard
-            message={emptyMicroscopicMessage}
-            height={160}
-          />
-        )}
-      </section>
-
-      {/* ─────────────────────────────────────────────────────────────── */}
-      {/* SECTION 2: INITIAL MACROSCOPIC */}
-      {/* Image with 4 data tiles in 2x2 grid */}
-      {/* ─────────────────────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="font-semibold text-base text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
-          Initial Macroscopic
-        </h3>
-
-        <div className="rounded-[2.5rem] overflow-hidden border-2 border-[var(--primary-color)]/10 bg-[var(--background-color)]">
-          {/* Macroscopic image */}
-          {hasMacroscopicImage ? (
-            <div className="relative w-full aspect-video overflow-hidden">
+          {hasMicroscopicImage ? (
+            <div className="relative w-full aspect-video rounded-[2.5rem] overflow-hidden bg-[var(--primary-color)]/[0.03] border-2 border-[var(--primary-color)]/10">
+              {/* Image container */}
               <ObservationImageViewer
-                imagePath={macroscopicImagePath}
+                imagePath={microscopicImagePath}
                 objectFit="cover"
               />
+
+              {/* Identified mold overlay at bottom */}
+              {(identifiedMold || confidence) && (
+                <div className="absolute bottom-0 left-0 right-0 backdrop-blur-sm bg-black/40 px-5 py-4 flex items-center justify-between gap-3">
+                  <p className="text-xs sm:text-sm font-semibold text-white flex-1 pr-2 font-[family-name:var(--font-bricolage-grotesque)]">
+                    {(identifiedMold ?? "").trim().length > 0
+                      ? identifiedMold
+                      : "Pending Analysis"}
+                  </p>
+                  {(confidence ?? "").trim().length > 0 && (
+                    <p className="text-xs sm:text-sm font-black text-[var(--accent-color)] font-[family-name:var(--font-montserrat)] tracking-tight">
+                      {confidence}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="bg-[var(--primary-color)]/[0.03] border-b-2 border-[var(--primary-color)]/10 h-48 flex items-center justify-center">
-              <ObservationEmptyStateCard
-                message={emptyMacroscopicMessage}
-                height={120}
-              />
-            </div>
+            <ObservationEmptyStateCard
+              message={emptyMicroscopicMessage}
+              height={160}
+            />
           )}
+        </section>
 
-          {/* Data tiles grid */}
-          <div className="p-5 grid grid-cols-2 gap-3">
-            <ObservationDataTile
-              label="Color"
-              value={macroColor}
-              icon={faPalette}
-            />
-            <ObservationDataTile
-              label="Texture"
-              value={macroTexture}
-              icon={faCubes}
-            />
-            <ObservationDataTile
-              label="Symptoms"
-              value={macroSymptoms}
-              icon={faHeartPulse}
-            />
-            <ObservationDataTile
-              label="Signs"
-              value={macroSigns}
-              icon={faStethoscope}
-            />
-            <div className="col-span-2">
+        {/* ─────────────────────────────────────────────────────────────── */}
+        {/* SECTION 2: INITIAL MACROSCOPIC */}
+        {/* Image with 4 data tiles in 2x2 grid */}
+        {/* ─────────────────────────────────────────────────────────────── */}
+        <section className="space-y-3">
+          <h3 className="font-semibold text-base text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">
+            Initial Macroscopic
+          </h3>
+
+          <div className="rounded-[2.5rem] overflow-hidden border-2 border-[var(--primary-color)]/10 bg-[var(--background-color)]">
+            {/* Macroscopic image */}
+            {hasMacroscopicImage ? (
+              <div className="relative w-full aspect-video overflow-hidden">
+                <ObservationImageViewer
+                  imagePath={macroscopicImagePath}
+                  objectFit="cover"
+                />
+              </div>
+            ) : (
+              <div className="bg-[var(--primary-color)]/[0.03] border-b-2 border-[var(--primary-color)]/10 h-48 flex items-center justify-center">
+                <ObservationEmptyStateCard
+                  message={emptyMacroscopicMessage}
+                  height={120}
+                />
+              </div>
+            )}
+
+            {/* Data tiles grid */}
+            <div className="p-5 grid grid-cols-2 gap-3">
               <ObservationDataTile
-                label="Characteristics"
-                value={macroCharacteristics}
-                icon={faFlask}
+                label="Color"
+                value={macroColor}
+                icon={faPalette}
               />
+              <ObservationDataTile
+                label="Texture"
+                value={macroTexture}
+                icon={faCubes}
+              />
+              <ObservationDataTile
+                label="Symptoms"
+                value={macroSymptoms}
+                icon={faHeartPulse}
+              />
+              <ObservationDataTile
+                label="Signs"
+                value={macroSigns}
+                icon={faStethoscope}
+              />
+              <div className="col-span-2">
+                <ObservationDataTile
+                  label="Characteristics"
+                  value={macroCharacteristics}
+                  icon={faFlask}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
+        </section>
+      </div>
+    </>
   );
 }
 

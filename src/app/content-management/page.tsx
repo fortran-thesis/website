@@ -50,13 +50,34 @@ import PageLoading from '@/components/loading/page_loading';
     const moldData: MoldGenus[] = useMemo(() => {
       const snapshot = moldRes?.data?.snapshot;
       if (!Array.isArray(snapshot)) return [];
-      return snapshot.map((m: any) => ({
-        id: m.id || '',
-        genusName: m.name || 'Unknown',
-        status: typeof m.status === 'string' ? m.status : 'draft',
-        reviewedBy: 'N/A',
-        dateReviewed: 'N/A',
-      }));
+      const parseDateToMs = (value: unknown): number => {
+        if (!value) return 0;
+        if (typeof value === 'object' && value !== null) {
+          const v = value as any;
+          const secs = v._seconds ?? v.seconds;
+          if (typeof secs === 'number') return secs * 1000;
+        }
+        const parsed = new Date(String(value)).getTime();
+        return Number.isNaN(parsed) ? 0 : parsed;
+      };
+
+      return snapshot.map((m: any) => {
+        const reviewedAtMs = parseDateToMs(
+          m.reviewed_at ?? m.updated_at ?? m.created_at ?? m.metadata?.updated_at ?? m.metadata?.created_at,
+        );
+
+        return {
+          id: m.id || '',
+          genusName: m.name || 'Unknown',
+          status: typeof m.status === 'string' ? m.status : 'draft',
+          reviewedBy: m.reviewed_by || m.reviewer || m.metadata?.reviewed_by || 'N/A',
+          dateReviewed:
+            reviewedAtMs > 0
+              ? new Date(reviewedAtMs).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+              : 'N/A',
+          dateReviewedTs: reviewedAtMs,
+        };
+      });
     }, [moldRes]);
 
     // SWR: fetch moldipedia articles
@@ -66,6 +87,7 @@ import PageLoading from '@/components/loading/page_loading';
       if (!Array.isArray(snapshot)) return [];
       return snapshot.map((item: any) => {
         let datePublished = 'N/A';
+        let datePublishedTs = 0;
         const metadata = item.metadata || {};
         const dateSource = metadata.created_at || metadata.timestamp || metadata.date || item.created_at;
         if (dateSource) {
@@ -77,6 +99,7 @@ import PageLoading from '@/components/loading/page_loading';
               dateObj = new Date(dateSource);
             }
             if (!isNaN(dateObj.getTime())) {
+              datePublishedTs = dateObj.getTime();
               datePublished = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             }
           } catch {
@@ -88,6 +111,7 @@ import PageLoading from '@/components/loading/page_loading';
           title: item.title || 'Untitled',
           coverImage: item.cover_photo || '',
           datePublished,
+          datePublishedTs,
         };
       });
     }, [wikiRes]);

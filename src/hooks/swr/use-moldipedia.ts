@@ -121,6 +121,10 @@ export interface MoldCaseSummary {
   case_name?: string;
   mold_report_id?: string;
   user_id?: string;
+  host?: string;
+  report_host?: string;
+  host_plant_affected?: string;
+  crop_label?: string;
   crop_name?: string;
   common_name?: string;
   crop?: string;

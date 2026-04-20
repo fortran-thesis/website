@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo } from "@fortawesome/free-solid-svg-icons";
+import ImageViewerModal from "@/components/tiles/initial_observation_components/image_viewer_modal";
 
 interface CaseDetailsTabProps {
   entries: {
@@ -98,70 +99,37 @@ function CaseTimelineTile({
               <button
                 key={idx}
                 onClick={() => {
-                  setModalOpen(true);
                   setCurrentIndex(idx);
+                  setModalOpen(true);
                 }}
-                className="focus:outline-none"
+                className="focus:outline-none hover:opacity-90 transition-opacity"
               >
                 <Image
                   src={url}
-                  alt={`Image ${idx + 1}`}
+                  alt={`Case image ${idx + 1}`}
                   width={150}
                   height={150}
-                  className="rounded-md object-cover border border-gray-200 hover:opacity-90 cursor-pointer"
+                  className="rounded-xl object-cover border border-[var(--primary-color)]/10 shadow-sm hover:shadow-md transition-shadow"
                 />
               </button>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-6 text-gray-400">
+          <div className="flex flex-col items-center justify-center py-6 text-[var(--moldify-grey)]">
             <FontAwesomeIcon icon={faCircleInfo} size="lg" />
-            <p className="mt-2 text-sm">No images were provided.</p>
+            <p className="mt-2 text-sm font-[family-name:var(--font-bricolage-grotesque)]">No images were provided.</p>
           </div>
         )}
       </div>
 
       {/* Image Viewer Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center">
-          <button
-            onClick={() => setModalOpen(false)}
-            className="absolute top-6 right-6 text-white text-3xl cursor-pointer"
-          >
-            &times;
-          </button>
-
-          <div className="flex items-center justify-center space-x-6">
-            <button
-              disabled={currentIndex === 0}
-              onClick={() => setCurrentIndex((i) => i - 1)}
-              className="text-white text-2xl disabled:opacity-30 cursor-pointer"
-            >
-              &#10094;
-            </button>
-
-            <Image
-              src={imageUrls[currentIndex]}
-              alt="Preview"
-              width={600}
-              height={400}
-              className="object-contain max-h-[80vh] rounded-lg"
-            />
-
-            <button
-              disabled={currentIndex === imageUrls.length - 1}
-              onClick={() => setCurrentIndex((i) => i + 1)}
-              className="text-white text-2xl disabled:opacity-30 cursor-pointer"
-            >
-              &#10095;
-            </button>
-          </div>
-
-          <p className="text-white mt-4 text-sm">
-            {currentIndex + 1} / {imageUrls.length}
-          </p>
-        </div>
-      )}
+      <ImageViewerModal
+        isOpen={isModalOpen}
+        imagePaths={imageUrls}
+        initialIndex={currentIndex}
+        onClose={() => setModalOpen(false)}
+        title="Case Images"
+      />
     </div>
   );
 }

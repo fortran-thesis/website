@@ -2,6 +2,7 @@
 
 import { FC } from "react";
 import Image from 'next/image';
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 {/* IMAGES */}
 const MoldifyLogov2 = '/assets/moldify-logo-v3.svg';
@@ -29,6 +30,8 @@ const ConfirmModal: FC<ConfirmModalProps> = ({
   onCancel,
   onConfirm,
 }) => {
+  useBodyScrollLock(isOpen);
+
   if (!isOpen) return null;
 
   return (

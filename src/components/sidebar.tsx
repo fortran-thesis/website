@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHouseChimney, faTriangleExclamation, faGear, faRightFromBracket, faBars, faUsers, faBookOpen, faSeedling, faChevronLeft, faChevronRight, faXmark } from '@fortawesome/free-solid-svg-icons';
 import { usePathname, useRouter } from 'next/navigation';
@@ -15,6 +16,12 @@ interface SidebarProps {
     userRole?: string;
 }
 
+interface TooltipState {
+    text: string;
+    x: number;
+    y: number;
+}
+
 export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const [navOpen, setNavOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
@@ -23,6 +30,7 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const [isCollapsed, setIsCollapsed] = useState(true); 
     const [isDesktop, setIsDesktop] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [tooltip, setTooltip] = useState<TooltipState | null>(null);
     const logout = useLogout();
 
     const normalizeRole = (role: string): string => {
@@ -76,6 +84,30 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
         window.localStorage.setItem("sidebarCollapsed", String(isCollapsed));
     }, [isCollapsed, isDesktop, isMounted]);
 
+    useEffect(() => {
+        if (!tooltip) return;
+
+        const hideTooltip = () => setTooltip(null);
+        window.addEventListener("scroll", hideTooltip, true);
+        window.addEventListener("resize", hideTooltip);
+
+        return () => {
+            window.removeEventListener("scroll", hideTooltip, true);
+            window.removeEventListener("resize", hideTooltip);
+        };
+    }, [tooltip]);
+
+    const showTooltip = (text: string, target: HTMLElement) => {
+        if (!isCollapsedEffective) return;
+
+        const rect = target.getBoundingClientRect();
+        setTooltip({
+            text,
+            x: rect.right + 12,
+            y: rect.top + rect.height / 2,
+        });
+    };
+
     const isCollapsedEffective = isMounted && isCollapsed && isDesktop;
 
     return (
@@ -116,6 +148,10 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
                         opacity-0 group-hover/sidebar:opacity-100 hover:scale-110 cursor-pointer
                         ${isCollapsedEffective ? "left-[72px]" : "left-[264px]"}
                     `}
+                    title={isCollapsedEffective ? "Expand sidebar" : "Collapse sidebar"}
+                    aria-label={isCollapsedEffective ? "Expand sidebar" : "Collapse sidebar"}
+                    onMouseEnter={(event) => showTooltip(isCollapsedEffective ? "Expand sidebar" : "Collapse sidebar", event.currentTarget)}
+                    onMouseLeave={() => setTooltip(null)}
                 >
                     <FontAwesomeIcon icon={isCollapsedEffective ? faChevronRight : faChevronLeft} size="sm" />
                 </button>
@@ -157,42 +193,48 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
                         {/* Navigation Links */}
                         <div className="flex-1 flex flex-col justify-between overflow-y-auto no-scrollbar overflow-x-hidden">
                             <div className="px-3 space-y-2">
-                                <SidebarLink icon={faHouseChimney} text="Dashboard" href="/dashboard" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />
-                                {isAdministrator && <SidebarLink icon={faUsers} text="User Management" href="/user" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />}
-                                <SidebarLink icon={faSeedling} text="Case Management" href="/investigation" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />
-                                {isMycologist && <SidebarLink icon={faBookOpen} text="Content Management" href="/content-management" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />}
-                                {isAdministrator && <SidebarLink icon={faTriangleExclamation} text="Report Management" href="/reports" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />}
+                                <SidebarLink icon={faHouseChimney} text="Dashboard" href="/dashboard" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />
+                                {isAdministrator && <SidebarLink icon={faUsers} text="User Management" href="/user" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />}
+                                <SidebarLink icon={faSeedling} text="Case Management" href="/investigation" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />
+                                {isMycologist && <SidebarLink icon={faBookOpen} text="Content Management" href="/content-management" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />}
+                                {isAdministrator && <SidebarLink icon={faTriangleExclamation} text="Report Management" href="/reports" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />}
                             </div>
 
                             <div className="px-3 pb-8 space-y-2">
                                 <div className="h-px bg-white/10 mx-3 my-4" />
-                                <SidebarLink icon={faGear} text="Settings" href="/settings" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} />
+                                <SidebarLink icon={faGear} text="Settings" href="/settings" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />
                                 
                                 <button
                                     onClick={handleLogout}
                                     disabled={isLoggingOut}
-                                    title={isCollapsedEffective ? "Log Out" : undefined}
-                                    aria-label={isCollapsedEffective ? "Log Out" : undefined}
+                                    title="Log Out"
+                                    aria-label="Log Out"
                                     className={`w-full flex items-center p-3 rounded-xl hover:bg-red-500/10 transition-all group relative
                                     ${isCollapsedEffective ? "justify-center" : "gap-5"}
                                     ${isLoggingOut ? "opacity-50" : ""}`}
+                                    onMouseEnter={(event) => showTooltip("Log Out", event.currentTarget)}
+                                    onMouseLeave={() => setTooltip(null)}
                                 >
                                     <div className="w-6 flex justify-center flex-shrink-0">
                                         <FontAwesomeIcon icon={faRightFromBracket} className={isLoggingOut ? "animate-pulse" : ""} />
                                     </div>
                                     {!isCollapsedEffective && <span className="text-sm font-medium">Log Out</span>}
-                                    
-                                    {isCollapsedEffective && (
-                                        <span className="absolute left-full ml-4 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-[100] pointer-events-none shadow-xl transition-all duration-150 delay-300">
-                                            Log Out
-                                        </span>
-                                    )}
                                 </button>
                             </div>
                         </div>
                     </nav>
                 </aside>
             </div>
+
+            {tooltip && typeof document !== "undefined" && createPortal(
+                <div
+                    className="fixed z-[9999] px-2 py-1 bg-gray-900 text-white text-[10px] rounded whitespace-nowrap pointer-events-none shadow-xl"
+                    style={{ left: tooltip.x, top: tooltip.y, transform: "translateY(-50%)" }}
+                >
+                    {tooltip.text}
+                </div>,
+                document.body
+            )}
 
             <ConfirmModal
                 isOpen={showLogoutConfirm}
@@ -209,7 +251,7 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     );
 }
 
-function SidebarLink({ icon, text, href, collapsed, onNavigate }: { icon: any; text: string; href: string; collapsed: boolean; onNavigate?: () => void }) {
+function SidebarLink({ icon, text, href, collapsed, onNavigate, onTooltipShow, onTooltipHide }: { icon: any; text: string; href: string; collapsed: boolean; onNavigate?: () => void; onTooltipShow?: (text: string, target: HTMLElement) => void; onTooltipHide?: () => void }) {
     const pathname = usePathname();
     const router = useRouter();
     const active = pathname === href || pathname.startsWith(href + "/");
@@ -217,8 +259,8 @@ function SidebarLink({ icon, text, href, collapsed, onNavigate }: { icon: any; t
     return (
         <Link
             href={href}
-            title={collapsed ? text : undefined}
-            aria-label={collapsed ? text : undefined}
+            title={text}
+            aria-label={text}
             onClick={(e) => {
                 e.preventDefault();
                 if (onNavigate) onNavigate();
@@ -228,6 +270,11 @@ function SidebarLink({ icon, text, href, collapsed, onNavigate }: { icon: any; t
                 ${active ? "bg-white/15 text-white" : "text-white/60 hover:bg-white/5 hover:text-white"}
                 ${collapsed ? "justify-center" : "gap-5"}
             `}
+            onMouseEnter={(event) => {
+                if (!collapsed || !onTooltipShow) return;
+                onTooltipShow(text, event.currentTarget);
+            }}
+            onMouseLeave={() => onTooltipHide?.()}
         >
             <div className="w-6 flex justify-center flex-shrink-0">
                 <FontAwesomeIcon icon={icon} style={{ width: "1.2rem", height: "1.2rem" }} />
@@ -235,12 +282,6 @@ function SidebarLink({ icon, text, href, collapsed, onNavigate }: { icon: any; t
             
             {!collapsed && (
                 <span className="text-sm font-medium whitespace-nowrap overflow-hidden">
-                    {text}
-                </span>
-            )}
-
-            {collapsed && (
-                <span className="absolute left-full ml-4 px-2 py-1 bg-gray-900 text-white text-[10px] rounded opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 whitespace-nowrap z-[100] pointer-events-none shadow-xl transition-all duration-150 delay-300">
                     {text}
                 </span>
             )}

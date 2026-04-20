@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { useState } from "react";
 import Image from "next/image";
+import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 const MoldifyLogov2 = "/assets/moldify-logo-v3.svg";
 
@@ -22,6 +23,8 @@ export interface MycoFormData {
 }
 
 export default function AddMycoModal({ isOpen, onClose, onSubmit }: AddMycoModalProps) {
+  useBodyScrollLock(isOpen);
+
   const [formData, setFormData] = useState<MycoFormData>({
     firstName: "",
     lastName: "",
