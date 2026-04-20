@@ -157,6 +157,45 @@ export interface PriorityCounts {
   low: number;
 }
 
+export interface MoldReportPrintPayload {
+  report: {
+    report_id: string;
+    report_date: string;
+    case_name: string;
+    host_plant_affected: string;
+    case_status: string;
+    confidence_level: string;
+    location: string;
+    date_observed: string;
+  };
+  identities: {
+    reporter_name: string;
+    mycologist_name: string;
+  };
+  sections: {
+    fungus_name: string;
+    overview: string;
+    description: string;
+    health_risks: string;
+    affected_hosts: string[];
+    symptoms_and_signs: string;
+    disease_cycle: string;
+    impact: string;
+    prevention_summary: string;
+    physical_control: string;
+    cultural_control: string;
+    biological_control: string;
+    mechanical_control: string;
+    chemical_control: string;
+  };
+  source: {
+    mold_catalog_used: boolean;
+    wikimold_used: boolean;
+    mold_catalog_id?: string;
+    wikimold_id?: string;
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /*  Hooks                                                              */
 /* ------------------------------------------------------------------ */

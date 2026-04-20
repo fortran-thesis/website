@@ -806,6 +806,8 @@ function ViewCaseContent() {
           </div>
 
           <button 
+            type="button"
+            onClick={handleExportPdf}
             className={`cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all font-[family-name:var(--font-bricolage-grotesque)] ${
               canExportPdf
                 ? 'bg-[var(--background-color)] text-[var(--primary-color)] hover:scale-105 active:scale-95 shadow-lg'

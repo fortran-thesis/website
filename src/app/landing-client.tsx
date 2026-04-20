@@ -594,7 +594,10 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
                 className="absolute inset-0 -z-10 rounded-full bg-[var(--accent-color)] blur-[40px] group-hover:opacity-60 group-hover:scale-[2.2] group-hover:blur-[60px] transition-all duration-1000 ease-out pointer-events-none" 
               />
               
-              <motion.button
+              <motion.a
+                href="https://drive.google.com/file/d/1mzdstPYdrMBYe7KuMZbob-yLBjudTfgn/view?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.98 }}
                 className="relative flex items-center gap-4 bg-[var(--primary-color)] text-[var(--background-color)] px-10 py-5 rounded-2xl overflow-hidden shadow-2xl transition-all duration-500 cursor-pointer"
@@ -614,7 +617,7 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
                     <p className="text-xl font-black uppercase tracking-tight">download app</p>
                   </div>
                 </div>
-              </motion.button>
+              </motion.a>
             </div>
           </div>
 
