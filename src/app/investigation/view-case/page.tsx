@@ -813,7 +813,6 @@ function ViewCaseContent() {
                 ? 'bg-[var(--background-color)] text-[var(--primary-color)] hover:scale-105 active:scale-95 shadow-lg'
                 : 'bg-[var(--background-color)]/10 text-[var(--background-color)]/40 cursor-not-allowed border border-[var(--background-color)]/20'
             }`}
-            onClick={handleExportPdf}
             disabled={!canExportPdf}
             title={canExportPdf ? 'Open printable preview' : 'PDF export is only available for resolved or closed cases'}
           >
