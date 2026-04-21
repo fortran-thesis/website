@@ -3,14 +3,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   async headers() {
+    const isDev = process.env.NODE_ENV === 'development';
     const csp = [
       "default-src 'self'",
       "base-uri 'self'",
       "frame-ancestors 'none'",
+      "frame-src 'self' https://www.google.com https://www.youtube.com https://www.youtube-nocookie.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
-      "script-src 'self' 'unsafe-inline'",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
       "connect-src 'self' https: wss:",
       "object-src 'none'",
       "form-action 'self'",
