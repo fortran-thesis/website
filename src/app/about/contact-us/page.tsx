@@ -8,8 +8,7 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import BackButton from '@/components/buttons/back_button';
 
 export default function ContactUs() {
-  const headerBg = '/assets/farm-mindoro.jpg';
-  const farmerImg = '/assets/farmer.jpg';
+  const farmerImg = '/assets/farmer.webp';
   const leafSvg = '/assets/leaf.svg';
 
   return (
@@ -23,7 +22,7 @@ export default function ContactUs() {
         {/* Background Layer */}
         <div 
           className="absolute inset-0 z-0 bg-cover bg-center" 
-          style={{ backgroundImage: `url(${headerBg})` }}
+          style={{ backgroundImage: 'url("/assets/farm-mindoro.webp")' }}
         >
           <div className="absolute inset-0 bg-black/45 shadow-[inset_0_0_150px_rgba(0,0,0,0.6)]" />
         </div>

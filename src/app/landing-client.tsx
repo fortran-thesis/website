@@ -12,11 +12,11 @@ import { faDownLong } from '@fortawesome/free-solid-svg-icons';
 /*  Static data                                                        */
 /* ------------------------------------------------------------------ */
 
-const caseSub = '/assets/agr.png'; 
-const knowledge = '/assets/knowledge.jpg';
-const myco = '/assets/myco.jpg';
+const caseSub = '/assets/agr.webp'; 
+const knowledge = '/assets/knowledge.webp';
+const myco = '/assets/myco.webp';
 const leaf = '/assets/leaf.svg';
-const downloadApp = '/assets/download_app.png';
+const downloadApp = '/assets/download_app.webp';
 
 type MotionImgProps = ComponentProps<typeof motion.img>;
 
@@ -248,7 +248,7 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
             className="relative h-full w-full"
           >
             <img 
-              src="/assets/rice-terraces.jpg" 
+              src="/assets/rice-terraces.webp" 
               alt="Rice Terraces"
               className="h-full w-full object-cover brightness-[1.05] contrast-[1.1]"
             />
@@ -304,7 +304,7 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
           >
             <div className="flex flex-col gap-10">
               <img 
-                src="/assets/help-farmers.jpg"
+                src="/assets/help-farmers.webp"
                 className="w-full aspect-[4/5] object-cover shadow-xl rounded-sm"
                 alt="farmers"
               />
@@ -321,7 +321,7 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
 
             <div className="pt-32">
               <img 
-                src="/assets/help-farmers-2.jpg"
+                src="/assets/help-farmers-2.webp"
                 className="w-full aspect-square object-cover shadow-xl rounded-sm"
                 alt="farmer working"
               />
@@ -614,7 +614,7 @@ export default function LandingClient({ resolvedCount }: LandingClientProps) {
                 <div className="relative z-10 flex items-center gap-4">
                   <FontAwesomeIcon icon={faDownLong} className="text-[var(--background-color)] text-xl" />                  
                   <div className="flex flex-col items-start leading-none">
-                    <p className="text-xl font-black uppercase tracking-tight">download app</p>
+                    <p className="text-xl font-black tracking-tight font-[family-name:var(--font-montserrat)]">Download App</p>
                   </div>
                 </div>
               </motion.a>

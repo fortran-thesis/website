@@ -4,12 +4,12 @@ import Footer from '@/components/footer';
 import BackButton from '@/components/buttons/back_button';
 
 export default function AboutUs() {
-  const headerBg = '/assets/mold-fruit-1.jpg';
+  const headerBg = '/assets/mold-fruit-1.webp';
 
   const teamMembers = [
-    { name: "Faith Gabrielle A. Gamboa", role: "Designer", image: "/assets/faith.png" },
-    { name: "Karl Manuel M. Diata", role: "Project Manager", image: "/assets/karl.png" },
-    { name: "Richmond Glenn M. Viloria", role: "Programmer", image: "/assets/richmond.png" }
+    { name: "Faith Gabrielle A. Gamboa", role: "Designer", image: "/assets/faith.webp" },
+    { name: "Karl Manuel M. Diata", role: "Project Manager", image: "/assets/karl.webp" },
+    { name: "Richmond Glenn M. Viloria", role: "Programmer", image: "/assets/richmond.webp" }
   ];
 
   return (
