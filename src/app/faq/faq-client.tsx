@@ -81,7 +81,7 @@ export default function FaqClient({ initialFaqs }: FaqClientProps) {
       <header className="relative h-[60vh] min-h-[500px] w-full flex items-center justify-center overflow-hidden">
         <div 
           className="absolute inset-0 z-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/assets/farm.jpg')" }}
+          style={{ backgroundImage: "url('/assets/farm.webp')" }}
         >
           <div className="absolute inset-0 bg-black/45" />
         </div>

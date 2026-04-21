@@ -8,8 +8,8 @@ import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import BackButton from '@/components/buttons/back_button';
 
 export default function ContactUs() {
-  const headerBg = '/assets/farm-mindoro.jpg';
-  const farmerImg = '/assets/farmer.jpg';
+  const headerBg = '/assets/farm-mindoro.webp';
+  const farmerImg = '/assets/farmer.webp';
   const leafSvg = '/assets/leaf.svg';
 
   return (
