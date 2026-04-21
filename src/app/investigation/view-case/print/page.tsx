@@ -210,6 +210,7 @@ function PrintableCaseReportContent() {
       ]),
     [inVitroFromInvestigation, latestInVitroLog, latestInVitroCharacteristics],
   );
+  const laboratoryCode = textValue(payload?.report?.case_name, textValue(payload?.report?.report_id));
 
   const initialObservationTitle = textValue(
     initialObservationFromInvestigation.microscopic_identification,
@@ -345,8 +346,12 @@ function PrintableCaseReportContent() {
       }
 
       .print-bleed-header {
-        width: calc(100% + 24mm) !important;
-        margin: -12mm -12mm 0 -12mm !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        color: var(--primary-color) !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
       }
 
       .avoid-page-break {
@@ -426,7 +431,6 @@ function PrintableCaseReportContent() {
     </button>
   </div>
 
-  {/* Minimalist Header Section */}
   {/* Professional Editorial Header */}
   <section className="print-bleed-header px-10 py-10">
     <div className="flex items-center justify-between gap-6 border-b border-[var(--primary-color)]/20 pb-8">
@@ -445,13 +449,13 @@ function PrintableCaseReportContent() {
             Technical Lab Report
           </h1>
           <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-medium">
-            Internal Case ID: <span className="opacity-70">{textValue(payload.report.report_id)}</span>
+            Laboratory Code: <span className="opacity-70">{laboratoryCode}</span>
           </p>
         </div>
       </div>
-      <div className="text-right">
+      <div className="ml-auto max-w-[42%] min-w-0 text-right">
         <p className="font-[family-name:var(--font-montserrat)] text-[9px] font-bold uppercase tracking-[0.25em] text-[var(--moldify-grey)] opacity-50">Authorized Mycologist</p>
-        <p className="font-[family-name:var(--font-montserrat)] text-xl font-black uppercase tracking-tight text-[var(--primary-color)]">
+        <p className="font-[family-name:var(--font-montserrat)] text-lg font-black uppercase tracking-tight leading-tight break-words whitespace-normal text-[var(--primary-color)] md:text-xl">
           {textValue(payload.identities.mycologist_name)}
         </p>
       </div>
@@ -493,7 +497,7 @@ function PrintableCaseReportContent() {
         </div>
       </div>
     </div>
-  
+ 
 
     {/* Metadata Matrix */}
     <div className="grid grid-cols-1 gap-px bg-[var(--primary-color)]/10 md:grid-cols-3 border border-[var(--primary-color)]/10 rounded-2xl overflow-hidden">
@@ -571,9 +575,12 @@ function PrintableCaseReportContent() {
     <section className="page-break print-snapshot-section space-y-16 border-t border-[var(--primary-color)]/20 pt-16">
   {/* Header */}
   <div className="space-y-3">
-    <h2 className="font-[family-name:var(--font-montserrat)] text-xl font-black uppercase text-[var(--primary-color)] tracking-tight">
-        Cultivation Logs
-      </h2>
+    <h2 className="font-[family-name:var(--font-montserrat)] text-xs font-black uppercase tracking-[0.4em] text-[var(--accent-color)]">
+      Investigation Snapshot
+    </h2>
+    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-3xl font-black tracking-tight text-[var(--primary-color)]">
+      Visual Specimen Analysis
+    </p>
   </div>
 
   {/* Case Details / Field Journal - Wider Images */}
