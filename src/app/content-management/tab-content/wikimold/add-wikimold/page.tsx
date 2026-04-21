@@ -460,7 +460,7 @@ export default function AddWikiMold() {
                   value={wikiMoldData.title}
                   onChange={(e) => setWikiMoldData((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder="Enter Title..."
-                  className="w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-5xl font-black placeholder:opacity-10 focus:outline-none tracking-tighter border-b-2 border-[var(--primary-color)]/10 focus:border-[var(--accent-color)] transition-all"
+                  className="w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-5xl font-black placeholder:text-[var(--primary-color)]/55 focus:outline-none tracking-tighter border-b-2 border-[var(--primary-color)]/25 focus:border-[var(--accent-color)] transition-all"
                 />
               </div>
 
@@ -479,9 +479,9 @@ export default function AddWikiMold() {
           {/* 4. FUNGAL ANALYSIS PHASE */}
           <section id="analysis" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
             <div className="flex flex-col gap-2 mb-12">
-              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Phase 02</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">Phase 02</label>
               <h2 className="font-black text-4xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Host & Pathogen Impact</h2>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--primary-color)]/40 italic">Technical Analysis & Observations</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--primary-color)]/70 italic">Technical Analysis & Observations</p>
             </div>
 
             <div className="grid grid-cols-1 gap-12">
@@ -529,14 +529,14 @@ export default function AddWikiMold() {
           {/* Each control type is displayed as an expandable accordion on the public page */}
           <section id="management" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10 pb-32">
             <div className="flex flex-col gap-2 mb-12">
-              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Phase 03</label>
+              <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">Phase 03</label>
               <h2 className="font-black text-4xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Prevention & Treatment</h2>
             </div>
             {/* TREATMENT CONTROL OPTIONS: 5 different control methods */}
             {/* On public page, each expands to show the HTML content entered here */}
             <div className="grid grid-cols-1 gap-12">
               <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-4">
-                <span className="text-[10px] font-black text-[var(--accent-color)] opacity-40 uppercase tracking-widest">Protocol 00</span>
+                <span className="text-[10px] font-black text-[var(--primary-color)]/70 uppercase tracking-widest">Protocol 00</span>
                 <h3 className="font-black text-xl text-[var(--primary-color)] uppercase tracking-tight">Prevention Summary</h3>
                 <ReactQuill
                   className="flex-1"
@@ -548,7 +548,7 @@ export default function AddWikiMold() {
 
               {['mechanical', 'cultural', 'biological', 'physical', 'chemical'].map((key, index) => (
                 <div key={key} className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-4">
-                  <span className="text-[10px] font-black text-[var(--accent-color)] opacity-40 uppercase tracking-widest">Protocol 0{index + 1}</span>
+                  <span className="text-[10px] font-black text-[var(--primary-color)]/70 uppercase tracking-widest">Protocol 0{index + 1}</span>
                   <h3 className="font-black text-xl text-[var(--primary-color)] uppercase tracking-tight">{key} Control</h3>
                   {/* TREATMENT EDITOR: HTML content for each control method */}
                   {/* Backend should store these as separate fields or in a treatments object */}
@@ -571,7 +571,7 @@ export default function AddWikiMold() {
           .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid rgba(0,0,0,0.05) !important; margin-bottom: 1.5rem !important; padding-bottom: 1rem !important; }
           .ql-container.ql-snow { border: none !important; }
           .ql-editor { font-size: 1.15rem !important; line-height: 1.8 !important; min-height: 250px !important; padding: 0 !important; color: var(--moldify-black); font-family: var(--font-bricolage-grotesque); }
-          .ql-editor.ql-blank::before { left: 0 !important; font-style: normal !important; opacity: 0.3 !important; }
+          .ql-editor.ql-blank::before { left: 0 !important; font-style: normal !important; opacity: 0.55 !important; }
         `}</style>
 
         {/* SUBMIT BUTTON: Floating at bottom, triggers confirmation modal */}
