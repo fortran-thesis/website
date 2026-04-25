@@ -34,6 +34,7 @@ export default function Investigation() {
         const isAdministrator = user.role === "admin" || user.role === "Administrator";
         const isMycologist = user.role === "mycologist" || user.role === "Mycologist";
         const userRole = user.role === "admin" ? "Administrator" : user.role === "mycologist" ? "Mycologist" : "User";
+        const caseManagementLabel = isAdministrator ? "INVESTIGATION OVERSIGHT" : "CASE MANAGEMENT";
     
         /* ── SWR: admin status counts (only fetched for admin role) ── */
         const { data: adminStatsRes } = useSWR<ApiResponse<StatusCounts>>(
@@ -197,7 +198,7 @@ export default function Investigation() {
                 <div className="flex flex-col">
                     <Breadcrumbs role={userRole} />
                     <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-                        CASE MANAGEMENT
+                        {caseManagementLabel}
                     </h1>
                 </div>
 

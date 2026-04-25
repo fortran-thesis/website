@@ -10,7 +10,7 @@ import { useLogout } from '@/hooks/useLogout';
 import ConfirmModal from '@/components/modals/confirmation_modal';
 import TopLoadingBar from '@/components/loading/top_loading_bar';
 
-const MoldifyLogo = '/assets/Moldify_Logo.png';
+const MoldifyLogo = '/assets/moldify-logo-v5.svg';
 
 interface SidebarProps {
     userRole?: string;
@@ -42,6 +42,7 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
     const normalizedRole = normalizeRole(userRole);
     const isAdministrator = normalizedRole === "Administrator";
     const isMycologist = normalizedRole === "Mycologist";
+    const caseManagementLabel = isAdministrator ? "Investigation Oversight" : "Case Management";
 
     const handleLogout = async () => {
         if (isLoggingOut) return;
@@ -195,7 +196,7 @@ export default function Sidebar({ userRole = "Administrator" }: SidebarProps) {
                             <div className="px-3 space-y-2">
                                 <SidebarLink icon={faHouseChimney} text="Dashboard" href="/dashboard" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />
                                 {isAdministrator && <SidebarLink icon={faUsers} text="User Management" href="/user" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />}
-                                <SidebarLink icon={faSeedling} text="Case Management" href="/investigation" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />
+                                <SidebarLink icon={faSeedling} text={caseManagementLabel} href="/investigation" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />
                                 {isMycologist && <SidebarLink icon={faBookOpen} text="Content Management" href="/content-management" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />}
                                 {isAdministrator && <SidebarLink icon={faTriangleExclamation} text="Report Management" href="/reports" collapsed={isCollapsedEffective} onNavigate={() => setNavOpen(false)} onTooltipShow={showTooltip} onTooltipHide={() => setTooltip(null)} />}
                             </div>

@@ -1,7 +1,8 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faTriangleExclamation} from '@fortawesome/free-solid-svg-icons';
+import { faBook, faEye, faFlag, faSearch, faTriangleExclamation} from '@fortawesome/free-solid-svg-icons';
 import StatusDropdown from '@/components/StatusDropdown';
+import TabBar from '@/components/tab_bar';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import ReportsTable, { Report } from '@/components/tables/report_table';
@@ -21,6 +22,13 @@ export default function Reports() {
     const [statusFilter, setStatusFilter] = useState('');
     const [dateOrder, setDateOrder] = useState<'newest' | 'oldest'>('newest');
     const [dateSortSelection, setDateSortSelection] = useState('');
+
+    const normalizeReportType = (rawType?: string) => {
+      const type = (rawType || '').toString().trim().toLowerCase();
+      if (type.includes('wiki') || type.includes('moldipedia')) return 'WikiMold Report' as const;
+      if (type.includes('flag') || type.includes('mold') || type.includes('prediction')) return 'Flagged Mold' as const;
+      return 'Flagged Mold' as const;
+    };
 
     const normalizeStatus = (rawStatus?: string) => {
       const status = (rawStatus || '').toString().trim().toLowerCase();
@@ -48,7 +56,8 @@ export default function Reports() {
             return {
               id,
               issue: r.reason || r.details || 'Unknown Issue',
-                    reportedUser: r.content?.author,
+              reportType: normalizeReportType(r.content_type as string | undefined),
+                    reportedUser: r.content?.author || r.reported_user_name || r.reported_user || r.reported_user_id || 'N/A',
                     reportedBy: r.reporter?.name || r.reporter_name || r.reporter_id || r.reporterId || 'Unknown',
                     dateReported: (() => {
                       const formatOpts: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -132,6 +141,7 @@ export default function Reports() {
 
         return [
           report.issue,
+          report.reportType,
           report.reportedUser,
           report.reportedBy,
           report.status,
@@ -148,6 +158,54 @@ export default function Reports() {
         return dateOrder === 'newest' ? bTs - aTs : aTs - bTs;
       });
     }, [reports, searchQuery, statusFilter, dateOrder]);
+
+    const wikimoldReports = useMemo(
+      () => filteredReports.filter((report) => report.reportType === 'WikiMold Report'),
+      [filteredReports],
+    );
+
+    const flaggedMoldReports = useMemo(
+      () => filteredReports.filter((report) => report.reportType === 'Flagged Mold'),
+      [filteredReports],
+    );
+
+    const reportTabs = useMemo(
+      () => [
+        {
+          label: `WikiMold Reports (${wikimoldReports.length})`,
+          icon: faBook,
+          content: (
+            <div className="mt-4">
+            <ReportsTable
+              data={wikimoldReports}
+              onEdit={(c: Report) => {
+                router.push(`/reports/view-report?id=${c.id}&type=wikimold`);
+              }}
+              actionAriaLabel="Edit/View Report"
+            />
+            </div>
+          ),
+        },
+        {
+          label: `Flagged Mold Reports (${flaggedMoldReports.length})`,
+          icon: faFlag,
+          content: (
+            <div className="mt-4">
+            <ReportsTable
+              data={flaggedMoldReports}
+              hideReportedUser
+              onEdit={(c: Report) => {
+                router.push(`/reports/view-report?id=${c.id}&type=flagged`);
+              }}
+              actionIcon={faEye}
+              actionAriaLabel="View Report"
+            />
+            </div>
+          ),
+        },
+      ],
+      [wikimoldReports, flaggedMoldReports, router],
+    );
     
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
@@ -157,7 +215,7 @@ export default function Reports() {
                 <div className="flex flex-col">
                     <Breadcrumbs role={userRole} />
                     <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-                        REPORTS
+                        REPORT MANAGEMENT
                     </h1>
                 </div>
 
@@ -175,7 +233,7 @@ export default function Reports() {
             <div className="flex flex-col md:flex-row md:items-center mt-10 gap-4 w-full">
                 {/* Left Label */}
                 <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold">
-                    User Reports
+                    Reports
                 </p>
 
                 {/* Right Section */}
@@ -207,6 +265,7 @@ export default function Reports() {
                             { label: "Resolved", value: "resolved" },
                             { label: "Unresolved", value: "unresolved" }
                           ]}
+                          selectedValue={statusFilter}
                           onSelect={(value) => setStatusFilter(value)}
                         />
 
@@ -232,11 +291,7 @@ export default function Reports() {
             <div className="mt-6 w-full">
               {isInitialLoading && <PageLoading message="Loading reports..." />}
               {error && <MessageBanner variant="error" className="mb-4">{error}</MessageBanner>}
-              {!isInitialLoading && !error && <ReportsTable data={filteredReports} 
-                onEdit={(c: Report) => {
-                        router.push(`/reports/view-report?id=${c.id}`);
-                    }}
-                />}
+              {!isInitialLoading && !error && <TabBar tabs={reportTabs} initialIndex={0} />}
 
               {/* Infinite scroll trigger */}
               <div ref={loadMoreRef} className="py-4 text-center">

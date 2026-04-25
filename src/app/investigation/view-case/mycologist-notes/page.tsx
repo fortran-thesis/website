@@ -27,6 +27,7 @@ function MycologistNotesContent() {
 
   const rawRole = (authUser?.user?.role || authUser?.role || "").toLowerCase();
   const userRole = rawRole === "mycologist" ? "Mycologist" : "Administrator";
+  const caseManagementLabel = userRole === "Administrator" ? "Investigation Oversight" : "Case Management";
 
   const { data: moldCaseByIdRes, isLoading: moldCaseByIdLoading } = useMoldCase(
     isCaseResource ? resourceId : undefined,
@@ -411,7 +412,7 @@ function MycologistNotesContent() {
         <div className="space-y-2">
           <Breadcrumbs role={userRole} />
           <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-4xl uppercase tracking-tighter">
-            Case Management
+            {caseManagementLabel}
           </h1>
         </div>
 

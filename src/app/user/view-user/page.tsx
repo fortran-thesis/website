@@ -237,81 +237,87 @@ function ViewUserContent() {
         </MessageBanner>
       )}
 
-      <div className="flex flex-col lg:flex-row w-full gap-12 items-start py-8 border-b border-[var(--primary-color)]/5">
-        {/* 1. Profile Image with Accent Ring */}
+      <div className="flex flex-col lg:flex-row w-full gap-12 items-center lg:items-start py-12 border-b border-[var(--primary-color)]/10">
+        {/* 1. Profile Image: Typography-First Minimalism */}
         <div className="relative flex-shrink-0 group">
-          <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-xl relative z-10 transition-transform duration-500 group-hover:scale-[1.02]">
-            <Image
-              src={imgSrc}
-              alt="profile picture"
-              fill
-              className="object-cover"
-              onError={() => setImgSrc("/assets/default-fallback.png")}
-            />
+          <div className="w-44 h-44 rounded-full p-1 bg-[var(--primary-color)]/[0.03] border border-[var(--primary-color)]/[0.08] relative z-10 transition-all duration-700 group-hover:border-[var(--primary-color)]/30">
+            <div className="w-full h-full rounded-full overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.1)] group-hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)] transition-all">
+              <Image
+                src={imgSrc}
+                alt={`${userName}'s profile`}
+                fill
+                className="object-cover transition-transform duration-700 group-hover:scale-110"
+                priority
+                onError={() => setImgSrc("/assets/default-fallback.png")}
+              />
+            </div>
           </div>
-          {/* Decorative Accent Ring */}
-          <div className="absolute -inset-2 border border-[var(--primary-color)]/10 rounded-full animate-[spin_20s_linear_infinite]" />
+          
+          {/* Subtle Hover Anchor: A minimal geometric point for technical impact */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all duration-500">
+            <div className="w-[1px] h-4 bg-gradient-to-t from-[var(--primary-color)] to-transparent" />
+          </div>
         </div>
 
         {/* 2. Content Section */}
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full text-center lg:text-left">
           {/* Identity Row */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-4">
-                <h1 className="font-[family-name:var(--font-montserrat)] text-4xl font-black text-[var(--primary-color)] tracking-tighter">
-                  {userName}
-                </h1>
+          <div className="flex flex-col gap-4 mb-10">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+              <h1 className="font-[family-name:var(--font-montserrat)] text-5xl font-black text-[var(--primary-color)] tracking-tighter leading-none">
+                {userName}
+              </h1>
+              <div className="flex justify-center lg:justify-start">
                 <StatusBox status={userStatus} />
               </div>
-              <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-black uppercase tracking-[0.3em] text-[10px] opacity-40">
-                User Role: {userRole === "Farmer" && userDetails?.occupation ? userDetails.occupation : userRole}
-              </p>
             </div>
-
-          
+            
+            <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-black uppercase tracking-[0.45em] text-xs">
+              Role: {userRole === "Farmer" && userDetails?.occupation ? userDetails.occupation : userRole}
+            </p>
           </div>
 
-          {/* 3. Metadata Grid: Clean & Columnar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-8 gap-x-12 p-6 bg-[var(--primary-color)]/[0.02] rounded-3xl border border-[var(--primary-color)]/[0.04]">
+          {/* 3. Metadata Grid: Clean & Columnar Typography */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-0 rounded-[2rem] overflow-hidden bg-[var(--primary-color)]/[0.02] border border-[var(--primary-color)]/[0.08] backdrop-blur-sm">
             
             {/* Username Field */}
-            <div className="flex flex-col gap-1 border-l-2 border-[var(--accent-color)] pl-4">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)] opacity-30">
+            <div className="flex flex-col gap-2 p-8 border-b sm:border-b-0 sm:border-r border-[var(--primary-color)]/[0.08] hover:bg-[var(--primary-color)]/[0.02] transition-colors group/cell">
+              <span className="font-[family-name:var(--font-bricolage-grotesque)] text-[9px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)]/90 group-hover/cell:text-[var(--primary-color)] transition-colors">
                 Username
               </span>
-              <h2 className="text-[15px] font-bold text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
+              <h2 className="text-[16px] font-bold text-[var(--moldify-black)] font-[family-name:var(--font-montserrat)] tracking-tight">
                 {username}
               </h2>
             </div>
 
             {/* Email Field */}
-            <div className="flex flex-col gap-1 border-l-2 border-[var(--primary-color)]/10 pl-4">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)] opacity-30">
-                Email Address
+            <div className="flex flex-col gap-2 p-8 border-b xl:border-b-0 xl:border-r border-[var(--primary-color)]/[0.08] hover:bg-[var(--primary-color)]/[0.02] transition-colors group/cell">
+              <span className="font-[family-name:var(--font-bricolage-grotesque)] text-[9px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)]/90 group-hover/cell:text-[var(--primary-color)] transition-colors">
+                Email
               </span>
-              <h2 className="text-[15px] font-bold text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] truncate">
+              <h2 className="text-[16px] font-bold text-[var(--moldify-black)] font-[family-name:var(--font-montserrat)] truncate tracking-tight">
                 {userEmail}
               </h2>
             </div>
 
-            {/* Phone/Location Logic */}
             {!hidePersonalInfo && (
               <>
-                <div className="flex flex-col gap-1 border-l-2 border-[var(--primary-color)]/10 pl-4">
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)] opacity-30">
-                    Contact Number
+                {/* Phone Field */}
+                <div className="flex flex-col gap-2 p-8 border-b sm:border-b-0 sm:border-r border-[var(--primary-color)]/[0.08] hover:bg-[var(--primary-color)]/[0.02] transition-colors group/cell">
+                  <span className="font-[family-name:var(--font-bricolage-grotesque)] text-[9px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)]/90 group-hover/cell:text-[var(--primary-color)] transition-colors">
+                    Phone Number
                   </span>
-                  <h2 className="text-[15px] font-bold text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
+                  <h2 className="text-[16px] font-bold text-[var(--moldify-black)] font-[family-name:var(--font-montserrat)] tracking-tight">
                     {userPhone}
                   </h2>
                 </div>
 
-                <div className="flex flex-col gap-1 border-l-2 border-[var(--primary-color)]/10 pl-4">
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)] opacity-30">
+                {/* Location Field */}
+                <div className="flex flex-col gap-2 p-8 hover:bg-[var(--primary-color)]/[0.02] transition-colors group/cell">
+                  <span className="font-[family-name:var(--font-bricolage-grotesque)] text-[9px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)]/90 group-hover/cell:text-[var(--primary-color)] transition-colors">
                     Location
                   </span>
-                  <h2 className="text-[15px] font-bold text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
+                  <h2 className="text-[16px] font-bold text-[var(--moldify-black)] font-[family-name:var(--font-montserrat)] tracking-tight">
                     {userLocation}
                   </h2>
                 </div>

@@ -1,8 +1,8 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import TabBar from "@/components/tab_bar";
-import { faLock, faUser, faBoxArchive, faHistory, faFlag } from "@fortawesome/free-solid-svg-icons";
+import { faLock, faUser, faBoxArchive, faHistory } from "@fortawesome/free-solid-svg-icons";
 import ProfileCard from "./tab_contents/profile";
 import type { ProfileData } from "./tab_contents/profile";
 import ConfirmModal from "@/components/modals/confirmation_modal";
@@ -10,9 +10,6 @@ import ChangePasswordForm, { PasswordData } from "./tab_contents/password";
 import { useAuth } from "@/hooks/useAuth";
 import Archive from "./tab_contents/archive";
 import CaseHistory from "./tab_contents/case-history";
-import FlagHistory from "./tab_contents/flag-history";
-import type { FlaggedHistory } from "@/components/tables/flagged_history_table";
-import { useFlagReportsInfinite } from '@/hooks/swr';
 import { apiMutate, ApiError } from '@/lib/api';
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 import PageLoading from '@/components/loading/page_loading';
@@ -46,58 +43,6 @@ export default function Settings() {
   const [initialProfile, setInitialProfile] = useState<ProfileData | null>(null);
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [pendingPasswordData, setPendingPasswordData] = useState<PasswordData | null>(null);
-
-  // ✅ Flag history via paginated SWR
-  const {
-    data: flagPages,
-    setSize: setFlagSize,
-    isLoading: flagHistoryLoading,
-    isValidating: isFlagLoadingMore,
-    error: flagSwrError,
-  } = useFlagReportsInfinite(100);
-
-  useEffect(() => {
-    if (!flagPages || isFlagLoadingMore) return;
-    const lastPage = flagPages[flagPages.length - 1];
-    if (lastPage?.data?.nextPageToken) {
-      setFlagSize((size) => size + 1);
-    }
-  }, [flagPages, isFlagLoadingMore, setFlagSize]);
-
-  const flagHistoryError = flagSwrError ? 'Failed to load flag reports' : null;
-  const flaggedHistory: FlaggedHistory[] = useMemo(() => {
-    if (!flagPages) return [];
-    return flagPages.flatMap((page: any) =>
-      (page?.data?.snapshot ?? []).map((item: any) => {
-        const createdAt = item?.dateFlagged || item?.created_at || item?.metadata?.created_at;
-
-        let dateFlagged = 'N/A';
-        if (createdAt && typeof createdAt === 'object' && '_seconds' in createdAt) {
-          dateFlagged = new Date(createdAt._seconds * 1000).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: '2-digit',
-          });
-        } else if (typeof createdAt === 'string' && createdAt) {
-          const parsedDate = new Date(createdAt);
-          dateFlagged = Number.isNaN(parsedDate.getTime())
-            ? createdAt
-            : parsedDate.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: '2-digit',
-              });
-        }
-
-        return {
-          flagId: item.content_id || '',
-          systemPredicted: item.content_type || '',
-          correctedGenus: item.details || item.reason || '',
-          dateFlagged,
-        };
-      }),
-    );
-  }, [flagPages]);
 
   const formatRole = (value: string) => {
     const trimmed = value?.trim();
@@ -318,17 +263,6 @@ export default function Settings() {
         label: "Case History",
         icon: faHistory,
         content: <CaseHistory />,
-      },
-      {
-        label: "Flag History",
-        icon: faFlag,
-        content: (
-          <FlagHistory
-            flaggedHistory={flaggedHistory}
-            isLoading={flagHistoryLoading}
-            error={flagHistoryError}
-          />
-        ),
       },
     ];
 

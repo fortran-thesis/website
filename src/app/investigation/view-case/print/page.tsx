@@ -286,7 +286,7 @@ function PrintableCaseReportContent() {
 
   if (!reportId) {
     return (
-      <main className="min-h-screen bg-[var(--background-color)] p-8 text-[var(--primary-color)]">
+      <main className="min-h-screen bg-[var(--taupe)] p-8 text-[var(--primary-color)]">
         <p className="text-lg font-bold">Missing report id.</p>
       </main>
     );
@@ -298,7 +298,7 @@ function PrintableCaseReportContent() {
 
   if (error || !payload) {
     return (
-      <main className="min-h-screen bg-[var(--background-color)] p-8 text-[var(--primary-color)]">
+      <main className="min-h-screen bg-[var(--taupe)] p-8 text-[var(--primary-color)]">
         <p className="text-lg font-bold">Unable to load printable report payload.</p>
       </main>
     );
@@ -318,7 +318,7 @@ function PrintableCaseReportContent() {
     }
 
     body {
-      background: var(--background-color);
+      background: var(--taupe);
     }
 
     @media print {

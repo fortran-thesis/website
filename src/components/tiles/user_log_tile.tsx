@@ -20,9 +20,9 @@ export default function UserLogTile({ items, onItemClick }: UserLogTileProps) {
     <div className="w-full">
       {/* Table Header - Minimalist Editorial Style */}
       <div className="grid grid-cols-[100px_1fr_120px] gap-6 px-4 py-3 border-b border-[var(--primary-color)]/10 font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] text-[10px] uppercase tracking-[0.3em]">
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)] opacity-30">Timestamp</span>
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)] opacity-30">Activity Description</span>
-        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)] opacity-30 text-right">Reference</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)]">Timestamp</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)]">Activity Description</span>
+        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--primary-color)]text-right">Reference</span>
       </div>
 
       <div className="flex flex-col">

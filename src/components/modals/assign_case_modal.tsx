@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from 'next/image';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faCalendar } from "@fortawesome/free-solid-svg-icons";
@@ -8,7 +8,7 @@ import Holidays from "date-holidays";
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock';
 
 
-{/* IMAGES */}
+// IMAGES
 const MoldifyLogov2 = '/assets/moldify-logo-v3.svg';
 
 interface Mycologist {
@@ -28,7 +28,6 @@ interface AssignCaseModalProps {
 
 const CAPACITY_THRESHOLD = 2; // Mycologists with >2 active cases are at capacity
 const HOLIDAY_COUNTRY = process.env.NEXT_PUBLIC_HOLIDAY_COUNTRY || "PH";
-const ASSIGNMENT_CUTOFF_HOUR = 17; // 5:00 PM local time
 
 const parseDateInput = (value: string): Date | null => {
   const parts = value.split("-").map(Number);
@@ -47,6 +46,7 @@ const formatDateForInput = (date: Date): string => {
 export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
   useBodyScrollLock(isOpen);
 
+  const endDateInputRef = useRef<HTMLInputElement>(null);
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
   const [filter, setFilter] = useState<"all" | "available" | "at-capacity">("all");
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -70,18 +70,7 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
     return (holiday as { name?: string }).name || "holiday";
   };
 
-  // Check if a date is a weekend
-  const isWeekend = (date: Date): boolean => {
-    const dayOfWeek = date.getDay();
-    return dayOfWeek === 0 || dayOfWeek === 6;
-  };
 
-  const hasPassedAssignmentCutoff = (): boolean => {
-    const now = new Date();
-    return now.getHours() >= ASSIGNMENT_CUTOFF_HOUR;
-  };
-
-  const isAfterCutoff = hasPassedAssignmentCutoff();
 
   // Handle end date change with validation
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,13 +95,6 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
     // Validate date is not in the past.
     if (selectedDate < today) {
       setEndDateError("End date cannot be in the past.");
-      setEndDate(null);
-      return;
-    }
-
-    // Validate date is not a weekend
-    if (isWeekend(selectedDate)) {
-      setEndDateError("End date cannot fall on a weekend (Saturday or Sunday)");
       setEndDate(null);
       return;
     }
@@ -227,18 +209,8 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
       return;
     }
 
-    if (isAfterCutoff) {
-      setEndDateError("Assignments are closed for today after 5:00 PM. Please assign on the next working day.");
-      return;
-    }
-
     if (!endDate) {
       setEndDateError("End date is required");
-      return;
-    }
-
-    if (isWeekend(endDate)) {
-      setEndDateError("End date cannot fall on a weekend (Saturday or Sunday)");
       return;
     }
 
@@ -262,152 +234,166 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex justify-center items-center z-[9999] overflow-hidden">
       <form
-        className="bg-[var(--background-color)] rounded-xl w-full max-w-md p-6 relative"
-        onSubmit={handleSubmit}
-      >
-        <div className ="flex justify-center items-center mb-4">
-            <div className = "flex justify-between items-center space-x-3">
-                <Image
-                src={MoldifyLogov2}
-                alt="Moldify Logo"
-                width={25}
-                height={25}
-                className="object-contain rounded-xl"
-                />
-                <p className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-xs">MOLDIFY</p>
-            </div>
-            <button
-                type="button"
-                onClick={onClose}
-                className="absolute top-5 right-3 text-[var(--moldify-red)] text-xl leading-none hover:scale-110 transition cursor-pointer font-black"
-                >
-                ✕
-            </button>
-        </div>
+  className="bg-[var(--background-color)] rounded-[2.5rem] w-full max-w-md p-10 relative border border-[var(--primary-color)]/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.15)]"
+  onSubmit={handleSubmit}
+>
+  {/* --- HEADER (Kept as per your original wording/logic) --- */}
+  <div className="flex justify-center items-center mb-8">
+    <div className="flex items-center space-x-2">
+      <Image
+        src={MoldifyLogov2}
+        alt="Moldify Logo"
+        width={25}
+        height={25}
+        className="object-contain rounded-xl"
+      />
+      <p className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-bold text-xs tracking-[0.2em]">MOLDIFY</p>
+    </div>
+    <button
+      type="button"
+      onClick={onClose}
+      className="absolute top-8 right-8 text-[var(--moldify-red)] text-xl leading-none hover:rotate-90 transition-all duration-300 cursor-pointer font-black"
+      aria-label="Close modal"
+    >
+      ✕
+    </button>
+  </div>
 
-        <h2 className="text-2xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">ASSIGN CASE</h2>
-        <p className="text-[var(--moldify-black)] text-sm mb-4 font-[family-name:var(--font-bricolage-grotesque)]">Delegate reports to available mycologist.</p>
+  <div className="text-center mb-8">
+    <h2 className="text-3xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] tracking-tighter mb-2">ASSIGN CASE</h2>
+    <p className="text-[var(--moldify-black)] opacity-70 text-sm font-[family-name:var(--font-bricolage-grotesque)]">Delegate reports to available mycologist.</p>
+  </div>
 
-        {/* Workload stats */}
-        <div className = "flex items-center space-x-3 mb-3 mt-5">
-            <FontAwesomeIcon
-                icon={faArrowTrendUp}
-                style={{ width: "1rem", height: "1rem", color: "var(--moldify-grey)" }}
-            />
-            <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-grey)] text-xs">Workload Status</p>
-        </div>
-        {loading ? (
-          <div className="flex justify-center items-center py-10">
-            <p className="text-[var(--moldify-grey)] text-sm font-[family-name:var(--font-bricolage-grotesque)]">Loading mycologists...</p>
-          </div>
-        ) : (
-        <div className="flex justify-between mb-7 text-center">
-          <div>
-            <h1 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--moldify-blue)]">{mycologists.length}</h1>
-            <p className="text-[var(--moldify-grey)] text-sm font-[family-name:var(--font-bricolage-grotesque)]">Total Mycologists</p>
-          </div>
-          <div>
-            <h1 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)]">{mycologists.filter(m => m.status === "available").length}</h1>
-            <p className="text-[var(--moldify-grey)] text-sm font-[family-name:var(--font-bricolage-grotesque)]">Total Available</p>
-          </div>
-          <div>
-            <h1 className="text-3xl font-black font-[family-name:var(--font-montserrat)] text-[var(--moldify-red)]">{mycologists.filter(m => m.status === "at-capacity").length}</h1>
-            <p className="text-[var(--moldify-grey)] text-sm font-[family-name:var(--font-bricolage-grotesque)]">At Capacity</p>
-          </div>
-        </div>
-        )}
+  {/* Workload stats */}
+  <div className="mb-8">
+    <div className="flex items-center space-x-3 mb-4">
+      <FontAwesomeIcon
+        icon={faArrowTrendUp}
+        style={{ width: "0.85rem", height: "0.85rem", color: "var(--primary-color)" }}
+        className="opacity-50"
+      />
+      <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-black uppercase tracking-[0.25em] text-[10px] opacity-50">Workload Status</p>
+    </div>
 
-        {/* Mycologist dropdown */}
-        <div className="mb-7">
-          <div className="flex items-center gap-2">
-            <div className="flex-[3]">
-              <StatusDropdown
-                placeholder="Choose Mycologist"
-                backgroundColor="var(--background-color)"
-                textColor="var(--primary-color)"
-                borderColor="var(--primary-color)"
-                selectedValue={selectedMycologist?.id || selectedMycologist?.name}
-                options={filteredMycologists.map((m) => ({
-                  label: `${m.name} (${m.cases} cases)`,
-                  value: m.id || m.name,
-                  variant: m.status === "at-capacity" ? "danger" : "default",
-                  disabled: m.status === "at-capacity"
-                }))}
-                onSelect={(value) => {
-                  const m = filteredMycologists.find(m => (m.id || m.name) === value);
-                  if (m?.status === "at-capacity") {
-                    setSelectedMycologist(null);
-                    setEndDateError("This mycologist is at capacity and cannot be selected.");
-                    return;
-                  }
-                  console.log('🔍 Selected mycologist:', m);
-                  setEndDateError("");
-                  setSelectedMycologist(m || null);
-                }}
-              />
-            </div>
-
-            {/* Filter button */}
-            <div className="flex-2">
-              <StatusDropdown
-                placeholder="Filter"
-                backgroundColor="var(--background-color)"
-                textColor="var(--primary-color)"
-                borderColor="var(--primary-color)"
-                selectedValue={filter}
-                options={[
-                  { label: "All", value: "all" },
-                  { label: "Available", value: "available" },
-                  { label: "At Capacity", value: "at-capacity", variant: "danger" }
-                ]}
-                onSelect={(value) => {
-                  console.log('🔍 Selected filter:', value);
-                  setFilter(value as any);
-                }}
-              />
-            </div>
-          </div>
-          {!selectedMycologist && <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">* Please select a mycologist</p>}
+    {loading ? (
+      <div className="flex justify-center items-center py-10 bg-[var(--primary-color)]/[0.02] rounded-2xl border border-dashed border-[var(--primary-color)]/20">
+        <p className="text-[var(--primary-color)] text-xs font-bold font-[family-name:var(--font-bricolage-grotesque)] uppercase tracking-widest opacity-40">Loading mycologists...</p>
+      </div>
+    ) : (
+      <div className="grid grid-cols-3 gap-0 rounded-2xl overflow-hidden border border-[var(--primary-color)]/10 bg-[var(--primary-color)]/[0.03] shadow-sm">
+        <div className="p-4 border-r border-[var(--primary-color)]/10 text-center">
+          <h1 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--moldify-blue)] leading-none mb-1">{mycologists.length}</h1>
+          <p className="text-[var(--primary-color)] text-[9px] font-black uppercase tracking-tight opacity-50">Total Mycologists</p>
         </div>
-
-        {/* End Date */}
-        <div className="mb-7">
-          <label htmlFor="endDate" className="font-[family-name:var(--font-bricolage-grotesque)] text-sm font-semibold text-[var(--primary-color)] mb-2">Set End Date:</label>
-            <div className="relative w-full">
-            <input
-                id="endDate"
-                type="date"
-                value={endDate ? endDate.toISOString().slice(0, 10) : ""}
-                onChange={handleEndDateChange}
-              min={formatDateForInput(new Date())}
-                className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 mb-1 rounded-lg focus:outline-none appearance-none
-                [&::-webkit-calendar-picker-indicator]:opacity-0
-                [&::-webkit-calendar-picker-indicator]:absolute
-                [&::-webkit-calendar-picker-indicator]:right-3
-                [&::-webkit-calendar-picker-indicator]:cursor-pointer"
-                name="endDate"
-                required
-            />
-            <FontAwesomeIcon
-                icon={faCalendar}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--accent-color)] pointer-events-none"
-            />
-            </div>
-            {endDateError && <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">* {endDateError}</p>}
-            {isAfterCutoff && (
-              <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">
-                * Assignments are unavailable after 5:00 PM. Please continue on the next working day.
-              </p>
-            )}
+        <div className="p-4 border-r border-[var(--primary-color)]/10 text-center">
+          <h1 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] leading-none mb-1">{mycologists.filter(m => m.status === "available").length}</h1>
+          <p className="text-[var(--primary-color)] text-[9px] font-black uppercase tracking-tight opacity-50">Total Available</p>
         </div>
-        <button
-          type="submit"
-          className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-xl hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!selectedMycologist || !endDate || isAfterCutoff}
-        >
-          Assign Case
-        </button>
-      </form>
+        <div className="p-4 text-center">
+          <h1 className="text-2xl font-black font-[family-name:var(--font-montserrat)] text-[var(--moldify-red)] leading-none mb-1">{mycologists.filter(m => m.status === "at-capacity").length}</h1>
+          <p className="text-[var(--primary-color)] text-[9px] font-black uppercase tracking-tight opacity-50">At Capacity</p>
+        </div>
+      </div>
+    )}
+  </div>
+
+  {/* Mycologist dropdown area */}
+  <div className="mb-8">
+    <div className="flex items-center gap-3">
+      <div className="flex-[3]">
+        <StatusDropdown
+          placeholder="Choose Mycologist"
+          backgroundColor="var(--background-color)"
+          textColor="var(--primary-color)"
+          borderColor="var(--primary-color)"
+          selectedValue={selectedMycologist?.id || selectedMycologist?.name}
+          options={filteredMycologists.map((m) => ({
+            label: `${m.name} (${m.cases} cases)`,
+            value: m.id || m.name,
+            variant: m.status === "at-capacity" ? "danger" : "default",
+            disabled: m.status === "at-capacity"
+          }))}
+          onSelect={(value) => {
+            const m = filteredMycologists.find(m => (m.id || m.name) === value);
+            if (m?.status === "at-capacity") {
+              setSelectedMycologist(null);
+              setEndDateError("This mycologist is at capacity and cannot be selected.");
+              return;
+            }
+            setEndDateError("");
+            setSelectedMycologist(m || null);
+          }}
+        />
+      </div>
+
+      {/* Filter button */}
+      <div className="flex-2">
+        <StatusDropdown
+          placeholder="Filter"
+          backgroundColor="var(--background-color)"
+          textColor="var(--primary-color)"
+          borderColor="var(--primary-color)"
+          selectedValue={filter}
+          options={[
+            { label: "All", value: "all" },
+            { label: "Available", value: "available" },
+            { label: "At Capacity", value: "at-capacity", variant: "danger" }
+          ]}
+          onSelect={(value) => setFilter(value as any)}
+        />
+      </div>
+    </div>
+    {!selectedMycologist && <p className="text-[10px] text-red-600 mt-2 font-bold uppercase tracking-wider ml-1">* Please select a mycologist</p>}
+  </div>
+
+  {/* End Date Section */}
+  <div className="mb-8">
+    <label htmlFor="endDate" className="font-[family-name:var(--font-bricolage-grotesque)] text-[10px] font-black uppercase tracking-[0.25em] text-[var(--primary-color)] opacity-60 ml-1 mb-3 block">
+      Set End Date:
+    </label>
+    <div
+      className="relative group cursor-pointer"
+      onClick={() => {
+        const input = endDateInputRef.current;
+        if (!input) return;
+        input.focus();
+        (input as unknown as { showPicker?: () => void }).showPicker?.();
+      }}
+    >
+      <input
+        id="endDate"
+        ref={endDateInputRef}
+        type="date"
+        value={endDate ? endDate.toISOString().slice(0, 10) : ""}
+        onChange={handleEndDateChange}
+        min={formatDateForInput(new Date())}
+        className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--primary-color)]/[0.03] border border-[var(--primary-color)]/20 py-4 px-5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)]/10 transition-all appearance-none
+        [&::-webkit-calendar-picker-indicator]:opacity-0
+        [&::-webkit-calendar-picker-indicator]:absolute
+        [&::-webkit-calendar-picker-indicator]:left-0
+        [&::-webkit-calendar-picker-indicator]:top-0
+        [&::-webkit-calendar-picker-indicator]:w-full
+        [&::-webkit-calendar-picker-indicator]:h-full
+        [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+        name="endDate"
+        required
+      />
+      <FontAwesomeIcon
+        icon={faCalendar}
+        className="absolute right-5 top-1/2 -translate-y-1/2 text-[var(--primary-color)] opacity-40 group-hover:opacity-100 transition-opacity pointer-events-none"
+      />
+    </div>
+    {endDateError && <p className="text-[10px] text-red-600 mt-2 font-bold uppercase tracking-wider ml-1">* {endDateError}</p>}
+  </div>
+
+  <button
+    type="submit"
+    className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-white font-black text-xs uppercase tracking-[0.3em] py-5 rounded-2xl shadow-lg shadow-[var(--primary-color)]/20 hover:scale-[1.02] active:scale-95 transition-all mt-4 disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
+    disabled={!selectedMycologist || !endDate}
+  >
+    Assign Case
+  </button>
+</form>
     </div>
   );
 }
