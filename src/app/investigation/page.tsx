@@ -5,15 +5,17 @@ import StatisticsTile from '@/components/tiles/statistics_tile';
 import CaseTable from '@/components/tables/case_table';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import StatusDropdown from '@/components/StatusDropdown';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import useSWR from 'swr';
 import useSWRInfinite from 'swr/infinite';
+import { useSWRConfig } from 'swr';
 import { apiUrl, type ApiResponse } from '@/lib/api';
 import type { PaginatedResponse } from '@/hooks/swr/types';
 import type { MoldReportSnapshot, StatusCounts } from '@/hooks/swr/use-mold-reports';
 import PageLoading from '@/components/loading/page_loading';
+import { getFirestore, doc, onSnapshot } from 'firebase/firestore';
 
 export default function Investigation() {
         const { user: authUser, loading: authLoading } = useAuth();
@@ -47,6 +49,7 @@ export default function Investigation() {
             setSize,
             isValidating: isLoadingMore,
             isLoading: casesLoading,
+            mutate,
         } = useSWRInfinite<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
             (pageIndex, prev) => {
                 if (authLoading) return null;
@@ -55,8 +58,54 @@ export default function Investigation() {
                 if (pageIndex === 0) return apiUrl('/api/v1/mold-reports', { limit: 100, scope });
                 return apiUrl('/api/v1/mold-reports', { limit: 100, scope, pageToken: prev!.data!.nextPageToken! });
             },
-            { revalidateFirstPage: false },
+            {
+                revalidateFirstPage: true,
+                revalidateOnFocus: true,
+                revalidateIfStale: true,
+            },
         );
+
+        /* Force fresh data on mount to pick up reports created on mobile or updated assignments */
+        const { mutate: globalMutate } = useSWRConfig();
+        useEffect(() => {
+          // Clear cache and force immediate refetch
+          globalMutate((key: unknown) => {
+            return typeof key === 'string' && key.includes('/api/v1/mold-reports');
+          }, undefined, { revalidate: true });
+        }, [globalMutate]);
+
+        /* Real-time Firestore signal listener for cache invalidation */
+        useEffect(() => {
+          console.log('[SmartCache] Effect running, authUser=', authUser, 'authLoading=', authLoading);
+          if (!authUser || authLoading) {
+            console.log('[SmartCache] Returning early - no auth or still loading');
+            return;
+          }
+
+          try {
+            console.log('[SmartCache] Setting up Firestore listener');
+            const db = getFirestore();
+            console.log('[SmartCache] Got Firestore instance:', db);
+            const signalRef = doc(db, 'cache_signals', 'mold-reports');
+
+            const unsubscribe = onSnapshot(signalRef, (snapshot) => {
+              console.log('[SmartCache] Snapshot received:', snapshot.data());
+              if (snapshot.exists()) {
+                console.log('[SmartCache] Signal fired, refreshing list');
+                mutate();
+              }
+            }, (error) => {
+              console.error('[SmartCache] Listener error:', error);
+              console.error('[SmartCache] Error code:', error.code);
+              console.error('[SmartCache] Error message:', error.message);
+              console.error('[SmartCache] Full error:', JSON.stringify(error));
+            });
+
+            return () => unsubscribe();
+          } catch (error) {
+            console.error('[SmartCache] Setup error:', error);
+          }
+        }, [authUser, authLoading, mutate]);
 
         /* Load More is triggered manually — no eager auto-expand. */
 

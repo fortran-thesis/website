@@ -52,6 +52,5 @@ export interface DashboardSummary {
 export function useDashboardSummary(enabled = true) {
   return useSWR<ApiResponse<DashboardSummary>>(
     enabled ? '/api/v1/dashboard/summary' : null,
-    { dedupingInterval: 30_000 },
   );
 }

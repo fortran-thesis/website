@@ -84,7 +84,7 @@ export function useUsersInfinite(limit = 100) {
         pageToken: previousPageData!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false },
+    { revalidateFirstPage: true },
   );
 }
 

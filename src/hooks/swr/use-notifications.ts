@@ -71,7 +71,6 @@ export function useNotifications(
           pageToken: filters?.pageToken,
         })
       : null,
-    { dedupingInterval: 10_000 },
   );
 }
 
@@ -79,7 +78,6 @@ export function useNotifications(
 export function useUnreadNotificationCount(enabled = true) {
   return useSWR<ApiResponse<UnreadCountResponse>>(
     enabled ? '/api/v1/notification/unread-count' : null,
-    { dedupingInterval: 10_000 },
   );
 }
 
@@ -131,16 +129,17 @@ export async function removeDeviceToken(id: string) {
 export function useNotificationMutations() {
   const { mutate } = useSWRConfig();
 
-  const revalidate = () =>
-    Promise.all([
+  const revalidate = async () => {
+    await Promise.all([
       mutate(
         (key: unknown) =>
           typeof key === 'string' &&
-          (key.startsWith('/api/v1/notification') || key.startsWith('$inf$/api/v1/notification')),
+          key.startsWith('/api/v1/notification'),
         undefined,
         { revalidate: true },
       ),
     ]);
+  };
 
   const markRead = async (id: string) => {
     await markNotificationRead(id);

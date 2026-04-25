@@ -73,7 +73,7 @@ export function useReportsInfinite(limit = 10) {
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false },
+    { revalidateFirstPage: true },
   );
 }
 

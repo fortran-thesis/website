@@ -178,7 +178,7 @@ export function useMoldReportsInfinite(
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false, revalidateOnFocus: false },
+    { revalidateFirstPage: true, revalidateOnFocus: true, dedupingInterval: 1000 },
   );
 }
 
@@ -186,6 +186,7 @@ export function useMoldReportsInfinite(
 export function useMoldReport(id: string | undefined) {
   return useSWR<ApiResponse<MoldReportSnapshot>>(
     id ? `/api/v1/mold-reports/${id}` : null,
+    { dedupingInterval: 1000 },
   );
 }
 
@@ -200,7 +201,7 @@ export function useMoldReportExport(id: string | undefined) {
 export function useUnassignedReports(limit = 50, enabled = true) {
   return useSWR<ApiResponse<PaginatedResponse<MoldReportSnapshot>>>(
     enabled ? apiUrl('/api/v1/mold-reports/unassigned', { limit }) : null,
-    { revalidateOnFocus: false },
+    { revalidateOnFocus: true, dedupingInterval: 1000 },
   );
 }
 
@@ -216,7 +217,7 @@ export function useAssignedReports(
           pageToken: params?.pageToken,
         })
       : null,
-    { revalidateOnFocus: false },
+    { revalidateOnFocus: true, dedupingInterval: 1000 },
   );
 }
 
@@ -232,7 +233,7 @@ export function useClosedReports(
           pageToken: params?.pageToken,
         })
       : null,
-    { revalidateOnFocus: false },
+    { revalidateOnFocus: true, dedupingInterval: 1000 },
   );
 }
 
@@ -248,7 +249,7 @@ export function useClosedReportsInfinite(limit = 50, enabled = true) {
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false, revalidateOnFocus: false },
+    { revalidateFirstPage: true, revalidateOnFocus: true, dedupingInterval: 1000 },
   );
 }
 
@@ -263,7 +264,7 @@ export function useAssignedReportsInfinite(limit = 100) {
         pageToken: prev!.data!.nextPageToken!,
       });
     },
-    { revalidateFirstPage: false, revalidateOnFocus: false },
+    { revalidateFirstPage: true, revalidateOnFocus: true, dedupingInterval: 1000 },
   );
 }
 
@@ -316,9 +317,5 @@ export function useMoldReportSearch(params: {
 export function useResolvedCount() {
   return useSWR<ApiResponse<{ resolvedCount: number; resolved?: number }>>(
     '/api/v1/mold-reports/public/resolved-count',
-    {
-      dedupingInterval: PUBLIC_COUNT_CACHE_MS,
-      revalidateIfStale: false,
-    },
   );
 }

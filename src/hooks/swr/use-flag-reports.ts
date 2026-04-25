@@ -54,6 +54,6 @@ export function useFlagReportsInfinite(limit = 50, enabled = true) {
         pageToken: prev?.data?.nextPageToken,
       });
     },
-    { revalidateFirstPage: false },
+    { revalidateFirstPage: true },
   );
 }
