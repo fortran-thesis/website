@@ -12,9 +12,10 @@ interface TabItem {
 interface TabBar {
   tabs: TabItem[];
   initialIndex?: number;
+  onTabChange?: (index: number) => void;
 }
 
-export default function TabBar({ tabs, initialIndex = 0 }: TabBar) {
+export default function TabBar({ tabs, initialIndex = 0, onTabChange }: TabBar) {
   const [activeIndex, setActiveIndex] = useState(initialIndex);
 
   return (
@@ -27,7 +28,10 @@ export default function TabBar({ tabs, initialIndex = 0 }: TabBar) {
             <button
               key={index}
               type="button"
-              onClick={() => setActiveIndex(index)}
+              onClick={() => {
+                setActiveIndex(index);
+                onTabChange?.(index);
+              }}
               className={`font-[family-name:var(--font-bricolage-grotesque)] flex items-center gap-2 px-6 py-3 font-medium text-base transition-colors duration-200 cursor-pointer
                 ${
                   isActive

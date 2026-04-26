@@ -22,6 +22,7 @@ export default function Reports() {
     const [statusFilter, setStatusFilter] = useState('');
     const [dateOrder, setDateOrder] = useState<'newest' | 'oldest'>('newest');
     const [dateSortSelection, setDateSortSelection] = useState('');
+    const [activeReportTab, setActiveReportTab] = useState(0);
 
     const normalizeReportType = (rawType?: string) => {
       const type = (rawType || '').toString().trim().toLowerCase();
@@ -98,9 +99,9 @@ export default function Reports() {
 
     // Derive stats from loaded data
     const stats = useMemo(() => {
-      const unresolvedData = reports.filter((r) => r.status === 'Unresolved');
-      const resolvedData = reports.filter((r) => r.status === 'Resolved');
-      return { total: reports.length, unresolved: unresolvedData.length, resolved: resolvedData.length };
+      const wikimoldData = reports.filter((r) => r.reportType === 'WikiMold Report');
+      const flaggedMoldData = reports.filter((r) => r.reportType === 'Flagged Mold');
+      return { total: reports.length, wikimold: wikimoldData.length, flaggedMold: flaggedMoldData.length };
     }, [reports]);
 
     // Infinite scroll: load next SWR page
@@ -130,11 +131,12 @@ export default function Reports() {
     const filteredReports = useMemo(() => {
       const query = searchQuery.trim().toLowerCase();
       const status = statusFilter.trim().toLowerCase();
+      const shouldApplyStatusFilter = activeReportTab === 0;
 
       const filtered = reports.filter((report) => {
         const reportStatus = (report.status || '').toLowerCase();
         const matchesStatus =
-          !status || status === 'all' || reportStatus === status;
+          !shouldApplyStatusFilter || !status || status === 'all' || reportStatus === status;
 
         if (!matchesStatus) return false;
         if (!query) return true;
@@ -157,7 +159,7 @@ export default function Reports() {
         const bTs = b.dateReportedTs ?? 0;
         return dateOrder === 'newest' ? bTs - aTs : aTs - bTs;
       });
-    }, [reports, searchQuery, statusFilter, dateOrder]);
+    }, [reports, searchQuery, statusFilter, dateOrder, activeReportTab]);
 
     const wikimoldReports = useMemo(
       () => filteredReports.filter((report) => report.reportType === 'WikiMold Report'),
@@ -172,35 +174,31 @@ export default function Reports() {
     const reportTabs = useMemo(
       () => [
         {
-          label: `WikiMold Reports (${wikimoldReports.length})`,
+          label: 'WikiMold Reports',
           icon: faBook,
           content: (
-            <div className="mt-4">
             <ReportsTable
               data={wikimoldReports}
               onEdit={(c: Report) => {
                 router.push(`/reports/view-report?id=${c.id}&type=wikimold`);
               }}
-              actionAriaLabel="Edit/View Report"
             />
-            </div>
           ),
         },
         {
-          label: `Flagged Mold Reports (${flaggedMoldReports.length})`,
+          label: 'Flagged Mold Reports',
           icon: faFlag,
           content: (
-            <div className="mt-4">
             <ReportsTable
               data={flaggedMoldReports}
               hideReportedUser
+              hideStatus
+              actionIcon={faEye}
+              actionAriaLabel="View Flagged Mold Report"
               onEdit={(c: Report) => {
                 router.push(`/reports/view-report?id=${c.id}&type=flagged`);
               }}
-              actionIcon={faEye}
-              actionAriaLabel="View Report"
             />
-            </div>
           ),
         },
       ],
@@ -225,15 +223,15 @@ export default function Reports() {
             {/* Statistics Tiles */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 mt-6">
                 <StatisticsTile icon={faTriangleExclamation} iconColor="var(--accent-color)" title="Total Reports" statNum={stats.total} />
-                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--moldify-red)" title="Total Unresolved Reports" statNum={stats.unresolved} />
-                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--primary-color)" title="Total Resolved Reports" statNum={stats.resolved} />
+              <StatisticsTile icon={faTriangleExclamation} iconColor="var(--moldify-red)" title="Total WikiMold Reports" statNum={stats.wikimold} />
+              <StatisticsTile icon={faTriangleExclamation} iconColor="var(--primary-color)" title="Total Flagged Mold Reports" statNum={stats.flaggedMold} />
             </div>
             
             {/* Submitted Cases Section */}
             <div className="flex flex-col md:flex-row md:items-center mt-10 gap-4 w-full">
                 {/* Left Label */}
                 <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--primary-color)] font-extrabold">
-                    Reports
+                    User Reports
                 </p>
 
                 {/* Right Section */}
@@ -243,7 +241,7 @@ export default function Reports() {
                         <label htmlFor="search" className="sr-only">Search Cases</label>
                         <input
                             id="search"
-                            placeholder="Search Cases"
+                            placeholder="Search Reports"
                             className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--background-color)] py-2 px-4 rounded-full border-2 border-[var(--primary-color)] focus:outline-none w-full pr-10"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
@@ -256,18 +254,20 @@ export default function Reports() {
                     <div className="flex gap-2 w-full md:w-auto">
 
                         {/* Custom Status Dropdown */}
-                        <StatusDropdown
-                          placeholder="Filter By Status"
-                          backgroundColor="var(--accent-color)"
-                          textColor="var(--moldify-black)"
-                          options={[
-                            { label: "All", value: "all" },
-                            { label: "Resolved", value: "resolved" },
-                            { label: "Unresolved", value: "unresolved" }
-                          ]}
-                          selectedValue={statusFilter}
-                          onSelect={(value) => setStatusFilter(value)}
-                        />
+                        {activeReportTab === 0 && (
+                          <StatusDropdown
+                            placeholder="Filter By Status"
+                            backgroundColor="var(--accent-color)"
+                            textColor="var(--moldify-black)"
+                            options={[
+                              { label: "All", value: "all" },
+                              { label: "Resolved", value: "resolved" },
+                              { label: "Unresolved", value: "unresolved" }
+                            ]}
+                            selectedValue={statusFilter}
+                            onSelect={(value) => setStatusFilter(value)}
+                          />
+                        )}
 
                         <StatusDropdown
                           placeholder="Sort By Date"
@@ -291,7 +291,13 @@ export default function Reports() {
             <div className="mt-6 w-full">
               {isInitialLoading && <PageLoading message="Loading reports..." />}
               {error && <MessageBanner variant="error" className="mb-4">{error}</MessageBanner>}
-              {!isInitialLoading && !error && <TabBar tabs={reportTabs} initialIndex={0} />}
+              {!isInitialLoading && !error && (
+                <TabBar
+                  tabs={reportTabs}
+                  initialIndex={0}
+                  onTabChange={(index) => setActiveReportTab(index)}
+                />
+              )}
 
               {/* Infinite scroll trigger */}
               <div ref={loadMoreRef} className="py-4 text-center">

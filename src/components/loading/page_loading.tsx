@@ -84,7 +84,7 @@ export default function PageLoading({
             >
               <div className="h-[1px] w-10 bg-[var(--primary-color)]" />
               <p className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--moldify-grey)] font-[family-name:var(--font-bricolage-grotesque)]">
-                Sync_In_Progress
+                Work In Progress    
               </p>
               <div className="h-[1px] w-10 bg-[var(--primary-color)]" />
             </motion.div>

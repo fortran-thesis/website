@@ -22,6 +22,7 @@ interface ReportsTableProps {
   data: Report[];
   onEdit?: (report: Report) => void;
   hideReportedUser?: boolean;
+  hideStatus?: boolean;
   actionIcon?: IconDefinition;
   actionAriaLabel?: string;
 }
@@ -31,6 +32,7 @@ export default function ReportsTable({
   data,
   onEdit,
   hideReportedUser = false,
+  hideStatus = false,
   actionIcon = faPen,
   actionAriaLabel = "View Report",
 }: ReportsTableProps) {
@@ -72,7 +74,7 @@ export default function ReportsTable({
               {!hideReportedUser && <th className="py-3 px-6">Reported User</th>}
               <th className="py-3 px-6">Reported By</th>
               <th className="py-3 px-6">Date Reported</th>
-              <th className="py-3 px-6">Status</th>
+              {!hideStatus && <th className="py-3 px-6">Status</th>}
               <th className="py-3 px-6 text-center">Action</th>
             </tr>
           </thead>
@@ -99,11 +101,11 @@ export default function ReportsTable({
                   {!hideReportedUser && <td className="py-3 px-6">{report.reportedUser}</td>}
                   <td className="py-3 px-6">{report.reportedBy}</td>
                   <td className="py-3 px-6 whitespace-nowrap">{report.dateReported}</td>
-                  <td className="py-3 px-6">
-                    <StatusBox
-                      status={report.status}
-                    />
-                  </td>
+                  {!hideStatus && (
+                    <td className="py-3 px-6">
+                      <StatusBox status={report.status} />
+                    </td>
+                  )}
                   <td className="py-3 px-6 text-center">
                     <button
                       onClick={() => handleEditClick(report)}

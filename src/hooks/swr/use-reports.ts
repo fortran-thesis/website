@@ -17,6 +17,10 @@ import type { PaginatedResponse } from './types';
 
 export interface ReportSnapshot {
   id: string;
+  content_id?: string;
+  contentId?: string;
+  content_type?: string;
+  contentType?: string;
   reason?: string;
   title?: string;
   description?: string;
