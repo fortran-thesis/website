@@ -22,106 +22,46 @@ interface AssignCaseModalProps {
   onClose: () => void;
   caseId?: string; // Add case ID for assignment
   mycologists?: Mycologist[]; // Make optional since we'll fetch from backend
-  onAssign?: (mycologist: Mycologist, endDate: Date | null) => void; 
+  onAssign?: (mycologist: Mycologist, endDate: string | null) => void; 
 }
 
 const CAPACITY_THRESHOLD = 2; // Mycologists with >2 active cases are at capacity
 const HOLIDAY_COUNTRY = process.env.NEXT_PUBLIC_HOLIDAY_COUNTRY || "PH";
-const ASSIGNMENT_CUTOFF_HOUR = 17; // 5:00 PM local time
-
-const parseDateInput = (value: string): Date | null => {
-  const parts = value.split("-").map(Number);
-  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
-  const [year, month, day] = parts;
-  return new Date(Date.UTC(year, month - 1, day));
-};
-
-const formatDateForInput = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
 
 export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: propMycologists, onAssign }: AssignCaseModalProps) {
   const [selectedMycologist, setSelectedMycologist] = useState<Mycologist | null>(null);
   const [filter, setFilter] = useState<"all" | "available" | "at-capacity">("all");
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<string>("");
   const [endDateError, setEndDateError] = useState<string>("");
   const [mycologists, setMycologists] = useState<Mycologist[]>(propMycologists || []);
   const [loading, setLoading] = useState(false);
   const [holidayCalendar] = useState(() => new Holidays(HOLIDAY_COUNTRY));
 
-  const getHolidayInfo = (date: Date) => {
-    return holidayCalendar.isHoliday(date);
+  const getHolidayInfo = (dateValue: string) => {
+    const [year, month, day] = dateValue.split("-").map(Number);
+    if ([year, month, day].some((part) => Number.isNaN(part))) {
+      return null;
+    }
+
+    return holidayCalendar.isHoliday(new Date(Date.UTC(year, month - 1, day)));
   };
 
-  const isHoliday = (date: Date): boolean => Boolean(getHolidayInfo(date));
+  const isHoliday = (dateValue: string): boolean => Boolean(getHolidayInfo(dateValue));
 
-  const getHolidayName = (date: Date): string => {
-    const holiday = getHolidayInfo(date);
+  const getHolidayName = (dateValue: string): string => {
+    const holiday = getHolidayInfo(dateValue);
     if (!holiday) return "";
     if (Array.isArray(holiday)) {
       return holiday.map((item: { name?: string }) => item.name || "holiday").join(", ");
     }
+
     return (holiday as { name?: string }).name || "holiday";
   };
-
-  // Check if a date is a weekend
-  const isWeekend = (date: Date): boolean => {
-    const dayOfWeek = date.getDay();
-    return dayOfWeek === 0 || dayOfWeek === 6;
-  };
-
-  const hasPassedAssignmentCutoff = (): boolean => {
-    const now = new Date();
-    return now.getHours() >= ASSIGNMENT_CUTOFF_HOUR;
-  };
-
-  const isAfterCutoff = hasPassedAssignmentCutoff();
 
   // Handle end date change with validation
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEndDateError("");
-    const value = e.target.value;
-
-    if (!value) {
-      setEndDate(null);
-      return;
-    }
-
-    const selectedDate = parseDateInput(value);
-    if (!selectedDate) {
-      setEndDateError("Invalid date selected.");
-      setEndDate(null);
-      return;
-    }
-    selectedDate.setHours(0, 0, 0, 0);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    // Validate date is not in the past.
-    if (selectedDate < today) {
-      setEndDateError("End date cannot be in the past.");
-      setEndDate(null);
-      return;
-    }
-
-    // Validate date is not a weekend
-    if (isWeekend(selectedDate)) {
-      setEndDateError("End date cannot fall on a weekend (Saturday or Sunday)");
-      setEndDate(null);
-      return;
-    }
-
-    if (isHoliday(selectedDate)) {
-      const holidayName = getHolidayName(selectedDate);
-      setEndDateError(`End date cannot fall on a holiday${holidayName ? ` (${holidayName})` : ""}`);
-      setEndDate(null);
-      return;
-    }
-
-    setEndDate(selectedDate);
+    setEndDate(e.target.value);
   };
 
 
@@ -224,18 +164,8 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
       return;
     }
 
-    if (isAfterCutoff) {
-      setEndDateError("Assignments are closed for today after 5:00 PM. Please assign on the next working day.");
-      return;
-    }
-
     if (!endDate) {
       setEndDateError("End date is required");
-      return;
-    }
-
-    if (isWeekend(endDate)) {
-      setEndDateError("End date cannot fall on a weekend (Saturday or Sunday)");
       return;
     }
 
@@ -374,9 +304,8 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
             <input
                 id="endDate"
                 type="date"
-                value={endDate ? endDate.toISOString().slice(0, 10) : ""}
+                value={endDate}
                 onChange={handleEndDateChange}
-              min={formatDateForInput(new Date())}
                 className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 mb-1 rounded-lg focus:outline-none appearance-none
                 [&::-webkit-calendar-picker-indicator]:opacity-0
                 [&::-webkit-calendar-picker-indicator]:absolute
@@ -391,16 +320,11 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
             />
             </div>
             {endDateError && <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">* {endDateError}</p>}
-            {isAfterCutoff && (
-              <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">
-                * Assignments are unavailable after 5:00 PM. Please continue on the next working day.
-              </p>
-            )}
         </div>
         <button
           type="submit"
           className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-xl hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!selectedMycologist || !endDate || isAfterCutoff}
+          disabled={!selectedMycologist || !endDate}
         >
           Assign Case
         </button>

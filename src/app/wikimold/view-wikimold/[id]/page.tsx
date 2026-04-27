@@ -331,7 +331,14 @@ export default function ViewWikiMold() {
 
   const getCaseThumbnail = (entry: MoldCaseSummary): string => {
     const cultivation = asRecord(entry.cultivation_details);
+    const initialObservations = asRecord(
+      cultivation.initial_observations ?? cultivation.initial_observation,
+    );
     const imageCandidates = [
+      asText(initialObservations.microscopic_image_url),
+      asText(initialObservations.microscopic_image_path),
+      asText(initialObservations.macroscopic_image_url),
+      asText(initialObservations.macroscopic_image_path),
       asText(cultivation.initial_macroscopic_image_url),
       asText(cultivation.initial_microscopic_image_url),
       asText(entry.cover_photo),
@@ -892,6 +899,9 @@ const ProseContent = ({
                   const caseThumb = getCaseThumbnail(entry);
                   
                   const initial = asRecord(entry.cultivation_details);
+                  const initialObservations = asRecord(
+                    initial.initial_observations ?? initial.initial_observation,
+                  );
                   const evidenceSummary = asRecord(entry.evidence_summary);
                   const initialSummary = asRecord(evidenceSummary.initial);
                   const inVivoSummary = asRecord(evidenceSummary.in_vivo);
@@ -935,7 +945,28 @@ const ProseContent = ({
                       label: "[01] Initial Observation",
                       content: [
                         getRecordText(initialSummary, ['microscopic', 'macroscopic']),
+                        getRecordText(initialObservations, [
+                          'microscopic_description',
+                          'microscopic_identification',
+                          'identified_mold',
+                          'identifiedMold',
+                        ]),
+                        getRecordText(initialObservations, [
+                          'macroscopic_description',
+                          'macroscopic_summary',
+                          'initial_macroscopic',
+                        ]),
                         getRecordText(initialSummary, ['symptoms', 'characteristics']),
+                        getRecordText(initialObservations, [
+                          'symptoms',
+                          'initial_symptoms',
+                          'initial_macroscopic_symptoms',
+                        ]),
+                        getRecordText(initialObservations, [
+                          'characteristics',
+                          'initial_characteristics',
+                          'initial_macroscopic_characteristics',
+                        ]),
                         getRecordText(initial, [
                           'initial_microscopic',
                           'initial_macroscopic',

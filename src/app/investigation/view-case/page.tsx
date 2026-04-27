@@ -23,6 +23,7 @@ import { apiMutate } from "@/lib/api";
 import { useInvalidationFunctions } from '@/utils/cache-invalidation';
 import PageLoading from "@/components/loading/page_loading";
 import MessageBanner from "@/components/feedback/message_banner";
+import { serializeAssignmentDateInput } from "@/lib/assignment-date";
 
 type Mycologist = {
   name: string;
@@ -96,10 +97,10 @@ function ViewCaseContent() {
 
   const [assignError, setAssignError] = useState<string | null>(null);
   const [isAssigning, setIsAssigning] = useState(false);
-  const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; endDate: Date | null } | null>(null);
+  const [pendingAssign, setPendingAssign] = useState<{ mycologist: Mycologist; endDate: string | null } | null>(null);
 
   // Called from AssignCaseModal -> opens confirmation modal
-  const handleAssignClick = (mycologist: Mycologist, endDate: Date | null) => {
+  const handleAssignClick = (mycologist: Mycologist, endDate: string | null) => {
     setAssignError(null);
     setPendingAssign({ mycologist, endDate });
     setConfirmAssignOpen(true);
@@ -118,7 +119,7 @@ function ViewCaseContent() {
         method: 'PATCH',
         body: {
           assigned_mycologist_id: pendingAssign.mycologist.id,
-          end_date: pendingAssign.endDate?.toISOString(),
+          end_date: serializeAssignmentDateInput(pendingAssign.endDate),
         },
       });
 
