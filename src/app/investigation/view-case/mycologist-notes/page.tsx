@@ -480,12 +480,6 @@ function MycologistNotesContent() {
               </h3>
 
               <div className="grid grid-cols-2 gap-8 border-y border-[var(--primary-color)]/5 py-8 mb-8">
-                <div className="space-y-1">
-                  <span className="block text-[8px] font-bold uppercase tracking-widest text-[var(--moldify-grey)] opacity-60 font-[family-name:var(--font-montserrat)]">Confidence Level</span>
-                  <span className="text-3xl font-black text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-                    {finalVerdictConfidence || "N/A"}
-                  </span>
-                </div>
                 <div className="space-y-2">
                   <span className="block text-[8px] font-bold uppercase tracking-widest text-[var(--moldify-grey)] opacity-60 font-[family-name:var(--font-montserrat)]">Last Sync</span>
                   <span className="text-[10px] font-bold uppercase text-[var(--primary-color)] leading-tight block font-[family-name:var(--font-bricolage-grotesque)]">

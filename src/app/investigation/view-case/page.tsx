@@ -859,12 +859,6 @@ function ViewCaseContent() {
               </div>
             </div>
             
-            {finalVerdictConfidence && (
-              <div className="px-5 py-2.5 rounded-2xl bg-[var(--primary-color)]/5 border border-[var(--primary-color)]/5 text-right">
-                <span className="block text-[8px] font-black uppercase tracking-widest text-[var(--primary-color)] opacity-40">Confidence Level</span>
-                <span className="text-lg font-black text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)]">{finalVerdictConfidence}</span>
-              </div>
-            )}
           </div>
 
           <div className="grid md:grid-cols-2 gap-4 mb-8">
