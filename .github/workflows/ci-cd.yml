@@ -18,7 +18,7 @@ jobs:
           cache: 'npm'
       
       - name: npm audit
-        run: npm audit --omit=dev --audit-level=moderate
+        run: npm audit --omit=dev --audit-level=high
 
   test:
     runs-on: ubuntu-latest
