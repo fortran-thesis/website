@@ -28,13 +28,12 @@ interface AssignCaseModalProps {
 
 const CAPACITY_THRESHOLD = 2; // Mycologists with >2 active cases are at capacity
 const HOLIDAY_COUNTRY = process.env.NEXT_PUBLIC_HOLIDAY_COUNTRY || "PH";
-const ASSIGNMENT_CUTOFF_HOUR = 17; // 5:00 PM local time
 
 const parseDateInput = (value: string): Date | null => {
   const parts = value.split("-").map(Number);
   if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) return null;
   const [year, month, day] = parts;
-  return new Date(Date.UTC(year, month - 1, day));
+  return new Date(year, month - 1, day);
 };
 
 const formatDateForInput = (date: Date): string => {
@@ -70,19 +69,6 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
     return (holiday as { name?: string }).name || "holiday";
   };
 
-  // Check if a date is a weekend
-  const isWeekend = (date: Date): boolean => {
-    const dayOfWeek = date.getDay();
-    return dayOfWeek === 0 || dayOfWeek === 6;
-  };
-
-  const hasPassedAssignmentCutoff = (): boolean => {
-    const now = new Date();
-    return now.getHours() >= ASSIGNMENT_CUTOFF_HOUR;
-  };
-
-  const isAfterCutoff = hasPassedAssignmentCutoff();
-
   // Handle end date change with validation
   const handleEndDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEndDateError("");
@@ -99,20 +85,12 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
       setEndDate(null);
       return;
     }
-    selectedDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     // Validate date is not in the past.
     if (selectedDate < today) {
       setEndDateError("End date cannot be in the past.");
-      setEndDate(null);
-      return;
-    }
-
-    // Validate date is not a weekend
-    if (isWeekend(selectedDate)) {
-      setEndDateError("End date cannot fall on a weekend (Saturday or Sunday)");
       setEndDate(null);
       return;
     }
@@ -227,18 +205,8 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
       return;
     }
 
-    if (isAfterCutoff) {
-      setEndDateError("Assignments are closed for today after 5:00 PM. Please assign on the next working day.");
-      return;
-    }
-
     if (!endDate) {
       setEndDateError("End date is required");
-      return;
-    }
-
-    if (isWeekend(endDate)) {
-      setEndDateError("End date cannot fall on a weekend (Saturday or Sunday)");
       return;
     }
 
@@ -377,9 +345,9 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
             <input
                 id="endDate"
                 type="date"
-                value={endDate ? endDate.toISOString().slice(0, 10) : ""}
+                value={endDate ? formatDateForInput(endDate) : ""}
                 onChange={handleEndDateChange}
-              min={formatDateForInput(new Date())}
+                min={formatDateForInput(new Date())}
                 className="w-full font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--taupe)] py-3 px-4 pr-10 mb-1 rounded-lg focus:outline-none appearance-none
                 [&::-webkit-calendar-picker-indicator]:opacity-0
                 [&::-webkit-calendar-picker-indicator]:absolute
@@ -394,16 +362,11 @@ export default function AssignCaseModal({ isOpen, onClose, caseId, mycologists: 
             />
             </div>
             {endDateError && <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">* {endDateError}</p>}
-            {isAfterCutoff && (
-              <p className="text-xs text-red-500 mt-1 font-[family-name:var(--font-bricolage-grotesque)]">
-                * Assignments are unavailable after 5:00 PM. Please continue on the next working day.
-              </p>
-            )}
         </div>
         <button
           type="submit"
           className="w-full cursor-pointer font-[family-name:var(--font-bricolage-grotesque)] bg-[var(--primary-color)] text-[var(--background-color)] font-bold py-3 rounded-xl hover:bg-[var(--hover-primary)] transition mt-5 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={!selectedMycologist || !endDate || isAfterCutoff}
+          disabled={!selectedMycologist || !endDate}
         >
           Assign Case
         </button>
