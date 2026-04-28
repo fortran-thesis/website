@@ -153,14 +153,14 @@ export default function Users() {
             {/* End Header Section */}
 
             {/* Statistics Tiles */}
-            <div className="flex flex-col xl:flex-row w-full mt-6 gap-x-2 gap-y-2">
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 w-full xl:w-2/3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full mt-6">
+                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
                     <StatisticsTile icon={faUsers} iconColor="var(--accent-color)" title="Total Users" statNum={totalUsers} />
-                    <StatisticsTile icon={faUsers} iconColor="var(--primary-color)" title="Total Farmers" statNum={totalFarmers} />
+                    <StatisticsTile icon={faUsers} iconColor="var(--primary-color)" title="Total Clients" statNum={totalFarmers} />
                     <StatisticsTile icon={faUsers} iconColor="var(--moldify-blue)" title="Total Mycologists" statNum={totalMycologists} />
                     <StatisticsTile icon={faUsers} iconColor="var(--moldify-red)" title="Total Administrators" statNum={totalAdmins} />
                 </div>
-                <div className="w-fill xl:w-1/3">
+                <div className="lg:col-span-1 h-full">
                     <DonutChart
                         title="User Status Breakdown"
                         data={userStatusData}
@@ -210,7 +210,7 @@ export default function Users() {
                         textColor="var(--moldify-black)"
                         options={[
                             { label: "All", value: "all" },
-                            { label: "Farmer", value: "farmer" },
+                            { label: "Client", value: "farmer" },
                             { label: "Mycologist", value: "mycologist" },
                             { label: "Admin", value: "admin" }
                         ]}

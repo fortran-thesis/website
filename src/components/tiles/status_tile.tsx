@@ -39,7 +39,7 @@ export default function StatusBox({ status, fontSize = "10px" }: StatusBoxProps)
       className="inline-flex min-w-[9rem] justify-center items-center gap-3 px-5 py-2 rounded-full border border-[var(--primary-color)]/5"
       style={{ 
         backgroundColor: theme.bg,
-        backdropFilter: "blur(12px)", // Premium 'Nordic Glass' feel
+        backdropFilter: "blur(12px)", 
       }}
     >
       {/* Tiny Pulse Indicator */}
@@ -48,7 +48,6 @@ export default function StatusBox({ status, fontSize = "10px" }: StatusBoxProps)
         style={{ backgroundColor: theme.dot }} 
       />
 
-      {/* High-End Editorial Typography */}
       <span 
         className="font-black uppercase leading-none"
         style={{ 

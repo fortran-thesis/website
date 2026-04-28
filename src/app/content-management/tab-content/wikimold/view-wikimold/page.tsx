@@ -479,13 +479,13 @@ function ViewWikiMoldContent() {
                   value={wikiMoldInfo.title ?? ""}
                   onChange={(e) => setWikiMoldInfo((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder="Enter Title..."
-                  className="w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-5xl font-black placeholder:opacity-10 focus:outline-none transition-all tracking-tighter"
+                  className="w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-5xl font-black placeholder:text-[var(--primary-color)]/55 focus:outline-none transition-all tracking-tighter"
                 />
                 {/* THE LINE: Static light gray, becomes Accent Color on focus */}
                 <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--primary-color)]/10 group-focus-within:bg-[var(--accent-color)] transition-colors duration-300" />
               </div>
               
-              <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--primary-color)]/30 mt-4 italic">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-[var(--primary-color)]/70 mt-4 italic">
                 Public Facing Database Heading
               </p>
             </div>
@@ -497,13 +497,13 @@ function ViewWikiMoldContent() {
           {/* 01. DESCRIPTION: primary body content editor for biological overview. */}
           <section id="description" className="scroll-mt-32">
             <div className="flex flex-col gap-2 mb-8">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 01</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">Section 01</label>
                 <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Mold Description</h2>
             </div>
 
             <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 01</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">Section 01</label>
                 <h2 className="font-black text-2xl text-[var(--primary-color)] uppercase tracking-tighter">Biological Description</h2>
               </div>
               <div className="space-y-4">
@@ -521,7 +521,7 @@ function ViewWikiMoldContent() {
           {/* 4 Fields: Affected Hosts, Symptoms, Disease Cycle, Impact in 2x2 grid */}
           <section id="analysis" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
             <div className="flex flex-col gap-2 mb-8">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 02</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">Section 02</label>
                 <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Host & Pathogen Impact</h2>
             </div>
             
@@ -591,14 +591,14 @@ function ViewWikiMoldContent() {
           {/* 03. TREATMENT CONTROLS: separate remediation strategies per control category. */}
           <section id="treatments" className="scroll-mt-32 pt-12 border-t border-[var(--primary-color)]/10">
             <div className="flex flex-col gap-2 mb-8">
-                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Section 03</label>
+                <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">Section 03</label>
                 <h2 className="font-black text-3xl text-[var(--primary-color)] uppercase tracking-tighter font-[family-name:var(--font-montserrat)]">Prevention & Treatment</h2>
             </div>
             
             <div className="grid grid-cols-1 gap-12">
               <div className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Protocol 00</label>
+                  <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">Protocol 00</label>
                   <h3 className="font-black text-2xl text-[var(--primary-color)]">Prevention Summary</h3>
                 </div>
                 <div className="space-y-4">
@@ -620,7 +620,7 @@ function ViewWikiMoldContent() {
               }).map(([key, label], index) => (
                 <div key={key} className="p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent">
                    <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40">Protocol 0{index + 1}</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">Protocol 0{index + 1}</label>
                     <h3 className="font-black text-2xl text-[var(--primary-color)]">{label} Control</h3>
                   </div>
                   <div className="space-y-4">
@@ -670,7 +670,7 @@ function ViewWikiMoldContent() {
         .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid rgba(var(--primary-rgb), 0.1) !important; padding: 0 0 1rem 0 !important; margin-bottom: 1rem !important; }
         .ql-container.ql-snow { border: none !important; }
         .ql-editor { font-family: var(--font-bricolage-grotesque) !important; color: var(--primary-color) !important; font-size: 1.1rem !important; min-height: 200px !important; padding: 0 !important; }
-        .ql-editor.ql-blank::before { color: var(--primary-color) !important; opacity: 0.2 !important; left: 0 !important; }
+        .ql-editor.ql-blank::before { color: var(--primary-color) !important; opacity: 0.55 !important; left: 0 !important; }
       `}</style>
       
       <ConfirmModal

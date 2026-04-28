@@ -29,7 +29,9 @@ export function resolveNotificationRedirect(
     case 'mold_case':
       return buildViewCaseRedirect(referenceId, 'mold_case');
     case 'flag_report':
-      return `/flag-report/${encodedId}`;
+      // UI route for viewing/moderating flag reports lives under /reports/view-report.
+      // We intentionally omit a `type=` param here and let the view page infer it from the fetched payload.
+      return `/reports/view-report?id=${encodedId}`;
     case 'user':
       return `/user/view-user?id=${encodedId}`;
     default:

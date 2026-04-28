@@ -4,6 +4,7 @@ import {
   faClipboard,
   faTriangleExclamation,
   faImage,
+  faMicroscope,
 } from "@fortawesome/free-solid-svg-icons";
 import Breadcrumbs from "@/components/breadcrumbs_nav";
 import { useState, useMemo, Suspense, useEffect } from "react";
@@ -119,6 +120,9 @@ export default function ViewReport() {
 function ViewReportContent() {
   const searchParams = useSearchParams();
   const reportId = searchParams.get("id");
+  const reportType = (searchParams.get("type") ?? "").toLowerCase();
+  const isFlaggedMoldReport = reportType === "flagged";
+  const showStatusTile = !isFlaggedMoldReport;
 
   // SWR: fetch report
   const { data: reportRes, isLoading: loading, error: swrError } = useReport(reportId ?? undefined);
@@ -231,7 +235,7 @@ function ViewReportContent() {
         <div className="flex flex-col">
           <Breadcrumbs role={userRole} />
           <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-            REPORTS
+            REPORT MANAGEMENT
           </h1>
         </div>
       </div>
@@ -244,68 +248,101 @@ function ViewReportContent() {
       {!loading && !error && (
         <>
 
-      {/* User Info */}
-      <div className="flex flex-col lg:flex-row w-full gap-12 items-start py-10 border-b border-[var(--primary-color)]/10">
-  
-        {/* 1. Subject Profile - Circular & Floating */}
-        <div className="relative flex-shrink-0">
-          <div className={`w-36 h-36 rounded-full overflow-hidden border-4 border-white shadow-2xl relative z-10 
-            ${reportedUserName === '(N/A)' ? 'border-[var(--moldify-red)]/30' : 'border-white'}`}>
-            <img
-              src={imgSrc ?? "/assets/default-fallback.png"}
-              alt="profile picture"
-              className="object-cover w-full h-full rounded-full"
-              onError={(e) => {
-                const t = e.target as HTMLImageElement;
-                if (t.src !== '/assets/default-fallback.png') t.src = '/assets/default-fallback.png';
-              }}
-            />
+        {/* Report Summary */}
+        <div className="flex flex-col lg:flex-row w-full gap-12 items-center lg:items-start py-12 border-b border-[var(--primary-color)]/10">
+          {isFlaggedMoldReport ? (
+            <div className="relative flex-shrink-0 group">
+              <div className="absolute inset-0 bg-[var(--accent-color)]/10 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              
+              <div className="w-44 h-44 rounded-full p-1 bg-gradient-to-tr from-[var(--primary-color)]/20 via-transparent to-[var(--accent-color)]/20 border border-[var(--primary-color)]/10 relative z-10 transition-transform duration-700 group-hover:scale-[1.02]">
+                <div className="w-full h-full rounded-full flex flex-col items-center justify-center bg-[var(--background-color)] shadow-[inner_0_2px_4px_rgba(0,0,0,0.05)] relative overflow-hidden">
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+                  <FontAwesomeIcon icon={faMicroscope} className="text-[var(--accent-color)] text-4xl relative z-10 group-hover:text-[var(--accent-color)] transition-colors duration-500" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="relative flex-shrink-0 group">
+              <div className="w-44 h-44 rounded-full p-1 bg-[var(--primary-color)]/[0.03] border border-[var(--primary-color)]/[0.08] relative z-10 transition-all duration-700 group-hover:border-[var(--primary-color)]/30">
+                <div className="w-full h-full rounded-full overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.1)] group-hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)] transition-all bg-[var(--background-color)]">
+                  <img
+                    src={imgSrc ?? "/assets/default-fallback.png"}
+                    alt="reported content preview"
+                    className="object-cover w-full h-full rounded-full"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/assets/default-fallback.png';
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 opacity-0 group-hover:opacity-100 group-hover:-translate-y-2 transition-all duration-500">
+                <div className="w-[1px] h-4 bg-gradient-to-t from-[var(--primary-color)] to-transparent" />
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col w-full text-center lg:text-left">
+            {isFlaggedMoldReport ? (
+              <div className="flex flex-col gap-4 mb-10">
+                <span className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.5em] text-[var(--primary-color)] opacity-80">
+                  Misidentified Mold Genus
+                </span>
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+                  <h1 className="font-[family-name:var(--font-montserrat)] text-4xl font-black text-[var(--primary-color)] tracking-tighter leading-none">
+                    Genus Identification
+                  </h1>
+                  {showStatusTile && (
+                    <div className="flex justify-center lg:justify-start">
+                      <StatusBox status={isResolved ? "Resolved" : reportStatus} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4 mb-10">
+                <span className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.45em] text-[var(--primary-color)]">
+                  Reported User
+                </span>  
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+                  <h1 className="font-[family-name:var(--font-montserrat)] text-5xl font-black text-[var(--primary-color)] tracking-tighter leading-none">
+                    {reportedUserName === '(N/A)' ? (
+                      <span className="text-[var(--moldify-red)]">{reportedUserName}</span>
+                    ) : (
+                      reportedUserName
+                    )}
+                  </h1>
+                  {showStatusTile && (
+                    <div className="flex justify-center lg:justify-start">
+                      <StatusBox status={isResolved ? "Resolved" : reportStatus} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className={`grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-0 rounded-[2rem] overflow-hidden bg-[var(--primary-color)]/[0.02] border border-[var(--primary-color)]/[0.08] backdrop-blur-sm ${isFlaggedMoldReport ? 'max-w-2xl' : ''}`}>
+              <div className={`flex flex-col gap-2 p-8 border-b sm:border-b-0 sm:border-r border-[var(--primary-color)]/[0.08] ${isFlaggedMoldReport ? '' : 'hover:bg-[var(--primary-color)]/[0.02] transition-colors group/cell'}`}>
+                <span className={`font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.3em] ${isFlaggedMoldReport ? 'text-[var(--primary-color)]/40' : 'text-[var(--primary-color)]/90 group-hover/cell:text-[var(--primary-color)] transition-colors'}`}>
+                  Reporter
+                </span>
+                <h2 className={`font-bold text-[var(--moldify-black)] font-[family-name:var(--font-montserrat)] tracking-tight truncate ${isFlaggedMoldReport ? 'text-[15px]' : 'text-[16px]'}`}>
+                  {reporterName}
+                </h2>
+              </div>
+
+              <div className={`flex flex-col gap-2 p-8 border-[var(--primary-color)]/[0.08] ${isFlaggedMoldReport ? '' : 'border-b sm:border-b-0 hover:bg-[var(--primary-color)]/[0.02] transition-colors group/cell'}`}>
+                <span className={`font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.3em] ${isFlaggedMoldReport ? 'text-[var(--primary-color)]/40' : 'text-[var(--primary-color)]/90 group-hover/cell:text-[var(--primary-color)] transition-colors'}`}>
+                  Date Reported
+                </span>
+                <h2 className={`font-bold text-[var(--moldify-black)] font-[family-name:var(--font-montserrat)] tracking-tight ${isFlaggedMoldReport ? 'text-[15px]' : 'text-[16px]'}`}>
+                  {dateReported}
+                </h2>
+              </div>
+            </div>
           </div>
-          {/* Subtle Glow Ring */}
-          <div className="absolute -inset-2 border border-[var(--primary-color)]/10 rounded-full animate-[spin_20s_linear_infinite]" />
         </div>
-
-        {/* 2. Content Architecture */}
-        <div className="flex flex-col w-full">
-          
-          {/* Top Label & Identity */}
-          <div className="flex flex-col gap-1 mb-8">
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)] opacity-30 font-[family-name:var(--font-bricolage-grotesque)]">
-              Reported User
-            </span>
-            <div className="flex flex-wrap items-center gap-6">
-              <h1 className="font-[family-name:var(--font-montserrat)] text-5xl font-black text-[var(--primary-color)] tracking-tighter leading-none">
-                {reportedUserName === '(N/A)' ? (
-                  <span className="text-[var(--moldify-red)]">{reportedUserName}</span>
-                ) : (
-                  reportedUserName
-                )}
-              </h1>
-              <StatusBox status={isResolved ? "Resolved" : reportStatus} />
-            </div>
-          </div>
-
-          {/* 3. The Dual Registry Bar (Everything included) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 py-6 border-t border-b border-[var(--primary-color)]/[0.05]">
-            
-            {/* Reporter Info */}
-            <div className="flex flex-col gap-1.5 border-l-2 border-[var(--accent-color)] pl-4">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)] opacity-30">Reporter</span>
-              <h2 className="text-[15px] font-bold text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-                {reporterName}
-              </h2>
-            </div>
-
-            {/* Date Info */}
-            <div className="flex flex-col gap-1.5 border-l-2 border-[var(--primary-color)]/10 pl-4">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--primary-color)] opacity-30">Date Reported</span>
-              <h2 className="text-[15px] font-bold text-[var(--primary-color)] font-[family-name:var(--font-montserrat)]">
-                {dateReported}
-              </h2>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Report Section */}
       <div className="flex flex-col lg:flex-row w-full gap-12 mt-12 items-start">
@@ -314,139 +351,178 @@ function ViewReportContent() {
         <div className="w-full lg:w-[350px] flex-shrink-0 flex flex-col gap-8 sticky top-8">
           
           {/* 1. Status & Action Area */}
-          <div className="flex flex-col gap-3">
-            {reportStatus === "Rejected" ? (
-              <div className="group flex items-center gap-4 p-5 rounded-3xl bg-[var(--moldify-red)]/[0.05] border border-[var(--moldify-red)]/10 transition-all duration-300 hover:bg-[var(--moldify-red)]/[0.08]">
-                <div className="w-11 h-11 rounded-2xl bg-[var(--moldify-red)]/10 flex items-center justify-center shrink-0 shadow-sm">
-                  <FontAwesomeIcon icon={faTriangleExclamation} className="text-[var(--moldify-red)] text-lg" />
+          {isFlaggedMoldReport ? (
+            <div className="p-6 rounded-3xl bg-[var(--moldify-red)]/[0.02] border border-[var(--moldify-red)]/10">
+              <h1 className="font-[family-name:var(--font-montserrat)] text-xs font-black uppercase tracking-widest text-[var(--moldify-red)] mb-2">
+                Analysis Note
+              </h1>
+              <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs text-[var(--moldify-black)] opacity-60 leading-relaxed italic">
+                This entry requires manual genus verification due to a system classification mismatch.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {reportStatus === "Rejected" ? (
+                <div className="group flex items-center gap-4 p-5 rounded-3xl bg-[var(--moldify-red)]/[0.05] border border-[var(--moldify-red)]/10 transition-all duration-300 hover:bg-[var(--moldify-red)]/[0.08]">
+                  <div className="w-11 h-11 rounded-2xl bg-[var(--moldify-red)]/10 flex items-center justify-center shrink-0 shadow-sm">
+                    <FontAwesomeIcon icon={faTriangleExclamation} className="text-[var(--moldify-red)] text-lg" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.2em] text-[var(--moldify-red)] opacity-60">Status</span>
+                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-sm uppercase tracking-tight text-[var(--moldify-red)]">
+                        Report Rejected
+                    </span>
+                  </div>
                 </div>
-                <div className="flex flex-col">
-                  <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.2em] text-[var(--moldify-red)] opacity-60">Status</span>
-                  <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-sm uppercase tracking-tight text-[var(--moldify-red)]">
-                      Report Rejected
-                  </span>
+              ) : reportStatus === "Revision Requested" ? (
+                <div className="group flex items-center gap-4 p-5 rounded-3xl bg-[var(--primary-color)]/[0.05] border border-[var(--primary-color)]/10 transition-all duration-300 hover:bg-[var(--primary-color)]/[0.08]">
+                  <div className="w-11 h-11 rounded-2xl bg-[var(--primary-color)]/10 flex items-center justify-center shrink-0 shadow-sm">
+                    <FontAwesomeIcon icon={faClipboard} className="text-[var(--primary-color)] text-lg" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.2em] text-[var(--primary-color)] opacity-60">Status</span>
+                    <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-sm uppercase tracking-tight text-[var(--primary-color)]">
+                        Revision Pending
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ) : reportStatus === "Revision Requested" ? (
-              <div className="group flex items-center gap-4 p-5 rounded-3xl bg-[var(--primary-color)]/[0.05] border border-[var(--primary-color)]/10 transition-all duration-300 hover:bg-[var(--primary-color)]/[0.08]">
-                <div className="w-11 h-11 rounded-2xl bg-[var(--primary-color)]/10 flex items-center justify-center shrink-0 shadow-sm">
-                  <FontAwesomeIcon icon={faClipboard} className="text-[var(--primary-color)] text-lg" />
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <button
+                    type="button"
+                    className="w-full py-4 rounded-2xl bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_10px_20px_rgba(0,0,0,0.1)] hover:-translate-y-1 hover:shadow-[0_15px_25px_rgba(0,0,0,0.15)] transition-all active:scale-[0.98] cursor-pointer"
+                    onClick={() => setIsReqRevisionsModalOpen(true)}
+                  >
+                    Request Revision
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full py-4 rounded-2xl bg-transparent border-2 border-[var(--moldify-red)]/30 text-[var(--moldify-red)] font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-[var(--moldify-red)] hover:border-[var(--moldify-red)] hover:text-[var(--background-color)] transition-all active:scale-[0.98] cursor-pointer"
+                    onClick={() => setRejectModalOpen(true)}
+                  >
+                    Reject Report
+                  </button>
                 </div>
-                <div className="flex flex-col">
-                  <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.2em] text-[var(--primary-color)] opacity-60">Status</span>
-                  <span className="font-[family-name:var(--font-bricolage-grotesque)] font-black text-sm uppercase tracking-tight text-[var(--primary-color)]">
-                      Revision Pending
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <button
-                  type="button"
-                  className="w-full py-4 rounded-2xl bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.2em] shadow-[0_10px_20px_rgba(0,0,0,0.1)] hover:-translate-y-1 hover:shadow-[0_15px_25px_rgba(0,0,0,0.15)] transition-all active:scale-[0.98] cursor-pointer"
-                  onClick={() => setIsReqRevisionsModalOpen(true)}
-                >
-                  Request Revision
-                </button>
-                <button
-                  type="button"
-                  className="w-full py-4 rounded-2xl bg-transparent border-2 border-[var(--moldify-red)]/30 text-[var(--moldify-red)] font-[family-name:var(--font-bricolage-grotesque)] font-black text-[10px] uppercase tracking-[0.2em] hover:bg-[var(--moldify-red)] hover:border-[var(--moldify-red)] hover:text-[var(--background-color)] transition-all active:scale-[0.98] cursor-pointer"
-                  onClick={() => setRejectModalOpen(true)}
-                >
-                  Reject Report
-                </button>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
           {/* 2. Issue Details Module */}
           <div className="flex flex-col gap-6 p-8 rounded-[2.5rem] bg-[var(--primary-color)]/[0.02] border border-[var(--primary-color)]/[0.06] backdrop-blur-sm">
             <div className="flex flex-col gap-1">
-              <p className="text-[9px] font-black uppercase tracking-[0.5em] text-[var(--primary-color)] opacity-30">Categorized_Issue</p>
-              <h2 className="font-[family-name:var(--font-montserrat)] text-xl font-black text-[var(--primary-color)] tracking-tighter leading-tight">
+              <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.5em] text-[var(--primary-color)] opacity-30">
+                {isFlaggedMoldReport ? 'Flagged Mold' : 'Categorized Issue'}
+              </p>
+              <h2 className={`font-[family-name:var(--font-montserrat)] text-xl font-black text-[var(--primary-color)] tracking-tighter leading-tight ${isFlaggedMoldReport ? 'italic' : ''}`}>
                 {userIssue}
               </h2>
             </div>
 
-            <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-[var(--primary-color)] to-transparent opacity-10" />
+            {!isFlaggedMoldReport && (
+              <>
+                <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-[var(--primary-color)] to-transparent opacity-10" />
 
-            <div className="flex flex-col gap-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.5em] text-[var(--primary-color)] opacity-30">Audit_Notes</p>
-              <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[14px] text-[var(--moldify-black)] leading-relaxed opacity-70 italic border-l-2 border-[var(--primary-color)]/10 pl-4">
-                {additionalInfo || 'No additional information provided by reporter.'}
-              </p>
-            </div>
+                <div className="flex flex-col gap-3">
+                  <p className="text-[9px] font-black uppercase tracking-[0.5em] text-[var(--primary-color)] opacity-30">Audit_Notes</p>
+                  <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[14px] text-[var(--moldify-black)] leading-relaxed opacity-70 italic border-l-2 border-[var(--primary-color)]/10 pl-4">
+                    {additionalInfo || 'No additional information provided by reporter.'}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* RIGHT SIDE: Content Preview */}
-        <div className="flex-grow min-w-0 bg-[var(--taupe)] rounded-[3rem] border border-[var(--primary-color)]/[0.08] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)]">
-          
-          {/* Evidence Header */}
-          <div className="relative w-full aspect-[21/9] bg-[var(--moldify-softGrey)] overflow-hidden group">
-            {imageSrc ? (
-              <>
-                <img
-                  src={imageSrc}
-                  alt="Report evidence"
-                  className="object-cover w-full h-full grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000 ease-in-out"
-                  onError={(e) => {
-                    setHasImage(false);
-                    const t = e.target as HTMLImageElement;
-                    t.style.display = 'none';
-                  }}
-                />
-                {/* Subtle Vignette for depth */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-60 pointer-events-none" />
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-[var(--primary-color)] opacity-10">
-                <FontAwesomeIcon icon={faImage} className="text-5xl mb-3" />
-                <p className="text-[10px] font-black uppercase tracking-[0.4em]">Evidence_Missing</p>
-              </div>
-            )}
-            
-          
-          </div>
+        {isFlaggedMoldReport ? (
+          <div className="flex-grow min-w-0 bg-transparent rounded-[3rem] border border-[var(--primary-color)]/[0.08] overflow-hidden p-12 lg:p-16">
+            <div className="mx-auto w-full max-w-2xl">
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="h-[1px] w-8 bg-[var(--primary-color)] opacity-30" />
+                  <span className="font-[family-name:var(--font-montserrat)] text-xs font-black uppercase tracking-[0.4em] text-[var(--primary-color)] opacity-90">
+                    Mold Genus
+                  </span>
+                </div>
 
-          {/* Content Body */}
-          <div className="p-12 lg:p-20">
-            <div className="mx-auto w-full max-w-3xl">
-              <div className="flex flex-col gap-2 mb-10">
-                <span className="text-[10px] font-black uppercase tracking-[0.6em] text-[var(--primary-color)] opacity-20">Content Reported</span>
-                <h2 className="font-[family-name:var(--font-montserrat)] text-5xl font-black text-[var(--primary-color)] tracking-tighter leading-[0.9] lg:text-6xl">
+                <h2 className="font-[family-name:var(--font-montserrat)] text-4xl font-black text-[var(--primary-color)] tracking-tighter leading-tight italic">
                   {contentTitle}
                 </h2>
-              </div>
-              
-              <div className="prose prose-lg max-w-none font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] leading-[1.8] opacity-80 text-justify">
-                <ProseContent html={reportedContentHtml} />
+
+                <div className="prose prose-sm max-w-none font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] leading-[1.8] opacity-70">
+                  <ProseContent html={reportedContentHtml} />
+                </div>
               </div>
             </div>
           </div>
+        ) : (
+          <div className="flex-grow min-w-0 bg-[var(--taupe)] rounded-[3rem] border border-[var(--primary-color)]/[0.08] overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.05)]">
+            <div className="relative w-full aspect-[21/9] bg-[var(--moldify-softGrey)] overflow-hidden group">
+              {imageSrc ? (
+                <>
+                  <img
+                    src={imageSrc}
+                    alt="Report evidence"
+                    className="object-cover w-full h-full grayscale-[0.3] group-hover:grayscale-0 group-hover:scale-105 transition-all duration-1000 ease-in-out"
+                    onError={(e) => {
+                      setHasImage(false);
+                      const t = e.target as HTMLImageElement;
+                      t.style.display = 'none';
+                    }}
+                  />
+                  {/* Subtle Vignette for depth */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-60 pointer-events-none" />
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-[var(--primary-color)] opacity-10">
+                  <FontAwesomeIcon icon={faImage} className="text-5xl mb-3" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em]">Evidence_Missing</p>
+                </div>
+              )}
+            </div>
 
-        </div>
+            {/* Content Body */}
+            <div className="p-12 lg:p-20">
+              <div className="mx-auto w-full max-w-3xl">
+                <div className="flex flex-col gap-2 mb-10">
+                  <h2 className="font-[family-name:var(--font-montserrat)] text-5xl font-black text-[var(--primary-color)] tracking-tighter leading-[0.9] lg:text-6xl">
+                    {contentTitle}
+                  </h2>
+                </div>
+                
+                <div className="prose prose-lg max-w-none font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] leading-[1.8] opacity-80 text-justify">
+                  <ProseContent html={reportedContentHtml} />
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
       </div>
 
       {/* MODALS */}
-      <ConfirmModal
-        isOpen={isRejectModalOpen}
-        title="Are you sure you want to reject this report?"
-        subtitle="This action is permanent and cannot be undone."
-        cancelText="Cancel"
-        confirmText="Yes"
-        onCancel={() => setRejectModalOpen(false)}
-        onConfirm={handleReject}
-      />
+      {!isFlaggedMoldReport && (
+        <>
+          <ConfirmModal
+            isOpen={isRejectModalOpen}
+            title="Are you sure you want to reject this report?"
+            subtitle="This action is permanent and cannot be undone."
+            cancelText="Cancel"
+            confirmText="Yes"
+            onCancel={() => setRejectModalOpen(false)}
+            onConfirm={handleReject}
+          />
 
-      <RequestRevisionModal
-        isOpen={isReqRevisionsModalOpen}
-        onClose={() => setIsReqRevisionsModalOpen(false)}
-        onSubmit={handleSubmit}
-        isSubmitting={reportActionLoading}
-        reasonTitle={userIssue}
-        reasonDescription={reasonDescription}
-      />
+          <RequestRevisionModal
+            isOpen={isReqRevisionsModalOpen}
+            onClose={() => setIsReqRevisionsModalOpen(false)}
+            onSubmit={handleSubmit}
+            isSubmitting={reportActionLoading}
+            reasonTitle={userIssue}
+            reasonDescription={reasonDescription}
+          />
+        </>
+      )}
         </>
       )}
     </main>

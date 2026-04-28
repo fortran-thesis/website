@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Suspense, useMemo } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMoldReportExport } from "@/hooks/swr";
+import { useMoldCaseByReport, useMoldCaseLogs, useMoldReport, useMoldReportExport } from "@/hooks/swr";
 import PageLoading from "@/components/loading/page_loading";
 import BackButton from "@/components/buttons/back_button";
 
@@ -54,28 +54,226 @@ const timestampValue = (value: unknown): string => {
   return parsed.toLocaleString();
 };
 
+const isLikelyImageUrl = (value: string): boolean => {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (!/^https?:\/\//i.test(trimmed) && !trimmed.startsWith("/")) return false;
+  if (/\s/.test(trimmed)) return false;
+  return true;
+};
+
+const uniqueImageUrls = (values: string[]): string[] => {
+  const seen = new Set<string>();
+  const urls: string[] = [];
+
+  for (const value of values) {
+    const trimmed = value.trim();
+    if (!isLikelyImageUrl(trimmed)) continue;
+    if (seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    urls.push(trimmed);
+  }
+
+  return urls;
+};
+
+const collectImageUrls = (value: unknown, keyHint?: string): string[] => {
+  const results: string[] = [];
+
+  const walk = (node: unknown, hint?: string) => {
+    if (typeof node === "string") {
+      if (hint && /(image|photo|cover|microscopic|macroscopic)/i.test(hint)) {
+        results.push(node);
+      }
+      return;
+    }
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        walk(item, hint);
+      }
+      return;
+    }
+
+    if (node && typeof node === "object") {
+      for (const [key, nested] of Object.entries(node as Record<string, unknown>)) {
+        walk(nested, key);
+      }
+    }
+  };
+
+  walk(value, keyHint);
+  return uniqueImageUrls(results);
+};
+
+const asRecord = (value: unknown): Record<string, unknown> => {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+};
+
+const normalizeLogType = (rawType: unknown): string => {
+  const text = textValue(rawType, "").toLowerCase().replace(/[_\s-]+/g, "");
+  if (text === "vivo" || text === "invivo") return "vivo";
+  if (text === "vitro" || text === "invitro") return "vitro";
+  if (text === "initialobservation" || text === "initialobs") return "initial";
+  return text;
+};
+
 function PrintableCaseReportContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reportId = searchParams.get("id") ?? undefined;
 
   const { data, isLoading, error } = useMoldReportExport(reportId);
+  const { data: reportRes } = useMoldReport(reportId);
+  const { data: moldCaseRes } = useMoldCaseByReport(reportId);
+
   const payload = data?.data;
+  const reportData = reportRes?.data;
+  const moldCase = moldCaseRes?.data;
+  const moldCaseId = moldCase?.id;
+  const { data: logsRes } = useMoldCaseLogs(moldCaseId, 200, Boolean(moldCaseId));
   const canPrint = Boolean(payload && !isLoading && !error);
 
   const affectedHosts = useMemo(
     () => textList(payload?.sections?.affected_hosts),
     [payload?.sections?.affected_hosts],
   );
-  const followUps = Array.isArray(payload?.follow_ups) ? payload.follow_ups : [];
-  const cultivationLogs = Array.isArray(payload?.investigation?.cultivation_logs)
+  const exportCultivationLogs = Array.isArray(payload?.investigation?.cultivation_logs)
     ? payload.investigation.cultivation_logs
     : [];
-  const getFollowUpPhotos = (entry: Record<string, unknown>): string[] => {
-    const fromCoverPhoto = textList(entry.cover_photo);
-    if (fromCoverPhoto.length > 0) return fromCoverPhoto;
-    return textList(entry.cover_photo_urls);
-  };
+  const endpointCultivationLogs = Array.isArray(logsRes?.data?.snapshot) ? logsRes.data.snapshot : [];
+  const cultivationLogs = endpointCultivationLogs.length > 0
+    ? endpointCultivationLogs
+    : exportCultivationLogs;
+  const caseDetails = useMemo(
+    () => (Array.isArray((reportData as { case_details?: unknown[] } | undefined)?.case_details)
+      ? ((reportData as { case_details?: unknown[] }).case_details ?? [])
+      : []),
+    [reportData],
+  );
+  const cultivationDetails = useMemo(
+    () => asRecord((moldCase as { cultivation_details?: unknown } | null | undefined)?.cultivation_details),
+    [moldCase],
+  );
+  const initialObservationFromInvestigation = asRecord(payload?.investigation?.initial_observation);
+  const initialObservationFromCase = asRecord(cultivationDetails.initial_observations ?? cultivationDetails);
+  const latestInitialLog = useMemo(
+    () => cultivationLogs.slice().reverse().find((log) => normalizeLogType(asRecord(log).type) === "initial"),
+    [cultivationLogs],
+  );
+  const latestInVivoLog = useMemo(
+    () => cultivationLogs.slice().reverse().find((log) => normalizeLogType(asRecord(log).type) === "vivo"),
+    [cultivationLogs],
+  );
+  const latestInVitroLog = useMemo(
+    () => cultivationLogs.slice().reverse().find((log) => normalizeLogType(asRecord(log).type) === "vitro"),
+    [cultivationLogs],
+  );
+  const latestInitialLogCharacteristics = asRecord(asRecord(latestInitialLog).characteristics);
+  const latestInVivoCharacteristics = asRecord(asRecord(latestInVivoLog).characteristics);
+  const latestInVitroCharacteristics = asRecord(asRecord(latestInVitroLog).characteristics);
+  const initialObservationImages = useMemo(
+    () =>
+      uniqueImageUrls([
+        ...collectImageUrls(initialObservationFromInvestigation),
+        ...collectImageUrls(initialObservationFromCase),
+        ...collectImageUrls(latestInitialLog),
+        ...collectImageUrls(latestInitialLogCharacteristics),
+      ]),
+    [
+      initialObservationFromInvestigation,
+      initialObservationFromCase,
+      latestInitialLog,
+      latestInitialLogCharacteristics,
+    ],
+  );
+  const inVivoFromInvestigation = asRecord(payload?.investigation?.in_vivo_latest);
+  const inVivoImages = useMemo(
+    () =>
+      uniqueImageUrls([
+        ...collectImageUrls(inVivoFromInvestigation),
+        ...collectImageUrls(latestInVivoLog),
+        ...collectImageUrls(latestInVivoCharacteristics),
+      ]),
+    [inVivoFromInvestigation, latestInVivoLog, latestInVivoCharacteristics],
+  );
+  const inVitroFromInvestigation = asRecord(payload?.investigation?.in_vitro_latest);
+  const inVitroImages = useMemo(
+    () =>
+      uniqueImageUrls([
+        ...collectImageUrls(inVitroFromInvestigation),
+        ...collectImageUrls(latestInVitroLog),
+        ...collectImageUrls(latestInVitroCharacteristics),
+      ]),
+    [inVitroFromInvestigation, latestInVitroLog, latestInVitroCharacteristics],
+  );
+  const laboratoryCode = textValue(payload?.report?.case_name, textValue(payload?.report?.report_id));
+
+  const initialObservationTitle = textValue(
+    initialObservationFromInvestigation.microscopic_identification,
+    textValue(
+      initialObservationFromCase.initial_microscopic,
+      textValue(
+        latestInitialLogCharacteristics.microscopic_identification,
+        textValue(latestInitialLogCharacteristics.identified_mold, "N/A"),
+      ),
+    ),
+  );
+  const initialObservationConfidence = textValue(
+    initialObservationFromInvestigation.microscopic_confidence,
+    textValue(
+      initialObservationFromInvestigation.confidence,
+      textValue(
+        initialObservationFromCase.confidence,
+        textValue(latestInitialLogCharacteristics.confidence, "N/A"),
+      ),
+    ),
+  );
+  const initialObservationSummary = textValue(
+    initialObservationFromInvestigation.macroscopic_summary,
+    textValue(
+      initialObservationFromInvestigation.summary,
+      textValue(
+        initialObservationFromCase.initial_macroscopic,
+        textValue(asRecord(latestInitialLog).summary, "N/A"),
+      ),
+    ),
+  );
+
+  const inVivoTitle = textValue(
+    inVivoFromInvestigation.identified_mold,
+    textValue(
+      latestInVivoCharacteristics.identified_mold,
+      textValue(latestInVivoCharacteristics.microscopic_identification, "N/A"),
+    ),
+  );
+  const inVivoConfidence = textValue(
+    inVivoFromInvestigation.confidence,
+    textValue(latestInVivoCharacteristics.confidence, "N/A"),
+  );
+  const inVivoSummary = textValue(
+    inVivoFromInvestigation.summary,
+    textValue(asRecord(latestInVivoLog).summary, "N/A"),
+  );
+
+  const inVitroTitle = textValue(
+    inVitroFromInvestigation.identified_mold,
+    textValue(
+      latestInVitroCharacteristics.identified_mold,
+      textValue(latestInVitroCharacteristics.microscopic_identification, "N/A"),
+    ),
+  );
+  const inVitroConfidence = textValue(
+    inVitroFromInvestigation.confidence,
+    textValue(latestInVitroCharacteristics.confidence, "N/A"),
+  );
+  const inVitroSummary = textValue(
+    inVitroFromInvestigation.summary,
+    textValue(asRecord(latestInVitroLog).summary, "N/A"),
+  );
 
   const handleBack = () => {
     if (reportId) {
@@ -88,7 +286,7 @@ function PrintableCaseReportContent() {
 
   if (!reportId) {
     return (
-      <main className="min-h-screen bg-[var(--background-color)] p-8 text-[var(--primary-color)]">
+      <main className="min-h-screen bg-[var(--taupe)] p-8 text-[var(--primary-color)]">
         <p className="text-lg font-bold">Missing report id.</p>
       </main>
     );
@@ -100,7 +298,7 @@ function PrintableCaseReportContent() {
 
   if (error || !payload) {
     return (
-      <main className="min-h-screen bg-[var(--background-color)] p-8 text-[var(--primary-color)]">
+      <main className="min-h-screen bg-[var(--taupe)] p-8 text-[var(--primary-color)]">
         <p className="text-lg font-bold">Unable to load printable report payload.</p>
       </main>
     );
@@ -111,7 +309,7 @@ function PrintableCaseReportContent() {
   <style jsx global>{`
     @page {
       size: A4;
-      margin: 0;
+      margin: 12mm;
     }
 
     * {
@@ -120,7 +318,7 @@ function PrintableCaseReportContent() {
     }
 
     body {
-      background: var(--background-color);
+      background: var(--taupe);
     }
 
     @media print {
@@ -138,19 +336,22 @@ function PrintableCaseReportContent() {
       .print-shell {
         margin: 0 !important;
         box-shadow: none !important;
-        max-width: 100vw !important;
+        max-width: none !important;
         border-radius: 0 !important;
         border: none !important;
         background: #ffffff !important;
         overflow: visible !important;
-        width: 100vw !important;
+        width: auto !important;
         padding: 0 !important;
       }
 
       .print-bleed-header {
-        width: 100vw !important;
-        margin-left: calc(50% - 50vw) !important;
-        margin-right: calc(50% - 50vw) !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        color: var(--primary-color) !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
       }
 
       .avoid-page-break {
@@ -164,6 +365,41 @@ function PrintableCaseReportContent() {
 
       .page-break {
         break-before: page;
+        page-break-before: always;
+      }
+
+      .print-tech-section {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+
+      .print-snapshot-section,
+      .print-case-block,
+      .print-case-row,
+      .print-analysis-item,
+      .print-image-grid,
+      .print-image-frame {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+
+      .print-analysis-item {
+        break-after: auto !important;
+        page-break-after: auto !important;
+      }
+
+      .print-featured-frame {
+        max-height: 72mm !important;
+      }
+
+      .print-thumb-frame {
+        max-height: 30mm !important;
+      }
+
+      .print-image-frame > span,
+      .print-image-frame img {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
       }
     }
   `}</style>
@@ -195,10 +431,11 @@ function PrintableCaseReportContent() {
     </button>
   </div>
 
-  {/* Minimalist Header Section */}
-  <section className="print-bleed-header bg-[var(--primary-color)] px-10 py-10 text-[var(--background-color)]">
-    <div className="flex items-center justify-between">
+  {/* Professional Editorial Header */}
+  <section className="print-bleed-header px-10 py-10">
+    <div className="flex items-center justify-between gap-6 border-b border-[var(--primary-color)]/20 pb-8">
       <div className="flex items-center gap-6">
+        {/* Keeping your exact logo styling and size */}
         <div className="rounded-lg p-2">
           <Image
             src="/assets/moldify-logo-v5.svg"
@@ -207,18 +444,18 @@ function PrintableCaseReportContent() {
             height={80}
           />
         </div>
-        <div className="space-y-0.5">
-          <h1 className="font-[family-name:var(--font-montserrat)] text-sm font-black uppercase tracking-[0.15em] leading-none text-[var(--accent-color)]">
+        <div className="space-y-1.5">
+          <h1 className="font-[family-name:var(--font-montserrat)] text-xs font-black uppercase tracking-[0.3em] text-[var(--accent-color)] leading-none">
             Technical Lab Report
           </h1>
-          <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs opacity-70">
-            Internal Case: {textValue(payload.report.report_id)}
+          <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm text-[var(--primary-color)] font-medium">
+            Laboratory Code: <span className="opacity-70">{laboratoryCode}</span>
           </p>
         </div>
       </div>
-      <div className="text-right">
-        <p className="font-[family-name:var(--font-montserrat)] text-[9px] font-bold uppercase tracking-[0.2em] opacity-50">Mycologist</p>
-        <p className="font-[family-name:var(--font-montserrat)] text-lg font-black uppercase tracking-tight">
+      <div className="ml-auto max-w-[42%] min-w-0 text-right">
+        <p className="font-[family-name:var(--font-montserrat)] text-[9px] font-bold uppercase tracking-[0.25em] text-[var(--moldify-grey)] opacity-50">Authorized Mycologist</p>
+        <p className="font-[family-name:var(--font-montserrat)] text-lg font-black uppercase tracking-tight leading-tight break-words whitespace-normal text-[var(--primary-color)] md:text-xl">
           {textValue(payload.identities.mycologist_name)}
         </p>
       </div>
@@ -226,30 +463,41 @@ function PrintableCaseReportContent() {
   </section>
 
   {/* Content Body */}
-  <section className="space-y-12 px-10 py-12 md:px-12">
+  <section className="px-10 py-12 md:px-12 space-y-16">
     
-    {/* Subject Identification & Vital Dates */}
-    <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-[var(--primary-color)]/10 pb-10">
-      <div>
-        <h2 className="font-[family-name:var(--font-montserrat)] text-6xl font-black uppercase tracking-tighter text-[var(--primary-color)]">
-          {textValue(payload.sections.fungus_name, "Identification Pending")}
-        </h2>
-        <p className="mt-3 font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)] opacity-60">
-          Reported By: {textValue(payload.identities.reporter_name)}
-        </p>
+    {/* Subject Identification & Vital Dates - Clean Typographic Layout */}
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-10 items-start">
+      <div className="md:col-span-8 space-y-6">
+        <div className="space-y-2">
+          <h2 className="font-[family-name:var(--font-montserrat)] text-7xl font-black uppercase tracking-tighter leading-[0.85] text-[var(--primary-color)]">
+            {textValue(payload.sections.fungus_name, "Identification Pending")}
+          </h2>
+          <div className="flex items-center gap-4">
+            <div className="h-0.5 w-12 bg-[var(--accent-color)]" />
+            <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)] opacity-60">
+              Reported By: {textValue(payload.identities.reporter_name)}
+            </p>
+          </div>
+        </div>
       </div>
       
-      <div className="flex gap-10 md:text-right border-l md:border-l-0 md:border-r border-[var(--primary-color)]/10 pl-6 md:pl-0 md:pr-6 py-2">
-        <div className="space-y-1">
-          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--moldify-grey)] opacity-40">Issue Date</p>
-          <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm font-bold text-[var(--moldify-grey)]">{textValue(payload.report.report_date)}</p>
+      {/* Vital Dates - Minimalist Grid without containers */}
+      <div className="md:col-span-4 grid grid-cols-2 gap-8 md:text-right">
+        <div className="space-y-1 border-r border-[var(--primary-color)]/10 md:border-r-0 md:pr-0">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--moldify-grey)] opacity-40">Issue Date</p>
+          <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm font-bold text-[var(--primary-color)]">
+            {textValue(payload.report.report_date)}
+          </p>
         </div>
         <div className="space-y-1">
-          <p className="text-[9px] font-black uppercase tracking-widest text-[var(--moldify-grey)] opacity-40">Observation</p>
-          <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm font-bold text-[var(--moldify-grey)]">{textValue(payload.report.date_observed)}</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-[var(--moldify-grey)] opacity-40">Observation</p>
+          <p className="font-[family-name:var(--font-bricolage-grotesque)] text-sm font-bold text-[var(--primary-color)]">
+            {textValue(payload.report.date_observed)}
+          </p>
         </div>
       </div>
     </div>
+ 
 
     {/* Metadata Matrix */}
     <div className="grid grid-cols-1 gap-px bg-[var(--primary-color)]/10 md:grid-cols-3 border border-[var(--primary-color)]/10 rounded-2xl overflow-hidden">
@@ -272,7 +520,7 @@ function PrintableCaseReportContent() {
         { title: "Morphology", content: payload.sections.description },
         { title: "Clinical Risks", content: payload.sections.health_risks, highlight: true }
       ].map((section, i) => (
-        <article key={i} className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <article key={i} className="print-tech-section grid grid-cols-1 md:grid-cols-4 gap-6">
           <h3 className="font-[family-name:var(--font-montserrat)] text-xs font-black uppercase tracking-widest text-[var(--moldify-grey)] pt-1">
             {section.title}
           </h3>
@@ -324,130 +572,129 @@ function PrintableCaseReportContent() {
       </div>
     </section>
 
-    <section className="page-break space-y-4 border-t border-[var(--primary-color)]/10 pt-10">
-      <h2 className="font-[family-name:var(--font-montserrat)] text-xl font-black uppercase text-[var(--primary-color)] tracking-tight">
-        Investigation Snapshot
-      </h2>
+    <section className="page-break print-snapshot-section space-y-16 border-t border-[var(--primary-color)]/20 pt-16">
+  {/* Header */}
+  <div className="space-y-3">
+    <h2 className="font-[family-name:var(--font-montserrat)] text-xs font-black uppercase tracking-[0.4em] text-[var(--accent-color)]">
+      Investigation Snapshot
+    </h2>
+    <p className="font-[family-name:var(--font-bricolage-grotesque)] text-3xl font-black tracking-tight text-[var(--primary-color)]">
+      Visual Specimen Analysis
+    </p>
+  </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <article className="rounded-2xl border border-[var(--primary-color)]/15 p-5">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">Initial Observation</p>
-          <p className="mt-2 text-sm font-bold text-[var(--primary-color)]">
-            {textValue(payload.investigation?.initial_observation?.microscopic_identification)}
-          </p>
-          <p className="mt-1 text-xs text-[var(--moldify-grey)]">
-            Confidence: {textValue(
-              payload.investigation?.initial_observation?.microscopic_confidence,
-              textValue(payload.investigation?.initial_observation?.confidence),
-            )}
-          </p>
-          <p className="mt-2 text-sm text-[var(--moldify-grey)]">
-            {textValue(
-              payload.investigation?.initial_observation?.macroscopic_summary,
-              textValue(payload.investigation?.initial_observation?.summary),
-            )}
-          </p>
-        </article>
-
-        <article className="rounded-2xl border border-[var(--primary-color)]/15 p-5">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">Latest In Vivo</p>
-          <p className="mt-2 text-sm font-bold text-[var(--primary-color)]">
-            {textValue(payload.investigation?.in_vivo_latest?.identified_mold)}
-          </p>
-          <p className="mt-1 text-xs text-[var(--moldify-grey)]">
-            Confidence: {textValue(payload.investigation?.in_vivo_latest?.confidence)}
-          </p>
-          <p className="mt-2 text-sm text-[var(--moldify-grey)]">
-            {textValue(payload.investigation?.in_vivo_latest?.summary)}
-          </p>
-        </article>
-
-        <article className="rounded-2xl border border-[var(--primary-color)]/15 p-5">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--moldify-grey)]">Latest In Vitro</p>
-          <p className="mt-2 text-sm font-bold text-[var(--primary-color)]">
-            {textValue(payload.investigation?.in_vitro_latest?.identified_mold)}
-          </p>
-          <p className="mt-1 text-xs text-[var(--moldify-grey)]">
-            Confidence: {textValue(payload.investigation?.in_vitro_latest?.confidence)}
-          </p>
-          <p className="mt-2 text-sm text-[var(--moldify-grey)]">
-            {textValue(payload.investigation?.in_vitro_latest?.summary)}
-          </p>
-        </article>
-      </div>
-
-      <article className="space-y-3 rounded-2xl border border-[var(--primary-color)]/15 p-5">
-        <h3 className="text-base font-black uppercase text-[var(--primary-color)]">Cultivation Logs</h3>
-        {cultivationLogs.length === 0 ? (
-          <p className="text-sm text-[var(--moldify-grey)]">No cultivation logs captured yet.</p>
-        ) : (
-          <ul className="space-y-3">
-            {cultivationLogs.map((log) => (
-              <li key={String(log.log_id ?? `${log.type}-${log.created_at ?? "unknown"}`)} className="rounded-xl bg-[var(--background-color)] p-3">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--primary-color)]">
-                  {textValue(log.type)} • {timestampValue(log.observed_at ?? log.created_at)}
+  {/* Case Details / Field Journal - Wider Images */}
+  <div className="print-case-block space-y-8">
+    <h3 className="font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-widest text-[var(--moldify-grey)] opacity-50">
+      Field Intelligence Log
+    </h3>
+    
+    {caseDetails.length === 0 ? (
+      <p className="text-sm italic text-[var(--moldify-grey)] opacity-40">No entries logged.</p>
+    ) : (
+      <div className="space-y-12">
+        {caseDetails.map((detail, index) => {
+          const record = asRecord(detail);
+          const photos = uniqueImageUrls([
+            ...textList(record.cover_photo),
+            ...textList(record.cover_photo_urls),
+            ...textList(record.image_url),
+            ...textList(record.image_urls),
+          ]);
+          return (
+            <div key={textValue(record.detail_id, `case-detail-${index + 1}`)} className="print-case-row grid grid-cols-1 gap-6 md:grid-cols-4">
+              <div className="border-l-2 border-[var(--accent-color)] pl-4">
+                <p className="font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-widest text-[var(--primary-color)]">
+                  Log Entry
                 </p>
-                <p className="mt-1 text-sm font-bold text-[var(--moldify-grey)]">
-                  {textValue(log.identified_mold, "Pending identification")}
+                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-xs font-bold text-[var(--moldify-grey)]/60">
+                  {timestampValue(record.observed_at ?? asRecord(record.metadata).created_at)}
                 </p>
-                <p className="mt-1 text-sm text-[var(--moldify-grey)]">{textValue(log.summary)}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </article>
-    </section>
-
-    <section className="space-y-3 border-t border-[var(--primary-color)]/10 pt-10">
-      <h2 className="font-[family-name:var(--font-montserrat)] text-xl font-black uppercase text-[var(--primary-color)] tracking-tight">
-        Follow-up Timeline
-      </h2>
-      {followUps.length === 0 ? (
-        <p className="text-sm text-[var(--moldify-grey)]">No follow-up records.</p>
-      ) : (
-        <ol className="space-y-3">
-          {followUps.map((entry, index) => {
-            const record = entry as Record<string, unknown>;
-            const photos = getFollowUpPhotos(record);
-            const detailId = textValue(record.detail_id, `follow-up-${index + 1}`);
-
-            return (
-              <li key={detailId} className="rounded-xl border border-[var(--primary-color)]/10 p-4">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--primary-color)]">
-                  {timestampValue(record.observed_at ?? record.timestamp)}
-                </p>
-                <p className="mt-2 text-sm text-[var(--moldify-grey)]">
+              </div>
+              
+              <div className="md:col-span-3 space-y-6">
+                <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[15px] leading-relaxed text-[var(--moldify-grey)]">
                   {textValue(record.description)}
                 </p>
-                {photos.length > 0 ? (
-                  <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-                    {photos.map((url, photoIndex) => (
-                      <a
-                        key={`${detailId}-photo-${photoIndex}`}
-                        href={url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block overflow-hidden rounded-lg border border-[var(--primary-color)]/10"
-                      >
-                        <Image
-                          src={url}
-                          alt={`Follow-up photo ${photoIndex + 1}`}
-                          width={240}
-                          height={160}
-                          className="h-24 w-full object-cover"
-                          loading="lazy"
-                          unoptimized
-                        />
+                
+                {photos.length > 0 && (
+                  <div className="print-image-grid grid grid-cols-2 gap-4">
+                    {photos.map((url, pIdx) => (
+                      <a key={pIdx} href={url} target="_blank" rel="noreferrer" className="print-image-frame relative aspect-[16/9] overflow-hidden rounded-2xl border border-[var(--primary-color)]/10">
+                        <Image src={url} alt="Log detail" fill className="object-cover" unoptimized />
                       </a>
                     ))}
                   </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      )}
-    </section>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+
+  {/* Analytical Snapshots - Featured Image Style */}
+  <div className="space-y-12">
+    {[
+      { title: "Initial Observation", subtitle: initialObservationTitle, conf: initialObservationConfidence, summary: initialObservationSummary, imgs: initialObservationImages },
+      { title: "In Vivo Analysis", subtitle: inVivoTitle, conf: inVivoConfidence, summary: inVivoSummary, imgs: inVivoImages },
+      { title: "In Vitro Analysis", subtitle: inVitroTitle, conf: inVitroConfidence, summary: inVitroSummary, imgs: inVitroImages }
+    ].map((obs, idx) => (
+      <article key={idx} className="print-analysis-item space-y-6">
+        <div className="flex items-end justify-between border-b border-[var(--primary-color)]/10 pb-2">
+          <div className="space-y-1">
+            <span className="font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-widest text-[var(--accent-color)]">
+              {obs.title}
+            </span>
+            <h4 className="font-[family-name:var(--font-montserrat)] text-xl font-black text-[var(--primary-color)] uppercase tracking-tight">
+              {obs.subtitle}
+            </h4>
+          </div>
+          <span className="mb-1 text-[10px] font-black uppercase text-[var(--moldify-grey)] opacity-40">
+            Confidence: {obs.conf}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          <div className="space-y-4">
+            <p className="font-[family-name:var(--font-bricolage-grotesque)] text-[14px] leading-relaxed text-[var(--moldify-grey)]">
+              {obs.summary}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {obs.imgs.length > 0 ? (
+              <>
+                {/* Large Featured Image */}
+                <a href={obs.imgs[0]} target="_blank" rel="noreferrer" className="print-image-frame print-featured-frame relative block aspect-[3/2] overflow-hidden rounded-2xl border border-[var(--primary-color)]/10 bg-white">
+                  <Image src={obs.imgs[0]} alt="Featured specimen" fill className="object-cover" unoptimized />
+                </a>
+                
+                {/* Secondary Images Grid */}
+                {obs.imgs.length > 1 && (
+                  <div className="print-image-grid grid grid-cols-3 gap-3">
+                    {obs.imgs.slice(1, 4).map((url, imgIdx) => (
+                      <a key={imgIdx} href={url} target="_blank" rel="noreferrer" className="print-image-frame print-thumb-frame relative aspect-square overflow-hidden rounded-xl border border-[var(--primary-color)]/10">
+                        <Image src={url} alt="Specimen detail" fill className="object-cover" unoptimized />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex aspect-[3/2] items-center justify-center rounded-2xl border-2 border-dashed border-[var(--primary-color)]/5 bg-[var(--primary-color)]/[0.01]">
+                <p className="font-[family-name:var(--font-montserrat)] text-[10px] font-black uppercase tracking-widest text-[var(--moldify-grey)] opacity-20">
+                  No Optical Data Available
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>
 
     {/* Footer Source Info */}
     <footer className="mt-16 flex items-center justify-between border-t border-[var(--primary-color)]/10 pt-8 text-[9px]">

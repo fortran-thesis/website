@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPen, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
+import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import StatusBox from "@/components/tiles/status_tile";
 import EmptyState from "../empty_state"; 
 
@@ -14,15 +15,27 @@ export interface Report {
   dateReported: string;
   dateReportedTs?: number;
   status: "Resolved" | "Unresolved";
+  reportType: "WikiMold Report" | "Flagged Mold";
 }
 
 interface ReportsTableProps {
   data: Report[];
   onEdit?: (report: Report) => void;
+  hideReportedUser?: boolean;
+  hideStatus?: boolean;
+  actionIcon?: IconDefinition;
+  actionAriaLabel?: string;
 }
 
 // Reports Table ---
-export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
+export default function ReportsTable({
+  data,
+  onEdit,
+  hideReportedUser = false,
+  hideStatus = false,
+  actionIcon = faPen,
+  actionAriaLabel = "View Report",
+}: ReportsTableProps) {
   const [navigatingId, setNavigatingId] = useState<string | null>(null);
 
   const handleEditClick = (report: Report) => {
@@ -58,10 +71,10 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
           <thead className="sticky top-0 z-10 bg-[var(--primary-color)] text-[var(--background-color)] font-[family-name:var(--font-montserrat)] font-extrabold text-center">
             <tr>
               <th className="py-3 px-6">Issue</th>
-              <th className="py-3 px-6">Reported User</th>
+              {!hideReportedUser && <th className="py-3 px-6">Reported User</th>}
               <th className="py-3 px-6">Reported By</th>
               <th className="py-3 px-6">Date Reported</th>
-              <th className="py-3 px-6">Status</th>
+              {!hideStatus && <th className="py-3 px-6">Status</th>}
               <th className="py-3 px-6 text-center">Action</th>
             </tr>
           </thead>
@@ -85,14 +98,14 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
                   <td className="py-3 px-6 truncate max-w-[150px]" title={report.issue}>
                     {report.issue}
                   </td>
-                  <td className="py-3 px-6">{report.reportedUser}</td>
+                  {!hideReportedUser && <td className="py-3 px-6">{report.reportedUser}</td>}
                   <td className="py-3 px-6">{report.reportedBy}</td>
                   <td className="py-3 px-6 whitespace-nowrap">{report.dateReported}</td>
-                  <td className="py-3 px-6">
-                    <StatusBox
-                      status={report.status}
-                    />
-                  </td>
+                  {!hideStatus && (
+                    <td className="py-3 px-6">
+                      <StatusBox status={report.status} />
+                    </td>
+                  )}
                   <td className="py-3 px-6 text-center">
                     <button
                       onClick={() => handleEditClick(report)}
@@ -100,10 +113,10 @@ export default function ReportsTable({ data, onEdit }: ReportsTableProps) {
                       className={`text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)] ${
                         navigatingId === report.id ? 'opacity-60 cursor-wait' : ''
                       }`}
-                      aria-label="Edit Report"
+                      aria-label={actionAriaLabel}
                     >
                       <FontAwesomeIcon
-                        icon={faPen}
+                        icon={actionIcon}
                         className={navigatingId === report.id ? 'animate-pulse' : ''}
                         style={{ width: "12px", height: "12px" }}
                       />

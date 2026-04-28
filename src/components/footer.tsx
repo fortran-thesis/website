@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
-const MoldifyLogo = '/assets/Moldify_Logo.png';
+const MoldifyLogo = '/assets/moldify-logo-v5.svg';
 const grass = '/assets/grass.png';
 
 export default function Footer() {

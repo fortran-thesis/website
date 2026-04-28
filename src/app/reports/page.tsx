@@ -1,7 +1,8 @@
 "use client";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch, faTriangleExclamation} from '@fortawesome/free-solid-svg-icons';
+import { faBook, faEye, faFlag, faSearch, faTriangleExclamation} from '@fortawesome/free-solid-svg-icons';
 import StatusDropdown from '@/components/StatusDropdown';
+import TabBar from '@/components/tab_bar';
 import StatisticsTile from '@/components/tiles/statistics_tile';
 import Breadcrumbs from '@/components/breadcrumbs_nav';
 import ReportsTable, { Report } from '@/components/tables/report_table';
@@ -21,6 +22,14 @@ export default function Reports() {
     const [statusFilter, setStatusFilter] = useState('');
     const [dateOrder, setDateOrder] = useState<'newest' | 'oldest'>('newest');
     const [dateSortSelection, setDateSortSelection] = useState('');
+    const [activeReportTab, setActiveReportTab] = useState(0);
+
+    const normalizeReportType = (rawType?: string) => {
+      const type = (rawType || '').toString().trim().toLowerCase();
+      if (type.includes('wiki') || type.includes('moldipedia')) return 'WikiMold Report' as const;
+      if (type.includes('flag') || type.includes('mold') || type.includes('prediction')) return 'Flagged Mold' as const;
+      return 'Flagged Mold' as const;
+    };
 
     const normalizeStatus = (rawStatus?: string) => {
       const status = (rawStatus || '').toString().trim().toLowerCase();
@@ -48,7 +57,8 @@ export default function Reports() {
             return {
               id,
               issue: r.reason || r.details || 'Unknown Issue',
-                    reportedUser: r.content?.author,
+              reportType: normalizeReportType(r.content_type as string | undefined),
+                    reportedUser: r.content?.author || r.reported_user_name || r.reported_user || r.reported_user_id || 'N/A',
                     reportedBy: r.reporter?.name || r.reporter_name || r.reporter_id || r.reporterId || 'Unknown',
                     dateReported: (() => {
                       const formatOpts: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
@@ -89,9 +99,9 @@ export default function Reports() {
 
     // Derive stats from loaded data
     const stats = useMemo(() => {
-      const unresolvedData = reports.filter((r) => r.status === 'Unresolved');
-      const resolvedData = reports.filter((r) => r.status === 'Resolved');
-      return { total: reports.length, unresolved: unresolvedData.length, resolved: resolvedData.length };
+      const wikimoldData = reports.filter((r) => r.reportType === 'WikiMold Report');
+      const flaggedMoldData = reports.filter((r) => r.reportType === 'Flagged Mold');
+      return { total: reports.length, wikimold: wikimoldData.length, flaggedMold: flaggedMoldData.length };
     }, [reports]);
 
     // Infinite scroll: load next SWR page
@@ -121,17 +131,19 @@ export default function Reports() {
     const filteredReports = useMemo(() => {
       const query = searchQuery.trim().toLowerCase();
       const status = statusFilter.trim().toLowerCase();
+      const shouldApplyStatusFilter = activeReportTab === 0;
 
       const filtered = reports.filter((report) => {
         const reportStatus = (report.status || '').toLowerCase();
         const matchesStatus =
-          !status || status === 'all' || reportStatus === status;
+          !shouldApplyStatusFilter || !status || status === 'all' || reportStatus === status;
 
         if (!matchesStatus) return false;
         if (!query) return true;
 
         return [
           report.issue,
+          report.reportType,
           report.reportedUser,
           report.reportedBy,
           report.status,
@@ -147,7 +159,51 @@ export default function Reports() {
         const bTs = b.dateReportedTs ?? 0;
         return dateOrder === 'newest' ? bTs - aTs : aTs - bTs;
       });
-    }, [reports, searchQuery, statusFilter, dateOrder]);
+    }, [reports, searchQuery, statusFilter, dateOrder, activeReportTab]);
+
+    const wikimoldReports = useMemo(
+      () => filteredReports.filter((report) => report.reportType === 'WikiMold Report'),
+      [filteredReports],
+    );
+
+    const flaggedMoldReports = useMemo(
+      () => filteredReports.filter((report) => report.reportType === 'Flagged Mold'),
+      [filteredReports],
+    );
+
+    const reportTabs = useMemo(
+      () => [
+        {
+          label: 'WikiMold Reports',
+          icon: faBook,
+          content: (
+            <ReportsTable
+              data={wikimoldReports}
+              onEdit={(c: Report) => {
+                router.push(`/reports/view-report?id=${c.id}&type=wikimold`);
+              }}
+            />
+          ),
+        },
+        {
+          label: 'Flagged Mold Reports',
+          icon: faFlag,
+          content: (
+            <ReportsTable
+              data={flaggedMoldReports}
+              hideReportedUser
+              hideStatus
+              actionIcon={faEye}
+              actionAriaLabel="View Flagged Mold Report"
+              onEdit={(c: Report) => {
+                router.push(`/reports/view-report?id=${c.id}&type=flagged`);
+              }}
+            />
+          ),
+        },
+      ],
+      [wikimoldReports, flaggedMoldReports, router],
+    );
     
     return (
         <main className="relative flex flex-col xl:py-2 py-10 w-full">
@@ -157,7 +213,7 @@ export default function Reports() {
                 <div className="flex flex-col">
                     <Breadcrumbs role={userRole} />
                     <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-3xl">
-                        REPORTS
+                        REPORT MANAGEMENT
                     </h1>
                 </div>
 
@@ -167,8 +223,8 @@ export default function Reports() {
             {/* Statistics Tiles */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 mt-6">
                 <StatisticsTile icon={faTriangleExclamation} iconColor="var(--accent-color)" title="Total Reports" statNum={stats.total} />
-                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--moldify-red)" title="Total Unresolved Reports" statNum={stats.unresolved} />
-                <StatisticsTile icon={faTriangleExclamation} iconColor="var(--primary-color)" title="Total Resolved Reports" statNum={stats.resolved} />
+              <StatisticsTile icon={faTriangleExclamation} iconColor="var(--moldify-red)" title="Total WikiMold Reports" statNum={stats.wikimold} />
+              <StatisticsTile icon={faTriangleExclamation} iconColor="var(--primary-color)" title="Total Flagged Mold Reports" statNum={stats.flaggedMold} />
             </div>
             
             {/* Submitted Cases Section */}
@@ -185,7 +241,7 @@ export default function Reports() {
                         <label htmlFor="search" className="sr-only">Search Cases</label>
                         <input
                             id="search"
-                            placeholder="Search Cases"
+                            placeholder="Search Reports"
                             className="font-[family-name:var(--font-bricolage-grotesque)] text-[var(--moldify-black)] text-sm bg-[var(--background-color)] py-2 px-4 rounded-full border-2 border-[var(--primary-color)] focus:outline-none w-full pr-10"
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
@@ -198,17 +254,20 @@ export default function Reports() {
                     <div className="flex gap-2 w-full md:w-auto">
 
                         {/* Custom Status Dropdown */}
-                        <StatusDropdown
-                          placeholder="Filter By Status"
-                          backgroundColor="var(--accent-color)"
-                          textColor="var(--moldify-black)"
-                          options={[
-                            { label: "All", value: "all" },
-                            { label: "Resolved", value: "resolved" },
-                            { label: "Unresolved", value: "unresolved" }
-                          ]}
-                          onSelect={(value) => setStatusFilter(value)}
-                        />
+                        {activeReportTab === 0 && (
+                          <StatusDropdown
+                            placeholder="Filter By Status"
+                            backgroundColor="var(--accent-color)"
+                            textColor="var(--moldify-black)"
+                            options={[
+                              { label: "All", value: "all" },
+                              { label: "Resolved", value: "resolved" },
+                              { label: "Unresolved", value: "unresolved" }
+                            ]}
+                            selectedValue={statusFilter}
+                            onSelect={(value) => setStatusFilter(value)}
+                          />
+                        )}
 
                         <StatusDropdown
                           placeholder="Sort By Date"
@@ -232,11 +291,13 @@ export default function Reports() {
             <div className="mt-6 w-full">
               {isInitialLoading && <PageLoading message="Loading reports..." />}
               {error && <MessageBanner variant="error" className="mb-4">{error}</MessageBanner>}
-              {!isInitialLoading && !error && <ReportsTable data={filteredReports} 
-                onEdit={(c: Report) => {
-                        router.push(`/reports/view-report?id=${c.id}`);
-                    }}
-                />}
+              {!isInitialLoading && !error && (
+                <TabBar
+                  tabs={reportTabs}
+                  initialIndex={0}
+                  onTabChange={(index) => setActiveReportTab(index)}
+                />
+              )}
 
               {/* Infinite scroll trigger */}
               <div ref={loadMoreRef} className="py-4 text-center">

@@ -191,6 +191,7 @@ function ViewCaseContent() {
 
   const rawRole = (authUser?.user?.role || authUser?.role || "").toLowerCase();
   const userRole: UserRole = rawRole === "mycologist" ? "Mycologist" : "Administrator";
+  const caseManagementLabel = userRole === "Administrator" ? "Investigation Oversight" : "Case Management";
 
   /** Convert Firestore timestamp or ISO string to Date */
   const toDate = (v: string | { _seconds: number } | undefined): Date | null => {
@@ -727,7 +728,7 @@ function ViewCaseContent() {
           <Breadcrumbs role={userRole} />
           <div className="flex items-center gap-4">
             <h1 className="font-[family-name:var(--font-montserrat)] text-[var(--primary-color)] font-black text-4xl uppercase tracking-tighter">
-              Case Management
+              {caseManagementLabel}
             </h1>
           </div>
         </div>
@@ -816,7 +817,7 @@ function ViewCaseContent() {
             disabled={!canExportPdf}
             title={canExportPdf ? 'Open printable preview' : 'PDF export is only available for resolved or closed cases'}
           >
-            <FontAwesomeIcon icon={faFilePdf} /> Export PDF
+            <FontAwesomeIcon icon={faFilePdf} /> PDF Preview
           </button>
         </div>
 

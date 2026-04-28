@@ -295,11 +295,11 @@ function ViewMoldInfoContent() {
     setIsBackModalOpen(true);
   };
 
-  const fieldLabelClass = "text-[10px] font-black uppercase tracking-[0.4em] text-[var(--accent-color)] opacity-40";
+  const fieldLabelClass = "text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70";
   const cardTitleClass = "font-black text-2xl text-[var(--primary-color)] uppercase tracking-tight";
-  const cardNoteClass = "text-[10px] font-black uppercase tracking-[0.35em] text-[var(--primary-color)]/25";
+  const cardNoteClass = "text-[10px] font-black uppercase tracking-[0.35em] text-[var(--primary-color)]/60";
   const sectionCardClass = "p-10 rounded-[3rem] border-2 border-[var(--primary-color)]/5 flex flex-col gap-8 bg-transparent";
-  const inputClass = "w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-lg placeholder:text-[var(--primary-color)]/20 focus:outline-none transition-all tracking-tight border-b border-[var(--primary-color)]/10 focus:border-[var(--accent-color)]";
+  const inputClass = "w-full py-4 bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-lg placeholder:text-[var(--primary-color)]/55 focus:outline-none transition-all tracking-tight border-b border-[var(--primary-color)]/25 focus:border-[var(--accent-color)]";
 
   const navItems = [
     { id: "description", label: "Description" },
@@ -338,14 +338,14 @@ function ViewMoldInfoContent() {
   {/* SYSTEM REGISTRY STRIP */}
   <div className="flex items-center justify-between border-b border-[var(--primary-color)]/10 pb-4 mb-10">
     <div className="flex items-center gap-4">
-      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)] opacity-30">
+      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">
         Record Status
       </span>
       <StatusBox status={moldStatus || "Draft"} fontSize="0.65rem" />
     </div>
 
     <div className="flex items-center gap-3">
-      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)] opacity-30">
+      <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[var(--primary-color)]/70">
         Ref ID
       </span>
       <span className="font-[family-name:var(--font-bricolage-grotesque)] text-[11px] font-bold tracking-widest text-[var(--primary-color)] opacity-60">
@@ -370,10 +370,10 @@ function ViewMoldInfoContent() {
       onChange={(e) => setMoldInfo({ ...moldInfo, moldName: e.target.value })}
       placeholder="Enter mold name..."
       required
-      className="w-full bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-4xl md:text-5xl font-black placeholder:opacity-10 focus:outline-none tracking-tighter leading-tight transition-all"
+      className="w-full bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-montserrat)] text-4xl md:text-5xl font-black placeholder:text-[var(--primary-color)]/55 focus:outline-none tracking-tighter leading-tight transition-all"
     />
     
-    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-[var(--primary-color)]/20 mt-4 italic">
+    <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-[var(--primary-color)]/65 mt-4 italic">
       Public Facing Record Title
     </p>
 
@@ -429,7 +429,7 @@ function ViewMoldInfoContent() {
                     onChange={(e) => setMoldInfo({ ...moldInfo, description: e.target.value })}
                     rows={6}
                     placeholder="Enter detailed description of the mold genus..."
-                    className="w-full min-h-[220px] bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-lg placeholder:text-[var(--primary-color)]/20 focus:outline-none resize-y leading-8"
+                    className="w-full min-h-[220px] bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-lg placeholder:text-[var(--primary-color)]/55 focus:outline-none resize-y leading-8"
                   />
                 </div>
               </section>
@@ -494,7 +494,7 @@ function ViewMoldInfoContent() {
                         onChange={(e) => handleAdditionalInfoChange(key as keyof MoldInfoFormData["additionalInfo"], e.target.value)}
                         rows={4}
                         placeholder={placeholder}
-                        className="w-full min-h-[180px] bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-lg placeholder:text-[var(--primary-color)]/20 focus:outline-none resize-y leading-8"
+                        className="w-full min-h-[180px] bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-lg placeholder:text-[var(--primary-color)]/55 focus:outline-none resize-y leading-8"
                       />
                     </div>
                   ))}
@@ -528,7 +528,7 @@ function ViewMoldInfoContent() {
                         onChange={(e) => handleManagementChange(key as keyof MoldManagementFormData, e.target.value)}
                         rows={5}
                         placeholder={`Describe ${label.toLowerCase()} methods...`}
-                        className="w-full min-h-[200px] bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-lg placeholder:text-[var(--primary-color)]/20 focus:outline-none resize-y leading-8"
+                        className="w-full min-h-[200px] bg-transparent text-[var(--primary-color)] font-[family-name:var(--font-bricolage-grotesque)] text-lg placeholder:text-[var(--primary-color)]/55 focus:outline-none resize-y leading-8"
                       />
                     </div>
                   ))}
@@ -568,7 +568,7 @@ function ViewMoldInfoContent() {
         .ql-toolbar.ql-snow { border: none !important; border-bottom: 1px solid rgba(var(--primary-rgb), 0.1) !important; padding: 0 0 1rem 0 !important; margin-bottom: 1rem !important; }
         .ql-container.ql-snow { border: none !important; }
         .ql-editor { font-family: var(--font-bricolage-grotesque) !important; color: var(--primary-color) !important; font-size: 1.1rem !important; min-height: 200px !important; padding: 0 !important; }
-        .ql-editor.ql-blank::before { color: var(--primary-color) !important; opacity: 0.2 !important; left: 0 !important; }
+        .ql-editor.ql-blank::before { color: var(--primary-color) !important; opacity: 0.55 !important; left: 0 !important; }
       `}</style>
 
       <ConfirmModal

@@ -66,45 +66,51 @@ export default function UserTable({ data, onEdit }: UserTableProps) {
                         </tr>
                     </thead>
                     <tbody>
-                        {data.map((user, index) => (
+                        {data.map((user, index) => {
+                          const roleLower = String(user.user?.role ?? "").toLowerCase();
+                          const displayRole =
+                            roleLower === "user" || roleLower === "farmer"
+                              ? "Client"
+                              : roleLower
+                              ? roleLower.charAt(0).toUpperCase() + roleLower.slice(1)
+                              : "";
+
+                          return (
                             <tr
-                                key={index}
-                                className="border-b border-[var(--taupe)] last:border-none hover:bg-[var(--accent-color)]/10 transition-colors text-center"
+                              key={index}
+                              className="border-b border-[var(--taupe)] last:border-none hover:bg-[var(--accent-color)]/10 transition-colors text-center"
                             >
-                                <td className="py-3 px-6 text-[var(--moldify-black)]">{user.id}</td>
-                                <td className="py-3 px-6">{user.details?.displayName || ""}</td>
-                                <td className="py-3 px-6">{user.details?.email || ""}</td>
-                                <td
-                                    className={`py-3 px-6 font-bold ${
-                                        (user.user?.role?.toLowerCase() === "administrator" || user.user?.role?.toLowerCase() === "admin")
-                                        ? "text-[var(--moldify-red)]"
-                                        : user.user?.role?.toLowerCase() === "mycologist"
-                                        ? "text-[var(--moldify-blue)]"
-                                        : user.user?.role?.toLowerCase() === "user"
+                              <td className="py-3 px-6 text-[var(--moldify-black)]">{user.id}</td>
+                              <td className="py-3 px-6">{user.details?.displayName || ""}</td>
+                              <td className="py-3 px-6">{user.details?.email || ""}</td>
+                              <td
+                                className={`py-3 px-6 font-bold ${
+                                  roleLower === "administrator" || roleLower === "admin"
+                                    ? "text-[var(--moldify-red)]"
+                                    : roleLower === "mycologist"
+                                      ? "text-[var(--moldify-blue)]"
+                                      : roleLower === "user" || roleLower === "farmer"
                                         ? "text-[var(--primary-color)]"
                                         : "text-[var(--primary-color)]"
-                                    }`}
-                                    >
-                                    {
-                                        user.user?.role?.toLowerCase() === "user" || user.user?.role?.toLowerCase() === "farmer"
-                                        ? user.user?.occupation || "Farmer"
-                                        : user.user?.role?.charAt(0).toUpperCase() + user.user?.role?.slice(1)
-                                    }
-                                </td>
-                                <td className="py-3 px-6">
-                                    <StatusBox status={user.details?.disabled === false ? "Active" : "Inactive"} />
-                                </td>
-                                <td className="py-3 px-6 text-center">
-                                    <button
-                                        onClick={() => onEdit?.(user)}
-                                        className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
-                                        aria-label="Edit"
-                                    >
-                                        <FontAwesomeIcon icon={faEye} style={{ width: "12px", height: "12px" }} />
-                                    </button>
-                                </td>
+                                }`}
+                              >
+                                {displayRole}
+                              </td>
+                              <td className="py-3 px-6">
+                                <StatusBox status={user.details?.disabled === false ? "Active" : "Inactive"} />
+                              </td>
+                              <td className="py-3 px-6 text-center">
+                                <button
+                                  onClick={() => onEdit?.(user)}
+                                  className="text-[var(--background-color)] bg-[var(--primary-color)] transition px-2 py-1 rounded-lg cursor-pointer hover:bg-[var(--hover-primary)]"
+                                  aria-label="Edit"
+                                >
+                                  <FontAwesomeIcon icon={faEye} style={{ width: "12px", height: "12px" }} />
+                                </button>
+                              </td>
                             </tr>
-                        ))}
+                          );
+                        })}
                     </tbody>
                 </table>
                 )}
